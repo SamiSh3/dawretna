@@ -958,22 +958,7 @@ function renderSettings(){
   <input type="text" id="nM" placeholder="اسم عضو جديد" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13.5px;">
   <button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div></div>`;
 
-  // Setup guide
-  h+=`<div class="card" style="border-color:rgba(91,155,213,.3);">
-  <div class="h2" style="font-size:15px;color:var(--blue);">🔧 إعداد تسجيل الدخول بجوجل</div>
-  <div style="font-size:12px;color:var(--muted);line-height:1.9;margin-top:8px;">
-    <b style="color:var(--text);">١. استضافة الملف</b> (ضروري للـ OAuth)<br>
-    — ارفع الملف على GitHub Pages (مجاني) أو Netlify أو أي مكان<br><br>
-    <b style="color:var(--text);">٢. Google Cloud Console</b><br>
-    — أنشئ مشروع → APIs & Services → OAuth 2.0 Credentials<br>
-    — Authorized origins: رابط استضافتك<br>
-    — Authorized redirect URIs: <code style="font-family:var(--fm);color:var(--amber);">https://ncljmdpwdeznyytbnrgz.supabase.co/auth/v1/callback</code><br><br>
-    <b style="color:var(--text);">٣. Supabase Dashboard</b><br>
-    — Authentication → Providers → Google → Enable<br>
-    — أدخل Client ID و Secret من جوجل<br>
-    — Site URL = رابط استضافتك
-  </div></div>
-  <div class="note">البيانات محفوظة في Supabase. واتساب حالياً يدوي (بضغطة زر). للإرسال التلقائي يحتاج Meta Business API (مدفوع).</div>`;
+  h+=`<div class="note">البيانات محفوظة في Supabase. واتساب حالياً يدوي (بضغطة زر). للإرسال التلقائي يحتاج Meta Business API (مدفوع).</div>`;
   document.getElementById('content').innerHTML=h;
 }
 
