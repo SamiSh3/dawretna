@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دوريتنا</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دوريتنا">
+<meta name="theme-color" content="#101D23">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lalezar&family=Tajawal:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#101D23;--bg-el:#16262E;--bg-card:#1C333C;--bg-soft:#203945;
+  --amber:#E3A23D;--amber-s:rgba(227,162,61,.16);
+  --ember:#CC6B49;--ember-s:rgba(204,107,73,.16);
+  --sage:#8FB996;--sage-s:rgba(143,185,150,.16);
+  --danger:#C1554A;--danger-s:rgba(193,85,74,.16);
+  --blue:#5B9BD5;--blue-s:rgba(91,155,213,.16);
+  --text:#F3ECDD;--muted:#92A8AD;
+  --border:rgba(243,236,221,.12);--bsoft:rgba(243,236,221,.07);
+  --rlg:20px;--rmd:14px;--rsm:10px;
+  --fd:'Lalezar',sans-serif;--fb:'Tajawal',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;}html,body{margin:0;padding:0;}
+body{background:radial-gradient(ellipse 600px 300px at 50% -10%,rgba(227,162,61,.10),transparent 60%),var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;-webkit-font-smoothing:antialiased;}
+button,input,textarea,select{font-family:inherit;}
+#app{max-width:520px;margin:0 auto;padding:0 14px 70px;}
+
+/* ---- login screen ---- */
+#loginScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;}
+.login-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:32px 28px;max-width:380px;width:100%;text-align:center;}
+.login-icon{font-size:48px;margin-bottom:10px;filter:drop-shadow(0 0 14px rgba(227,162,61,.5));}
+.login-card h1{font-family:var(--fd);font-size:28px;font-weight:400;margin:0 0 6px;}
+.login-card p{font-size:14px;color:var(--muted);margin:0 0 28px;line-height:1.7;}
+.btn-google{background:#fff;color:#1f1f1f;border:1.5px solid #dadce0;border-radius:999px;padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;transition:.15s;}
+.btn-google:hover{box-shadow:0 2px 12px rgba(0,0,0,.2);}
+.btn-google svg{flex-shrink:0;}
+.login-note{font-size:11.5px;color:var(--muted);text-align:center;max-width:320px;line-height:1.7;}
+
+/* ---- topbar ---- */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 2px 10px;gap:8px;}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;}
+.brand-icon{font-size:24px;filter:drop-shadow(0 0 8px rgba(227,162,61,.45));}
+.brand h1{font-family:var(--fd);font-size:21px;font-weight:400;margin:0;line-height:1.1;}
+.brand p{margin:1px 0 0;font-size:11px;color:var(--muted);}
+.top-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.icon-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--muted);width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:.15s;}
+.icon-btn:hover{color:var(--amber);border-color:var(--amber);}
+.avatar-btn{background:var(--bg-card);border:2px solid var(--amber);width:35px;height:35px;border-radius:50%;overflow:hidden;cursor:pointer;flex-shrink:0;}
+.avatar-btn img{width:100%;height:100%;object-fit:cover;}
+.avatar-btn .av-init{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--amber);}
+
+/* ---- tabs ---- */
+.tabs{display:flex;gap:3px;background:var(--bg-el);border-radius:999px;padding:4px;margin:6px 0 16px;border:1px solid var(--bsoft);overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:1;min-width:fit-content;background:transparent;border:none;color:var(--muted);padding:8px 6px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:.18s;white-space:nowrap;}
+.tab.active{background:var(--amber);color:#1A1206;}
+.tab.admin-tab{color:var(--blue);}
+.tab.admin-tab.active{background:var(--blue);color:#fff;}
+
+/* ---- generic ---- */
+.hint{font-size:12.5px;color:var(--muted);margin:0 2px 14px;line-height:1.7;}
+.card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:16px;margin-bottom:14px;}
+.empty{text-align:center;padding:32px 16px;color:var(--muted);border:1px dashed var(--border);border-radius:var(--rlg);font-size:13px;line-height:1.8;}
+.empty .ei{font-size:28px;display:block;margin-bottom:8px;}
+.btn{border:none;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px;}
+.btn-primary{background:var(--amber);color:#1A1206;}.btn-primary:hover{filter:brightness(1.08);}
+.btn-ghost{background:var(--bg-soft);color:var(--text);border:1px solid var(--border);}.btn-ghost:hover{border-color:var(--amber);}
+.btn-sage{background:var(--sage);color:#10220F;}
+.btn-ember{background:var(--ember);color:#fff;}
+.btn-danger{background:var(--danger-s);color:var(--danger);border:1px solid rgba(193,85,74,.35);}
+.btn-blue{background:var(--blue-s);color:var(--blue);border:1px solid rgba(91,155,213,.35);}
+.btn-block{width:100%;justify-content:center;}
+.btn-sm{padding:6px 11px;font-size:12px;}
+.btn-xs{padding:4px 9px;font-size:11px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.field{margin-bottom:11px;}
+.field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+.field input,.field textarea,.field select{width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13.5px;outline:none;transition:.15s;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--amber);}
+.field textarea{resize:vertical;min-height:56px;}
+.row{display:flex;gap:8px;}.row>*{flex:1;}
+.h2{font-family:var(--fd);font-size:19px;font-weight:400;margin:0 0 4px;}
+.muted{color:var(--muted);}
+.note{font-size:11.5px;color:var(--muted);background:var(--bg-el);border-radius:var(--rsm);padding:9px 11px;line-height:1.8;margin-top:6px;}
+
+/* ---- date badge ---- */
+.date-badge{display:flex;flex-direction:column;gap:2px;}
+.date-greg{font-family:var(--fd);font-size:17px;font-weight:400;line-height:1.1;}
+.date-hijri{font-size:11.5px;color:var(--amber);font-family:var(--fm);display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+.adj-btn{background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:20px;height:20px;border-radius:50%;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:.15s;}
+.adj-btn:hover{color:var(--amber);border-color:var(--amber);}
+
+/* ---- timeline ---- */
+.slot-row{display:flex;gap:10px;align-items:stretch;}
+.slot-gutter{width:20px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;}
+.sdot{width:14px;height:14px;border-radius:50%;margin-top:20px;flex-shrink:0;border:2px solid var(--muted);background:var(--bg);}
+.sdot.booked{border-color:var(--amber);background:var(--amber);box-shadow:0 0 8px rgba(227,162,61,.6);}
+.sdot.urgent{border-color:var(--ember);background:var(--ember);box-shadow:0 0 10px rgba(204,107,73,.7);animation:pulse 1.8s ease-in-out infinite;}
+.sdot.today-dot{border-color:var(--ember);background:var(--ember);animation:pulse 1.2s ease-in-out infinite;}
+.sdot.past{border-color:var(--sage);background:var(--sage);}
+@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.35);}}
+.sthread{width:2px;flex:1;background:var(--border);margin-top:3px;}
+.slot-row:last-child .sthread{display:none;}
+.slot-card{flex:1;background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:13px 15px;margin-bottom:12px;}
+.slot-card.past-card{opacity:.5;}
+.slot-meta{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.countdown{font-family:var(--fm);font-size:10px;color:var(--amber);background:var(--amber-s);padding:3px 8px;border-radius:999px;white-space:nowrap;margin-top:3px;}
+.countdown.cdtoday{color:var(--ember);background:var(--ember-s);}
+.countdown.cdpast{color:var(--sage);background:var(--sage-s);}
+.host-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--bsoft);}
+.badge-you{background:var(--sage-s);color:var(--sage);font-size:10px;padding:2px 6px;border-radius:999px;margin-left:4px;font-weight:700;}
+.badge-admin{background:var(--blue-s);color:var(--blue);font-size:10px;padding:2px 6px;border-radius:999px;margin-left:4px;font-weight:700;}
+.rsvp-strip{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.chip{font-size:11px;padding:3px 8px;border-radius:999px;background:var(--bg-el);border:1px solid var(--border);color:var(--muted);}
+.chip.yes{background:var(--sage-s);color:var(--sage);border-color:transparent;}
+.chip.no{background:var(--danger-s);color:var(--danger);border-color:transparent;}
+.rsvp-act{display:flex;gap:7px;margin-top:8px;}
+details.dg{margin-top:9px;border-top:1px solid var(--bsoft);padding-top:7px;}
+details.dg summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:700;list-style:none;display:flex;align-items:center;gap:5px;padding:3px 0;user-select:none;}
+details.dg summary::-webkit-details-marker{display:none;}
+details.dg summary::before{content:'›';transition:.15s;font-size:14px;}
+details.dg[open] summary::before{transform:rotate(90deg);}
+.rem-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--bsoft);}
+.rem-row:last-of-type{border-bottom:none;}
+.rem-sent{font-size:10px;color:var(--sage);display:block;margin-top:1px;}
+
+/* ---- polls ---- */
+.poll-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px 16px;margin-bottom:12px;}
+.poll-q{font-family:var(--fd);font-size:18px;margin-bottom:10px;}
+.poll-opt{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bsoft);cursor:pointer;}
+.poll-opt:last-of-type{border-bottom:none;}
+.opt-bar-wrap{flex:1;background:var(--bg-el);border-radius:999px;height:6px;overflow:hidden;}
+.opt-bar{height:6px;background:var(--amber);border-radius:999px;transition:.4s;}
+.opt-bar.voted{background:var(--sage);}
+.opt-label{font-size:13px;font-weight:600;min-width:80px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.opt-count{font-family:var(--fm);font-size:11px;color:var(--muted);min-width:24px;text-align:left;}
+.voted-badge{font-size:10px;color:var(--sage);background:var(--sage-s);padding:2px 6px;border-radius:999px;}
+
+/* ---- admin panel ---- */
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bsoft);}
+.user-row:last-of-type{border-bottom:none;}
+.user-av{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--amber);}
+.user-av img{width:100%;height:100%;object-fit:cover;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-email{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-actions{display:flex;gap:5px;flex-shrink:0;}
+
+/* ---- special ---- */
+.sp-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:13px 15px;margin-bottom:11px;}
+.sp-card .title{font-family:var(--fd);font-size:17px;}
+
+/* ---- memories ---- */
+.mem-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);overflow:hidden;margin-bottom:12px;}
+.mem-img{width:100%;display:block;max-height:250px;object-fit:cover;}
+.mem-body{padding:12px 14px;}
+.mem-cap{font-size:13.5px;line-height:1.7;}
+.mem-meta{font-size:10.5px;color:var(--muted);margin-top:7px;font-family:var(--fm);}
+
+/* ---- gen modal ---- */
+.gen-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bsoft);}
+.gen-row:last-of-type{border-bottom:none;}
+.gen-adj{display:flex;align-items:center;gap:6px;}
+.gen-date-display{font-family:var(--fm);font-size:11px;color:var(--amber);min-width:80px;text-align:center;}
+
+/* ---- profile modal ---- */
+.profile-detail{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.profile-detail .av-lg{width:56px;height:56px;border-radius:50%;overflow:hidden;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--amber);flex-shrink:0;}
+.profile-detail .av-lg img{width:100%;height:100%;object-fit:cover;}
+
+/* ---- modals ---- */
+.modal-overlay{position:fixed;inset:0;background:rgba(8,14,17,.82);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;z-index:50;padding:0;}
+.modal-overlay.hidden{display:none;}
+.modal-box{background:var(--bg-el);border:1px solid var(--border);border-radius:var(--rlg) var(--rlg) 0 0;padding:24px 20px 32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.modal-box h2{font-family:var(--fd);font-weight:400;font-size:21px;margin:0 0 5px;}
+.modal-box p.sub{font-size:12.5px;color:var(--muted);margin:0 0 16px;line-height:1.7;}
+
+/* ---- roster ---- */
+.roster-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-el);border:1px solid var(--border);border-radius:999px;padding:4px 5px 4px 11px;font-size:12px;margin:0 3px 7px 0;}
+.roster-chip button{background:none;border:none;color:var(--muted);cursor:pointer;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.roster-chip button:hover{color:var(--danger);}
+
+/* ---- toast ---- */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg-el);border:1px solid var(--border);color:var(--text);padding:9px 17px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap;max-width:90vw;text-align:center;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.error{border-color:var(--danger);color:var(--danger);}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:100;}
+.flicker{animation:flicker 2s ease-in-out infinite;}
+@keyframes flicker{0%,100%{transform:scale(1);}50%{transform:scale(1.06)rotate(-2deg);}}
+</style>
+</head>
+<body>
+<div id="loadingScreen">
+  <span style="font-size:38px;" class="flicker">🏕️</span>
+  <p style="color:var(--muted);font-size:13px;">يجهز...</p>
+</div>
+
+<!-- Login Screen -->
+<div id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <div class="login-icon">🏕️</div>
+    <h1>دوريتنا</h1>
+    <p>منظم طلعات الشاليه للشلة — جدول، حجز، تبديل، استطلاعات، وذكريات.</p>
+    <button class="btn-google" id="googleSignInBtn">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      تسجيل الدخول بحساب جوجل
+    </button>
+  </div>
+  <p class="login-note">
+    🔒 بياناتك محفوظة آمنة عبر Supabase.<br>
+    الدخول بجوجل يحتاج رابط مستضاف — انظر تعليمات الإعداد في الأسفل.
+  </p>
+</div>
+
+<!-- Main App -->
+<div id="app" style="display:none;">
+  <div class="topbar">
+    <div class="brand">
+      <span style="font-size:22px;" class="flicker">🏕️</span>
+      <div>
+        <h1 id="chaletTitle">دوريتنا</h1>
+        <p id="chaletSub" class="muted">جدول الطلعات</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="refreshBtn" title="تحديث">↻</button>
+      <button class="avatar-btn" id="profileBtn" title="ملفك الشخصي">
+        <div class="av-init" id="avatarEl">؟</div>
+      </button>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabsNav">
+    <button class="tab active" data-tab="schedule">📅 الجدول</button>
+    <button class="tab" data-tab="special">🔥 خاصة</button>
+    <button class="tab" data-tab="polls">📊 استطلاع</button>
+    <button class="tab" data-tab="memories">📸 ذكريات</button>
+    <button class="tab" data-tab="settings">⚙️ إعدادات</button>
+  </nav>
+  <main id="content"></main>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay hidden" id="profileModal">
+  <div class="modal-box">
+    <h2>ملفك الشخصي</h2>
+    <div class="profile-detail" id="profileDetail"></div>
+    <div class="field"><label>رقم واتساب (للتذكيرات)</label><input type="tel" id="waPhone" placeholder="+966500000000" dir="ltr"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-primary btn-block" id="saveProfileBtn">حفظ</button>
+      <button class="btn btn-danger" id="signOutBtn">تسجيل الخروج</button>
+    </div>
+  </div>
+</div>
+
+<!-- Swap Modal -->
+<div class="modal-overlay hidden" id="swapModal">
+  <div class="modal-box">
+    <h2>🔁 طلب تبديل</h2>
+    <p class="sub" id="swapDesc"></p>
+    <div class="field"><label>اختر يومك الذي ستعطيه</label><select id="swapFromSel"></select></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-block" id="swapConfirmBtn">إرسال الطلب</button>
+      <button class="btn btn-ghost" id="swapCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gen Modal -->
+<div class="modal-overlay hidden" id="genModal">
+  <div class="modal-box">
+    <h2>📅 توليد مواعيد هجرية</h2>
+    <p class="sub">أول ثلاثاء من كل شهر هجري. تقدر تعدّل التاريخ ±١ يوم لكل موعد قبل الإضافة.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--border);margin-bottom:4px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:700;">
+        <input type="checkbox" id="selectAllGen" style="accent-color:var(--amber);width:17px;height:17px;">
+        تحديد الكل
+      </label>
+      <span id="genSelCount" style="font-size:11.5px;color:var(--muted);font-family:var(--fm);">0 محدد</span>
+    </div>
+    <div id="genList" style="margin-bottom:14px;max-height:55vh;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-block" id="genConfirmBtn">إضافة المحدد</button>
+      <button class="btn btn-ghost" id="genCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+const SUPABASE_URL = 'https://ncljmdpwdeznyytbnrgz.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jbGptZHB3ZGV6bnl5dGJucmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODU1NTIsImV4cCI6MjA5NzY2MTU1Mn0.tJC_gXgW-KuiFN_j8EoQeeXcuWtR9H9mKeZ7MoT-qI0';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { autoRefreshToken:true, persistSession:true, detectSessionInUrl:true }
+});
+
+let session = null;
+let myProfile = null;
+let D = { chalet:{name:'الشاليه',address:'',map_url:''}, team:[], slots:[], rsvps:[], swaps:[], reminders:[], specials:[], parts:[], memories:[], polls:[], votes:[] };
+let tab = 'schedule';
+let _genCandidates = [];
+let _genOffsets = {};
+let _swapToSlotId = null;
+
+/* ═══════════════════════════════
+   AUTH
+═══════════════════════════════ */
+async function initAuth(){
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+
+  sb.auth.onAuthStateChange(async (event, s) => {
+    session = s;
+    if(event === 'SIGNED_IN'){ await afterSignIn(); }
+    else if(event === 'SIGNED_OUT'){ showLogin(); }
+  });
+
+  if(session){ await afterSignIn(); }
+  else { showLogin(); }
+}
+
+async function afterSignIn(){
+  await loadProfile();
+  await loadAll();
+  showApp();
+  render();
+}
+
+async function signInWithGoogle(){
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href }
+  });
+  if(error) toast('خطأ في تسجيل الدخول: '+error.message, 'error');
+}
+
+async function signOut(){
+  await sb.auth.signOut();
+  showLogin();
+}
+
+function showLogin(){
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+function showApp(){
+  document.getElementById('loadingScreen').style.display='none';
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+document.getElementById('googleSignInBtn').addEventListener('click', signInWithGoogle);
+
+/* ═══════════════════════════════
+   SUPABASE DATA
+═══════════════════════════════ */
+async function loadProfile(){
+  if(!session) return;
+  const { data } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+  myProfile = data;
+  if(!myProfile){
+    const { data:np } = await sb.from('profiles').insert({
+      id: session.user.id,
+      name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+      email: session.user.email,
+      avatar_url: session.user.user_metadata?.avatar_url
+    }).select().single();
+    myProfile = np;
+  }
+  updateAvatarEl();
+}
+
+function updateAvatarEl(){
+  const el = document.getElementById('avatarEl');
+  if(!el || !myProfile) return;
+  const btn = document.getElementById('profileBtn');
+  if(myProfile.avatar_url){
+    btn.innerHTML = `<img src="${esc(myProfile.avatar_url)}" alt="صورتك">`;
+  } else {
+    btn.innerHTML = `<div class="av-init">${(myProfile.name||'?')[0]}</div>`;
+  }
+  if(myProfile.is_admin){
+    const existing = document.getElementById('adminTabBtn');
+    if(!existing){
+      const t = document.createElement('button');
+      t.className='tab admin-tab'; t.dataset.tab='admin'; t.textContent='👑 المشرف'; t.id='adminTabBtn';
+      t.addEventListener('click',()=>{ tab='admin'; render(); });
+      document.getElementById('tabsNav').appendChild(t);
+    }
+  }
+}
+
+async function loadAll(){
+  if(!session) return;
+  const [chalet,team,slots,rsvps,swaps,rems,specials,parts,mems,polls,votes] = await Promise.all([
+    sb.from('chalet').select('*').limit(1),
+    sb.from('team_members').select('*').order('created_at'),
+    sb.from('slots').select('*').order('date'),
+    sb.from('rsvps').select('*'),
+    sb.from('swap_requests').select('*').eq('status','pending'),
+    sb.from('reminders').select('*'),
+    sb.from('special_trips').select('*').order('date'),
+    sb.from('special_trip_participants').select('*'),
+    sb.from('memories').select('*').order('created_at',{ascending:false}),
+    sb.from('polls').select('*').order('created_at',{ascending:false}),
+    sb.from('poll_votes').select('*'),
+  ]);
+  D.chalet = chalet.data?.[0]||{name:'الشاليه',address:'',map_url:''};
+  D.team=team.data||[]; D.slots=slots.data||[]; D.rsvps=rsvps.data||[];
+  D.swaps=swaps.data||[]; D.reminders=rems.data||[]; D.specials=specials.data||[];
+  D.parts=parts.data||[]; D.memories=mems.data||[]; D.polls=polls.data||[];
+  D.votes=votes.data||[];
+}
+
+function myName(){ return myProfile?.name || session?.user?.email?.split('@')[0] || ''; }
+
+/* ═══════════════════════════════
+   UTILS
+═══════════════════════════════ */
+function esc(s){return(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function daysUntil(d){const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(d+'T00:00:00')-t)/86400000);}
+function toast(msg,type){const el=document.getElementById('toast');el.textContent=msg;el.className=type==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
+function openModal(id){document.getElementById(id).classList.remove('hidden');}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function waLink(t){return 'https://wa.me/?text='+encodeURIComponent(t);}
+function normNum(s){return(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0);}
+
+function hijriDayNum(d){
+  for(const loc of ['en-u-ca-islamic-umalqura','en-u-ca-islamic']){
+    try{const n=parseInt(d.toLocaleDateString(loc,{day:'numeric'}),10);if(!isNaN(n)&&n>0)return n;}catch(e){}
+  }
+  try{return parseInt(normNum(d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{day:'numeric'}).trim()),10)||0;}catch(e){return 0;}
+}
+function toHijri(date,offset){
+  const d=new Date(date+'T00:00:00');if(offset)d.setDate(d.getDate()+offset);
+  for(const loc of ['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
+    try{
+      const full=d.toLocaleDateString(loc,{day:'numeric',month:'long',year:'numeric'});
+      if(full&&full.length>3)return full;
+    }catch(e){}
+  }
+  return '';
+}
+function toGreg(date){
+  const d=new Date(date+'T00:00:00');
+  try{return d.toLocaleDateString('ar-SA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
+}
+function genFirstTuesdays(n){
+  const results=[],seen=new Set(),today=new Date();today.setHours(0,0,0,0);
+  const end=new Date(today);end.setMonth(end.getMonth()+n+2);
+  let cur=new Date(today),i=0;
+  while(cur<=end&&i<500){i++;
+    if(cur.getDay()===2){
+      const iso=cur.toISOString().slice(0,10);
+      const dayN=hijriDayNum(cur);
+      if(dayN>=1&&dayN<=7){const key=iso.slice(0,7);if(!seen.has(key)){seen.add(key);results.push({date:iso,greg:toGreg(iso),hijri:toHijri(iso,0)});}}
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  return results;
+}
+
+/* ═══════════════════════════════
+   ACTIONS
+═══════════════════════════════ */
+async function bookSlot(id){
+  const mn=myName();
+  await sb.from('slots').update({host_name:mn}).eq('id',id);
+  await sb.from('team_members').upsert({name:mn},{onConflict:'name'});
+  await loadAll();render();toast('تم الحجز 🏕️');
+}
+async function setRsvp(slotId,status){
+  await sb.from('rsvps').upsert({slot_id:slotId,member_name:myName(),status},{onConflict:'slot_id,member_name'});
+  await loadAll();render();toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+}
+async function resolveSwap(swapId,accept){
+  const sw=D.swaps.find(s=>s.id===swapId);if(!sw)return;
+  if(accept){
+    const fs=D.slots.find(s=>s.id===sw.from_slot_id),ts=D.slots.find(s=>s.id===sw.to_slot_id);
+    await sb.from('slots').update({host_name:ts.host_name}).eq('id',fs.id);
+    await sb.from('slots').update({host_name:fs.host_name}).eq('id',ts.id);
+  }
+  await sb.from('swap_requests').update({status:accept?'accepted':'rejected'}).eq('id',swapId);
+  await loadAll();render();toast(accept?'تم التبديل 🔁':'تم الرفض');
+}
+async function adjustHijri(slotId,delta){
+  const slot=D.slots.find(s=>s.id===slotId);if(!slot)return;
+  const newOff=Math.max(-1,Math.min(1,(slot.hijri_offset||0)+delta));
+  await sb.from('slots').update({hijri_offset:newOff}).eq('id',slotId);
+  await loadAll();render();
+}
+
+const REM_DEFS={week_host:'تذكير أسبوع — صاحب الطلعة',three_host:'تذكير 3 أيام — صاحب الطلعة',three_team:'تذكير 3 أيام — الفريق',day_host:'تذكير اليوم — صاحب',day_team:'تذكير اليوم — الفريق'};
+function remText(type,slot){
+  const d=toGreg(slot.date),cn=D.chalet.name||'الشاليه',h=slot.host_name||'';
+  switch(type){
+    case 'week_host': return `تذكير: بعد أسبوع طلعتك في "${cn}" يوم ${d} 🏕️`;
+    case 'three_host': return `تذكير: طلعتك بعد 3 أيام (${d}). تأكد من التجهيزات.`;
+    case 'three_team': return `يا شباب، طلعة "${cn}" بعد 3 أيام (${d}). صاحبها ${h}. اللي ما رد يرسل ✅ أو 🙅`;
+    case 'day_host':   return `اليوم طلعتك في "${cn}"! بالتوفيق 🔥`;
+    case 'day_team':   return `تذكير: اليوم طلعة "${cn}"! يلا نشوفكم 🔥`;
+    default: return '';
+  }
+}
+async function logRem(slotId,type){
+  await sb.from('reminders').upsert({slot_id:slotId,type,sent_by:myName()},{onConflict:'slot_id,type'}).select();
+  await loadAll();render();
+}
+async function sendCustom(slotId){
+  const ta=document.getElementById('cm_'+slotId);if(!ta)return;
+  const txt=ta.value.trim();if(!txt){toast('اكتب رسالة أول','error');return;}
+  window.open(waLink(txt),'_blank');
+  await sb.from('reminders').insert({slot_id:slotId,type:'custom',sent_by:myName(),message:txt});
+  ta.value='';
+}
+
+async function createSpecial(title,date,location){
+  const {error}=await sb.from('special_trips').insert({title,date,location:location||null,creator_name:myName()}).select().single();
+  if(error){toast('المشرفون فقط يمكنهم إضافة طلعات خاصة','error');return;}
+  await loadAll();render();toast('تم الإنشاء 🎉');
+}
+async function toggleJoin(id){
+  const joined=D.parts.find(p=>p.trip_id===id&&p.member_name===myName());
+  if(joined)await sb.from('special_trip_participants').delete().eq('trip_id',id).eq('member_name',myName());
+  else await sb.from('special_trip_participants').insert({trip_id:id,member_name:myName()});
+  await loadAll();render();
+}
+
+async function createPoll(question,options){
+  if(!question||options.length<2){toast('أضف سؤال وخيارين','error');return;}
+  await sb.from('polls').insert({question,options:JSON.stringify(options),created_by:myName()});
+  await loadAll();render();toast('تم إنشاء الاستطلاع 📊');
+}
+async function vote(pollId,optIdx){
+  const already=D.votes.find(v=>v.poll_id===pollId&&v.member_name===myName());
+  if(already){toast('صوّتت من قبل','error');return;}
+  await sb.from('poll_votes').upsert({poll_id:pollId,member_name:myName(),option_idx:optIdx},{onConflict:'poll_id,member_name'});
+  await loadAll();render();toast('تم التصويت ✅');
+}
+async function closePoll(id){await sb.from('polls').update({closed:true}).eq('id',id);await loadAll();render();}
+async function deletePoll(id){await sb.from('polls').delete().eq('id',id);await loadAll();render();}
+
+async function addMemory(caption,imageUrl,date){
+  if(!caption){toast('اكتب وصف','error');return;}
+  await sb.from('memories').insert({caption,image_url:imageUrl||null,date,author_name:myName()});
+  await loadAll();render();toast('تمت الإضافة 📸');
+}
+async function delMemory(id){await sb.from('memories').delete().eq('id',id);await loadAll();render();}
+
+async function saveChalet(name,address,mapUrl){
+  if(D.chalet.id)await sb.from('chalet').update({name,address,map_url:mapUrl}).eq('id',D.chalet.id);
+  else await sb.from('chalet').insert({name,address,map_url:mapUrl});
+  await loadAll();render();toast('تم الحفظ ✅');
+}
+async function addSlot(date){
+  if(!date){toast('اختر تاريخ','error');return;}
+  if(D.slots.find(s=>s.date===date)){toast('التاريخ موجود','error');return;}
+  await sb.from('slots').insert({date,hijri_offset:0});
+  await loadAll();render();toast('تمت الإضافة');
+}
+async function removeSlot(id){await sb.from('slots').delete().eq('id',id);await loadAll();render();}
+async function addMember(name){
+  if(!name)return;
+  await sb.from('team_members').upsert({name},{onConflict:'name'});
+  await loadAll();render();
+}
+async function removeMember(name){await sb.from('team_members').delete().eq('name',name);await loadAll();render();}
+
+/* ─── Admin actions ─── */
+async function toggleAdmin(userId, current){
+  await sb.from('profiles').update({is_admin:!current}).eq('id',userId);
+  await loadAll();
+  const {data}=await sb.from('profiles').select('*');
+  renderAdmin(data);
+  toast(!current?'تم تعيين مشرف 👑':'تم إلغاء الصلاحية');
+}
+async function removeUser(userId){
+  await sb.from('profiles').delete().eq('id',userId);
+  await loadAll();
+  const {data}=await sb.from('profiles').select('*');
+  renderAdmin(data);
+  toast('تم الحذف');
+}
+
+/* ═══════════════════════════════
+   PROFILE MODAL
+═══════════════════════════════ */
+document.getElementById('profileBtn').addEventListener('click',()=>{
+  if(!myProfile)return;
+  const d=document.getElementById('profileDetail');
+  const av=myProfile.avatar_url?`<img src="${esc(myProfile.avatar_url)}" style="width:100%;height:100%;object-fit:cover;" alt="">`:`<span>${(myProfile.name||'?')[0]}</span>`;
+  d.innerHTML=`<div class="av-lg">${av}</div><div><div style="font-size:16px;font-weight:700;">${esc(myProfile.name||'')}</div><div style="font-size:12px;color:var(--muted);">${esc(myProfile.email||'')}${myProfile.is_admin?' · <span style="color:var(--blue)">مشرف 👑</span>':''}</div></div>`;
+  document.getElementById('waPhone').value=myProfile.phone_wa||'';
+  openModal('profileModal');
+});
+document.getElementById('saveProfileBtn').addEventListener('click',async()=>{
+  const ph=document.getElementById('waPhone').value.trim();
+  await sb.from('profiles').update({phone_wa:ph}).eq('id',session.user.id);
+  myProfile.phone_wa=ph;
+  closeModal('profileModal');toast('تم الحفظ ✅');
+});
+document.getElementById('signOutBtn').addEventListener('click',async()=>{closeModal('profileModal');await signOut();});
+
+/* ═══════════════════════════════
+   SWAP MODAL
+═══════════════════════════════ */
+function openSwapModal(toSlotId){
+  const toSlot=D.slots.find(s=>s.id===toSlotId);if(!toSlot)return;
+  _swapToSlotId=toSlotId;
+  document.getElementById('swapDesc').textContent='تريد يوم '+toGreg(toSlot.date)+' ('+esc(toSlot.host_name||'')+') — اختر أي يوم من أيامك تعطيه مقابله:';
+  const mineAvail=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0&&!D.swaps.find(sw=>sw.from_slot_id===s.id));
+  if(!mineAvail.length){toast('ما عندك أيام متاحة للتبديل','error');return;}
+  document.getElementById('swapFromSel').innerHTML=mineAvail.map(s=>`<option value="${s.id}">${toGreg(s.date)}</option>`).join('');
+  openModal('swapModal');
+}
+document.getElementById('swapCancelBtn').addEventListener('click',()=>closeModal('swapModal'));
+document.getElementById('swapConfirmBtn').addEventListener('click',async()=>{
+  const fromId=document.getElementById('swapFromSel').value;
+  if(!fromId||!_swapToSlotId)return;
+  await sb.from('swap_requests').insert({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'});
+  closeModal('swapModal');await loadAll();render();toast('طلب التبديل أُرسل ⏳');
+});
+
+/* ═══════════════════════════════
+   GEN MODAL
+═══════════════════════════════ */
+function updateGenCount(){
+  const checked=document.querySelectorAll('#genList input[type=checkbox]:not(:disabled):checked').length;
+  document.getElementById('genSelCount').textContent=checked+' محدد';
+}
+document.getElementById('selectAllGen').addEventListener('change',function(){
+  document.querySelectorAll('#genList input[type=checkbox]:not(:disabled)').forEach(cb=>cb.checked=this.checked);
+  updateGenCount();
+});
+
+function openGen(){
+  _genCandidates=genFirstTuesdays(12);
+  _genOffsets={};
+  if(!_genCandidates.length){toast('ما أقدر أحسب المواعيد','error');return;}
+  const existing=new Set(D.slots.map(s=>s.date));
+  renderGenList(existing);
+  document.getElementById('selectAllGen').checked=false;
+  document.getElementById('genSelCount').textContent='0 محدد';
+  openModal('genModal');
+}
+
+function applyGenOffset(idx,delta){
+  const c=_genCandidates[idx];if(!c)return;
+  if(!_genOffsets[idx])_genOffsets[idx]=0;
+  _genOffsets[idx]=Math.max(-1,Math.min(1,_genOffsets[idx]+delta));
+  const off=_genOffsets[idx];
+  const d=new Date(c.date+'T00:00:00');d.setDate(d.getDate()+off);
+  const newIso=d.toISOString().slice(0,10);
+  const dispEl=document.getElementById('gen_disp_'+idx);
+  const hijriEl=document.getElementById('gen_hijri_'+idx);
+  const cbEl=document.getElementById('gen_cb_'+idx);
+  if(dispEl) dispEl.textContent=(off===0?'':(off>0?'+١':'-١'))+' '+toGreg(newIso).slice(0,20);
+  if(hijriEl) hijriEl.textContent=toHijri(newIso,0);
+  if(cbEl) cbEl.dataset.date=newIso;
+}
+
+function renderGenList(existing){
+  let h='';
+  _genCandidates.forEach((c,i)=>{
+    const off=_genOffsets[i]||0;
+    const d=new Date(c.date+'T00:00:00');d.setDate(d.getDate()+off);
+    const effDate=d.toISOString().slice(0,10);
+    const exists=existing.has(effDate);
+    h+=`<div class="gen-row">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:700;">${esc(c.greg.slice(0,30))}</div>
+        <div id="gen_hijri_${i}" style="font-size:10.5px;color:var(--amber);margin-top:2px;">${esc(toHijri(effDate,0))}</div>
+        <div id="gen_disp_${i}" style="font-size:10px;color:var(--muted);"></div>
+      </div>
+      <div class="gen-adj">
+        <button class="adj-btn" onclick="A.genAdj(${i},-1)" title="-١ يوم">−</button>
+        <button class="adj-btn" onclick="A.genAdj(${i},1)" title="+١ يوم">+</button>
+        ${exists?'<span style="font-size:11px;color:var(--sage)">✓ مضاف</span>':''}
+        <input type="checkbox" id="gen_cb_${i}" data-date="${effDate}" ${exists?'disabled checked':''} style="accent-color:var(--amber);width:17px;height:17px;" onchange="updateGenCount()">
+      </div>
+    </div>`;
+  });
+  document.getElementById('genList').innerHTML=h;
+}
+document.getElementById('genCancelBtn').addEventListener('click',()=>closeModal('genModal'));
+document.getElementById('genConfirmBtn').addEventListener('click',async()=>{
+  const checked=[...document.querySelectorAll('#genList input[type=checkbox]:checked:not(:disabled)')];
+  if(!checked.length){toast('اختر شهر واحد على الأقل','error');return;}
+  let added=0;
+  for(const cb of checked){
+    const d=cb.dataset.date;
+    if(!D.slots.find(s=>s.date===d)){
+      await sb.from('slots').insert({date:d,hijri_offset:0});added++;
+    }
+  }
+  closeModal('genModal');await loadAll();render();toast('تمت إضافة '+added+' موعد ✅');
+});
+
+/* ═══════════════════════════════
+   RENDER
+═══════════════════════════════ */
+function render(){
+  document.getElementById('chaletTitle').textContent=D.chalet.name||'دوريتنا';
+  document.getElementById('chaletSub').textContent=D.chalet.address||'جدول الطلعات';
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  if(tab==='schedule')     renderSchedule();
+  else if(tab==='special') renderSpecial();
+  else if(tab==='polls')   renderPolls();
+  else if(tab==='memories')renderMemories();
+  else if(tab==='admin')   renderAdminWrapper();
+  else                     renderSettings();
+}
+
+/* ── Schedule ── */
+function renderSchedule(){
+  let h=`<p class="hint">كل يوم هو أول ثلاثاء من شهر هجري. الأرقام الهجرية قابلة للتعديل ±١ يوم.</p>`;
+  h+=`<button class="btn btn-primary btn-block" style="margin-bottom:14px;" onclick="A.openGen()">📅 توليد مواعيد هجرية</button>`;
+  if(!D.slots.length){h+=`<div class="empty"><span class="ei">🗓️</span>اضغط الزر أعلاه لتوليد المواعيد.</div>`;document.getElementById('content').innerHTML=h;return;}
+  h+=`<div>`;
+  D.slots.forEach(slot=>{
+    const off=slot.hijri_offset||0,du=daysUntil(slot.date),isPast=du<0;
+    let dotCls='';
+    if(slot.host_name){if(isPast)dotCls='past';else if(du===0)dotCls='today-dot';else if(du<=3)dotCls='urgent';else dotCls='booked';}
+    const greg=toGreg(slot.date),hijri=toHijri(slot.date,off);
+    const cntCls=isPast?'cdpast':(du===0?'cdtoday':''),cntTxt=isPast?'انتهت':(du===0?'اليوم!':'بعد '+du+' يوم');
+    h+=`<div class="slot-row">
+      <div class="slot-gutter"><div class="sdot ${dotCls}"></div><div class="sthread"></div></div>
+      <div class="slot-card ${isPast?'past-card':''}">
+        <div class="slot-meta">
+          <div class="date-badge">
+            <div class="date-greg">${esc(greg)}</div>
+            <div class="date-hijri">
+              <span>${esc(hijri)}</span>
+              <button class="adj-btn" onclick="A.adjHijri('${slot.id}',-1)">−</button>
+              <button class="adj-btn" onclick="A.adjHijri('${slot.id}',1)">+</button>
+            </div>
+          </div>
+          <span class="countdown ${cntCls}">${cntTxt}</span>
+        </div>
+        <div class="host-row">`;
+    if(!slot.host_name){
+      h+=`<div class="muted" style="font-size:13px;">لم يُحجز</div>
+          <button class="btn btn-primary btn-sm" ${isPast?'disabled':''} onclick="A.book('${slot.id}')">🙋 احجز</button>`;
+    }else{
+      const youB=(myName()&&slot.host_name===myName())?`<span class="badge-you">أنت</span>`:'';
+      h+=`<div style="font-size:13px;">${youB}صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b></div>`;
+    }
+    h+=`</div>`;
+
+    const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
+    if(inSw){
+      const from=D.slots.find(s=>s.id===inSw.from_slot_id);
+      h+=`<div class="note">🔁 <b>${esc(inSw.requester_name)}</b> يريد يومك مقابل ${from?'('+esc(toGreg(from.date))+')':''}.
+        <div class="rsvp-act">
+          <button class="btn btn-sage btn-sm" onclick="A.resolveSwap('${inSw.id}',true)">✅ أوافق</button>
+          <button class="btn btn-danger btn-sm" onclick="A.resolveSwap('${inSw.id}',false)">❌ أرفض</button>
+        </div></div>`;
+    }
+    const outSw=myName()?D.swaps.find(s=>s.from_slot_id===slot.id&&s.requester_name===myName()):null;
+    if(outSw&&!inSw) h+=`<div class="note">⏳ بانتظار رد الطرف الآخر على التبديل.</div>`;
+
+    if(slot.host_name&&!isPast){
+      const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
+      let yes=0,no=0,pnd=0;
+      const chips=D.team.map(t=>{
+        const rv=sRsvp.find(r=>r.member_name===t.name);
+        if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;else pnd++;
+        const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');
+        return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;
+      }).join('');
+      if(chips)h+=`<div class="rsvp-strip">${chips}</div><div class="muted" style="font-size:10.5px;margin-top:5px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`;
+      const myRv=sRsvp.find(r=>r.member_name===myName());
+      h+=`<div class="rsvp-act">
+        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm" onclick="A.rsvp('${slot.id}','yes')">✅ سأحضر</button>
+        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm" onclick="A.rsvp('${slot.id}','no')">🙅 أعتذر</button>
+      </div>`;
+    }
+
+    if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw){
+      const mineAvail=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0&&!D.swaps.find(sw=>sw.from_slot_id===s.id));
+      if(mineAvail.length){
+        h+=`<details class="dg"><summary>🔁 طلب تبديل مع هذا اليوم</summary>
+          <p style="font-size:12px;color:var(--muted);margin:8px 0;">تأخذ يوم ${esc(slot.host_name)} وهو يأخذ يومك.</p>
+          <button class="btn btn-ember btn-sm btn-block" onclick="A.openSwap('${slot.id}')">🔁 اختر يومك للتبديل</button>
+        </details>`;
+      }
+    }
+
+    if(slot.host_name&&!isPast){
+      h+=`<details class="dg"><summary>🔔 التذكيرات</summary>`;
+      Object.entries(REM_DEFS).forEach(([key,lbl])=>{
+        const sent=D.reminders.find(r=>r.slot_id===slot.id&&r.type===key);
+        h+=`<div class="rem-row"><div><span style="font-size:12px;">${lbl}</span>${sent?`<span class="rem-sent">أُرسلت بواسطة ${esc(sent.sent_by||'')}</span>`:''}</div>
+          <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="${esc(waLink(remText(key,slot)))}" onclick="A.logRem('${slot.id}','${key}')">إرسال</a></div>`;
+      });
+      h+=`<div class="rem-row" style="flex-direction:column;align-items:stretch;gap:7px;">
+        <span style="font-size:12px;">رسالة مخصصة</span>
+        <textarea id="cm_${slot.id}" placeholder="اكتب رسالتك..." style="width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px;font-size:12.5px;min-height:44px;font-family:var(--fb);"></textarea>
+        <button class="btn btn-primary btn-sm" onclick="A.sendCustom('${slot.id}')">📤 إرسال عبر واتساب</button>
+      </div></details>`;
+    }
+    h+=`</div></div>`;
+  });
+  h+=`</div>`;
+  if(D.chalet.address||D.chalet.map_url){
+    h+=`<div class="card" style="margin-top:4px;">📍 <b>${esc(D.chalet.name)}</b><br><span class="muted">${esc(D.chalet.address)}</span>`;
+    if(D.chalet.map_url)h+=` <a href="${esc(D.chalet.map_url)}" target="_blank" rel="noopener" style="color:var(--amber);">خريطة 🗺️</a>`;
+    h+=`</div>`;
+  }
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ── Special ── */
+function renderSpecial(){
+  const isAdmin=myProfile?.is_admin;
+  let h=`<p class="hint">طلعات إضافية — ${isAdmin?'تقدر تنشئ طلعة وتدعو الشلة للانضمام.':'المشرفون فقط يمكنهم إنشاء طلعات خاصة.'}</p>`;
+  if(isAdmin){
+    h+=`<div class="card"><div class="h2">➕ طلعة خاصة جديدة</div>
+    <div class="field"><label>العنوان</label><input type="text" id="spT" placeholder="شواء، رحلة..."></div>
+    <div class="row"><div class="field"><label>التاريخ</label><input type="date" id="spD"></div>
+    <div class="field"><label>المكان</label><input type="text" id="spL" placeholder="اختياري"></div></div>
+    <button class="btn btn-primary btn-block" onclick="A.createSpecial()">إنشاء</button></div>`;
+  }
+  if(!D.specials.length)h+=`<div class="empty"><span class="ei">🔥</span>${isAdmin?'ما فيه طلعات خاصة بعد.':'لا توجد طلعات خاصة حالياً.'}</div>`;
+  else D.specials.forEach(t=>{
+    const pts=D.parts.filter(p=>p.trip_id===t.id).map(p=>p.member_name);
+    const joined=myName()&&pts.includes(myName());
+    h+=`<div class="sp-card"><div class="title">${esc(t.title)}</div>
+    <div class="muted" style="font-size:12px;margin-top:3px;">${esc(toGreg(t.date))}${t.location?' · '+esc(t.location):''}</div>
+    <div style="font-size:11px;color:var(--amber);margin-top:3px;">${esc(toHijri(t.date,0))}</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">👥 ${pts.length}: ${pts.map(esc).join('، ')||'—'}</div>
+    <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:9px;" onclick="A.toggleJoin('${t.id}')">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
+  });
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ── Polls ── */
+function renderPolls(){
+  let h=`<p class="hint">استطلاعات رأي للشلة — أنشئ واتصويت.</p>
+  <div class="card"><div class="h2">📊 استطلاع جديد</div>
+  <div class="field"><label>السؤال</label><input type="text" id="pollQ" placeholder="مثال: وش نطبخ؟"></div>
+  <div id="pollOpts">
+    <div class="field"><label>خيار ١</label><input type="text" class="poll-opt-input" placeholder="مثال: شيش طاووق"></div>
+    <div class="field"><label>خيار ٢</label><input type="text" class="poll-opt-input" placeholder="مثال: كباب"></div>
+  </div>
+  <div style="margin-bottom:11px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt()">+ خيار</button></div>
+  <button class="btn btn-primary btn-block" onclick="A.createPoll()">إنشاء</button></div>`;
+  if(!D.polls.length)h+=`<div class="empty"><span class="ei">📊</span>لا يوجد استطلاعات.</div>`;
+  else D.polls.forEach(poll=>{
+    const opts=Array.isArray(poll.options)?poll.options:(typeof poll.options==='string'?JSON.parse(poll.options):[]);
+    const pV=D.votes.filter(v=>v.poll_id===poll.id);
+    const total=pV.length,myV=myName()?pV.find(v=>v.member_name===myName()):null;
+    h+=`<div class="poll-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div class="poll-q">${esc(poll.question)}</div>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          ${!poll.closed&&myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.closePoll('${poll.id}')">إغلاق</button>`:''}
+          ${myProfile?.is_admin||myName()===poll.created_by?`<button class="btn btn-ghost btn-xs" onclick="A.deletePoll('${poll.id}')">حذف</button>`:''}
+        </div>
+      </div>
+      ${poll.closed?`<span style="font-size:11px;background:var(--danger-s);color:var(--danger);padding:2px 8px;border-radius:999px;">مغلق</span>`:''}
+      <div style="margin-top:10px;">`;
+    opts.forEach((opt,i)=>{
+      const cnt=pV.filter(v=>v.option_idx===i).length;
+      const pct=total?Math.round(cnt/total*100):0;
+      const voted=myV?.option_idx===i;
+      h+=`<div class="poll-opt" onclick="${!myV&&!poll.closed?`A.vote('${poll.id}',${i})`:''}">
+        <span class="opt-label" title="${esc(opt)}">${esc(opt)}</span>
+        <div class="opt-bar-wrap"><div class="opt-bar ${voted?'voted':''}" style="width:${pct}%"></div></div>
+        <span class="opt-count">${cnt}</span>
+        ${voted?`<span class="voted-badge">✓</span>`:''}
+      </div>`;
+    });
+    h+=`</div><div class="muted" style="font-size:11px;margin-top:7px;">${total} صوت${myV?'':(poll.closed?'':' · اضغط للتصويت')}</div></div>`;
+  });
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ── Memories ── */
+function renderMemories(){
+  let h=`<p class="hint">ذكريات الطلعات. الصور عبر رابط مباشر.</p>
+  <div class="card"><div class="h2">📸 ذكرى جديدة</div>
+  <div class="field"><label>الوصف</label><textarea id="memC" placeholder="وش صار؟"></textarea></div>
+  <div class="field"><label>رابط صورة (اختياري)</label><input type="url" id="memI" placeholder="https://..."></div>
+  <div class="field"><label>التاريخ</label><input type="date" id="memD" value="${new Date().toISOString().slice(0,10)}"></div>
+  <button class="btn btn-primary btn-block" onclick="A.addMem()">إضافة</button></div>`;
+  if(!D.memories.length)h+=`<div class="empty"><span class="ei">📷</span>لا توجد ذكريات.</div>`;
+  else D.memories.forEach(m=>{
+    h+=`<div class="mem-card">`;
+    if(m.image_url)h+=`<img class="mem-img" src="${esc(m.image_url)}" onerror="this.style.display='none'">`;
+    h+=`<div class="mem-body"><div class="mem-cap">${esc(m.caption)}</div>
+    <div class="mem-meta">${esc(toGreg(m.date))} · ${esc(toHijri(m.date,0))} · ${esc(m.author_name||'')}
+    ${myName()&&(m.author_name===myName()||myProfile?.is_admin)?` <button class="btn btn-danger btn-xs" style="margin-right:6px;" onclick="A.delMem('${m.id}')">حذف</button>`:''}
+    </div></div></div>`;
+  });
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ── Admin Panel ── */
+async function renderAdminWrapper(){
+  if(!myProfile?.is_admin){document.getElementById('content').innerHTML=`<div class="empty"><span class="ei">🔒</span>غير مصرح.</div>`;return;}
+  document.getElementById('content').innerHTML=`<p class="hint">لوحة إدارة المستخدمين والصلاحيات.</p><div id="adminContent"><div class="card" style="text-align:center;padding:20px;"><span class="spin"></span></div></div>`;
+  const {data:profiles}=await sb.from('profiles').select('*').order('created_at');
+  renderAdmin(profiles||[]);
+}
+function renderAdmin(profiles){
+  let h=`<div class="card"><div class="h2">👥 المستخدمون (${profiles.length})</div>`;
+  profiles.forEach(p=>{
+    const av=p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:`<span>${(p.name||'?')[0]}</span>`;
+    const isMe=p.id===session?.user?.id;
+    h+=`<div class="user-row">
+      <div class="user-av">${av}</div>
+      <div class="user-info">
+        <div class="user-name">${esc(p.name||'بدون اسم')} ${p.is_admin?'<span class="badge-admin">مشرف</span>':''}</div>
+        <div class="user-email">${esc(p.email||'')}${p.phone_wa?' · '+esc(p.phone_wa):''}</div>
+      </div>
+      <div class="user-actions">
+        ${!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-blue'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin})">${p.is_admin?'إلغاء صلاحية':'مشرف'}</button>`:'<span class="muted" style="font-size:11px;">أنت</span>'}
+      </div>
+    </div>`;
+  });
+  h+=`</div>
+  <div class="note">لإضافة مستخدم: يفتح الرابط ويسجل دخول بجوجل تلقائياً يُضاف للقائمة.<br>
+  واتساب: يحتاج Meta Business API للإرسال التلقائي — حالياً الإرسال يدوي بضغطة زر.</div>`;
+  const c=document.getElementById('adminContent');
+  if(c) c.innerHTML=h;
+  else document.getElementById('content').innerHTML=`<p class="hint">لوحة إدارة المستخدمين.</p>`+h;
+}
+
+/* ── Settings ── */
+function renderSettings(){
+  let h=`<div class="card"><div class="h2">📍 بيانات الشاليه</div>
+  <div class="field"><label>الاسم</label><input type="text" id="sN" value="${esc(D.chalet.name)}"></div>
+  <div class="field"><label>العنوان / الوصف</label><textarea id="sA">${esc(D.chalet.address||'')}</textarea></div>
+  <div class="field"><label>رابط الموقع</label><input type="url" id="sM" value="${esc(D.chalet.map_url||'')}" placeholder="https://maps.google.com/..."></div>
+  <button class="btn btn-primary btn-block" onclick="A.saveChalet()">حفظ</button></div>
+  <div class="card"><div class="h2">🗓️ إضافة تاريخ يدوي</div>
+  <div class="field"><input type="date" id="nD"></div>
+  <button class="btn btn-primary btn-block" onclick="A.addSlot()">إضافة</button></div>`;
+  if(D.slots.length){
+    h+=`<div class="card"><div class="h2" style="font-size:15px;">التواريخ (${D.slots.length})</div>`;
+    D.slots.forEach(s=>{h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br><span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>${s.host_name?' · '+esc(s.host_name):' · متاح'}</div><button class="btn btn-danger btn-sm" onclick="A.removeSlot('${s.id}')">حذف</button></div>`;});
+    h+=`</div>`;
+  }
+  h+=`<div class="card"><div class="h2">👥 أعضاء الفريق</div><div style="margin:10px 0;">`;
+  D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button></span>`);
+  h+=`</div><div class="row" style="margin-top:10px;">
+  <input type="text" id="nM" placeholder="اسم عضو جديد" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13.5px;">
+  <button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div></div>`;
+
+  // Setup guide
+  h+=`<div class="card" style="border-color:rgba(91,155,213,.3);">
+  <div class="h2" style="font-size:15px;color:var(--blue);">🔧 إعداد تسجيل الدخول بجوجل</div>
+  <div style="font-size:12px;color:var(--muted);line-height:1.9;margin-top:8px;">
+    <b style="color:var(--text);">١. استضافة الملف</b> (ضروري للـ OAuth)<br>
+    — ارفع الملف على GitHub Pages (مجاني) أو Netlify أو أي مكان<br><br>
+    <b style="color:var(--text);">٢. Google Cloud Console</b><br>
+    — أنشئ مشروع → APIs & Services → OAuth 2.0 Credentials<br>
+    — Authorized origins: رابط استضافتك<br>
+    — Authorized redirect URIs: <code style="font-family:var(--fm);color:var(--amber);">https://ncljmdpwdeznyytbnrgz.supabase.co/auth/v1/callback</code><br><br>
+    <b style="color:var(--text);">٣. Supabase Dashboard</b><br>
+    — Authentication → Providers → Google → Enable<br>
+    — أدخل Client ID و Secret من جوجل<br>
+    — Site URL = رابط استضافتك
+  </div></div>
+  <div class="note">البيانات محفوظة في Supabase. واتساب حالياً يدوي (بضغطة زر). للإرسال التلقائي يحتاج Meta Business API (مدفوع).</div>`;
+  document.getElementById('content').innerHTML=h;
+}
+
+/* ═══════════════════════════════
+   GLOBAL ACTIONS
+═══════════════════════════════ */
+window.A={
+  book:bookSlot, rsvp:setRsvp, resolveSwap, adjHijri:adjustHijri,
+  openSwap:openSwapModal, openGen,
+  genAdj:applyGenOffset, logRem, sendCustom,
+  createSpecial(){createSpecial(document.getElementById('spT')?.value.trim(),document.getElementById('spD')?.value,document.getElementById('spL')?.value.trim());},
+  toggleJoin,
+  addPollOpt(){
+    const d=document.getElementById('pollOpts');if(!d)return;
+    const n=d.querySelectorAll('.poll-opt-input').length+1;
+    const f=document.createElement('div');f.className='field';
+    f.innerHTML=`<label>خيار ${n}</label><input type="text" class="poll-opt-input" placeholder="...">`;
+    d.appendChild(f);
+  },
+  createPoll(){
+    const q=document.getElementById('pollQ')?.value.trim();
+    const opts=[...document.querySelectorAll('.poll-opt-input')].map(i=>i.value.trim()).filter(Boolean);
+    createPoll(q,opts);
+  },
+  vote, closePoll, deletePoll,
+  addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
+  delMem:delMemory,
+  toggleAdmin, removeUser,
+  saveChalet(){saveChalet(document.getElementById('sN')?.value.trim(),document.getElementById('sA')?.value.trim(),document.getElementById('sM')?.value.trim());},
+  addSlot(){addSlot(document.getElementById('nD')?.value);},
+  removeSlot,
+  addMember(){const n=document.getElementById('nM')?.value.trim();addMember(n);if(document.getElementById('nM'))document.getElementById('nM').value='';},
+  removeMember,
+};
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{tab=t.dataset.tab;render();}));
+document.getElementById('refreshBtn').addEventListener('click',async()=>{await loadAll();render();toast('تم التحديث ✓');});
+
+/* INIT */
+initAuth();
+})();
+</script>
+</body>
+</html>
