@@ -305,20 +305,31 @@ details.dg[open] summary::before{transform:rotate(90deg);}
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="genModal">
+<div class="modal-overlay hidden" id="newSlotModal">
   <div class="modal-box">
-    <h2>📅 توليد مواعيد هجرية</h2>
-    <p class="sub">أول ثلاثاء من كل شهر هجري — تقدر تعدّل ±١ يوم لكل موعد.</p>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--border);margin-bottom:4px;">
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer;">
-        <input type="checkbox" id="selAll" style="accent-color:var(--amber);width:17px;height:17px;">تحديد الكل
-      </label>
-      <span id="selCount" style="font-size:11px;color:var(--muted);font-family:var(--fm);">0 محدد</span>
+    <h2>➕ طلعة جديدة</h2>
+    <p class="sub" id="newSlotSuggest"></p>
+    <div class="field">
+      <label>التاريخ الميلادي</label>
+      <input type="date" id="newSlotDate">
     </div>
-    <div id="genList" style="max-height:55vh;overflow-y:auto;margin-bottom:14px;"></div>
+    <div id="newSlotHijri" style="font-size:12px;color:var(--amber);margin:-6px 0 12px;font-family:var(--fm);min-height:18px;"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-ghost btn-sm" id="adjMinus">− يوم</button>
+      <span style="font-size:11.5px;color:var(--muted);">تعديل هجري</span>
+      <button class="btn btn-ghost btn-sm" id="adjPlus">+ يوم</button>
+    </div>
+    <div class="field">
+      <label>الميزانية (ريال) — اختياري</label>
+      <input type="number" id="newSlotBudget" placeholder="مثال: 1500" min="0">
+    </div>
+    <div class="field">
+      <label>ملاحظات الميزانية — اختياري</label>
+      <input type="text" id="newSlotBudgetNotes" placeholder="توزيع التكاليف...">
+    </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-primary btn-block" id="genConfirmBtn">إضافة المحدد</button>
-      <button class="btn btn-ghost" id="genCancelBtn">إلغاء</button>
+      <button class="btn btn-primary btn-block" id="newSlotConfirmBtn">إضافة الطلعة</button>
+      <button class="btn btn-ghost" id="newSlotCancelBtn">إلغاء</button>
     </div>
   </div>
 </div>
@@ -719,68 +730,61 @@ async function addMember(name){
 }
 async function removeMember(name){await sb.from('team_members').delete().eq('name',name);await loadAll();render();}
 
-// gen modal
-function genFirstTuesdays(n){
-  const res=[],seen=new Set(),today=new Date();today.setHours(0,0,0,0);
-  const end=new Date(today);end.setMonth(end.getMonth()+n+2);
-  let cur=new Date(today),i=0;
-  while(cur<=end&&i<500){i++;
-    if(cur.getDay()===2){
-      const iso=cur.toISOString().slice(0,10),dayN=hijriDayNum(cur);
-      if(dayN>=1&&dayN<=7){const k=iso.slice(0,7);if(!seen.has(k)){seen.add(k);res.push({date:iso,greg:toGreg(iso),hijri:toHijri(iso,0)});}}
+// إيجاد أقرب أول ثلاثاء في شهر هجري قادم
+function nextFirstTuesday(){
+  const today=new Date();today.setHours(0,0,0,0);
+  let cur=new Date(today);
+  for(let i=0;i<90;i++){
+    if(cur.getDay()===2){// ثلاثاء
+      const dayN=hijriDayNum(cur);
+      if(dayN>=1&&dayN<=7) return cur.toISOString().slice(0,10);
     }
     cur.setDate(cur.getDate()+1);
   }
-  return res;
+  return today.toISOString().slice(0,10);
 }
-function updateSelCount(){
-  const n=document.querySelectorAll('#genList input[type=checkbox]:not(:disabled):checked').length;
-  document.getElementById('selCount').textContent=n+' محدد';
+
+function updateNewSlotHijri(){
+  const inp=document.getElementById('newSlotDate');
+  const el=document.getElementById('newSlotHijri');
+  if(!inp||!el||!inp.value)return;
+  el.textContent=toHijri(inp.value,0);
 }
-document.getElementById('selAll').addEventListener('change',function(){
-  document.querySelectorAll('#genList input[type=checkbox]:not(:disabled)').forEach(cb=>cb.checked=this.checked);
-  updateSelCount();
-});
-function openGen(){
-  _genCandidates=genFirstTuesdays(12);_genOffsets={};
-  if(!_genCandidates.length){toast('ما أقدر أحسب المواعيد','error');return;}
-  const exist=new Set(D.slots.map(s=>s.date));
-  let h='';
-  _genCandidates.forEach((c,i)=>{
-    const off=_genOffsets[i]||0;
-    const d=new Date(c.date+'T00:00:00');d.setDate(d.getDate()+off);
-    const eff=d.toISOString().slice(0,10),ex=exist.has(eff);
-    h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bsoft);">
-      <div><div style="font-size:12.5px;font-weight:700;">${esc(c.greg.slice(0,32))}</div>
-      <div id="gh_${i}" style="font-size:10.5px;color:var(--amber);margin-top:2px;">${esc(toHijri(eff,0))}</div></div>
-      <div style="display:flex;align-items:center;gap:5px;">
-        <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="A.genAdj(${i},-1)">−</button>
-        <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="A.genAdj(${i},1)">+</button>
-        ${ex?'<span style="font-size:10px;color:var(--sage)">✓</span>':''}
-        <input type="checkbox" id="gc_${i}" data-date="${eff}" ${ex?'disabled checked':''} style="accent-color:var(--amber);width:17px;height:17px;" onchange="updateSelCount()">
-      </div></div>`;
-  });
-  document.getElementById('genList').innerHTML=h;
-  document.getElementById('selAll').checked=false;
-  document.getElementById('selCount').textContent='0 محدد';
-  openModal('genModal');
+
+function openNewSlot(){
+  if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم إضافة طلعات','error');return;}
+  const suggested=nextFirstTuesday();
+  const inp=document.getElementById('newSlotDate');
+  if(inp) inp.value=suggested;
+  const sugEl=document.getElementById('newSlotSuggest');
+  if(sugEl) sugEl.textContent=`المقترح: أقرب أول ثلاثاء في شهر هجري — ${toGreg(suggested)}`;
+  document.getElementById('newSlotBudget').value='';
+  document.getElementById('newSlotBudgetNotes').value='';
+  updateNewSlotHijri();
+  openModal('newSlotModal');
 }
-window.updateSelCount=updateSelCount;
-function genAdj(i,delta){
-  if(!_genOffsets[i])_genOffsets[i]=0;
-  _genOffsets[i]=Math.max(-1,Math.min(1,_genOffsets[i]+delta));
-  const c=_genCandidates[i];const d=new Date(c.date+'T00:00:00');d.setDate(d.getDate()+_genOffsets[i]);
-  const eff=d.toISOString().slice(0,10);
-  const cb=document.getElementById('gc_'+i);if(cb)cb.dataset.date=eff;
-  const hEl=document.getElementById('gh_'+i);if(hEl)hEl.textContent=toHijri(eff,0);
-}
-document.getElementById('genCancelBtn').onclick=()=>closeModal('genModal');
-document.getElementById('genConfirmBtn').onclick=async()=>{
-  const checked=[...document.querySelectorAll('#genList input[type=checkbox]:checked:not(:disabled)')];
-  if(!checked.length){toast('اختر شهراً واحداً على الأقل','error');return;}
-  let added=0;
-  for(const cb of checked){const d=cb.dataset.date;if(!D.slots.find(s=>s.date===d)){await sb.from('slots').insert({date:d,hijri_offset:0});added++;}}
-  closeModal('genModal');await loadAll();render();toast(`تمت إضافة ${added} موعد ✅`);
+
+document.getElementById('newSlotDate').addEventListener('change', updateNewSlotHijri);
+document.getElementById('adjMinus').onclick=()=>{
+  const inp=document.getElementById('newSlotDate');if(!inp.value)return;
+  const d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()-1);
+  inp.value=d.toISOString().slice(0,10);updateNewSlotHijri();
+};
+document.getElementById('adjPlus').onclick=()=>{
+  const inp=document.getElementById('newSlotDate');if(!inp.value)return;
+  const d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+1);
+  inp.value=d.toISOString().slice(0,10);updateNewSlotHijri();
+};
+document.getElementById('newSlotCancelBtn').onclick=()=>closeModal('newSlotModal');
+document.getElementById('newSlotConfirmBtn').onclick=async()=>{
+  const date=document.getElementById('newSlotDate').value;
+  if(!date){toast('اختر تاريخ','error');return;}
+  if(D.slots.find(s=>s.date===date)){toast('هذا التاريخ موجود من قبل','error');return;}
+  const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
+  const notes=document.getElementById('newSlotBudgetNotes').value.trim();
+  await sb.from('slots').insert({date,hijri_offset:0,budget:budget||null,budget_notes:notes||null});
+  await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',toGreg(date),null);
+  closeModal('newSlotModal');await loadAll();render();toast('تمت إضافة الطلعة ✅');
 };
 
 // swap modal
@@ -901,7 +905,9 @@ function renderHome(){
   } else {
     h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.<br>اضغط + لإضافة مواعيد.</div>`;
   }
-  h+=`<button class="btn btn-ghost btn-block" style="margin-bottom:14px;" onclick="A.openGen()">📅 توليد مواعيد هجرية</button>`;
+  if(myProfile?.is_admin){
+    h+=`<button class="btn btn-primary btn-block" style="margin-bottom:14px;" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button>`;
+  }
 
   // stats
   const upcoming=D.slots.filter(s=>daysUntil(s.date)>0).length;
@@ -1132,12 +1138,11 @@ function renderSettingsInto(prefix){
   </div>
   <p style="font-size:11px;color:var(--muted);margin:0 0 10px;">للحصول على الإحداثيات: افتح جوجل ماب → كليك يمين على الموقع → انسخ الأرقام.</p>
   <button class="btn btn-primary btn-block" onclick="A.saveChalet()">حفظ</button></div>
-  <div class="card"><div class="h2">🗓️ إضافة تاريخ يدوي</div>
-  <div class="field"><input type="date" id="nD"></div>
-  <button class="btn btn-primary btn-block" onclick="A.addSlot()">إضافة</button></div>`;
+  ${myProfile?.is_admin?`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
+  <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`:''}\``;
   if(D.slots.length){
-    h+=`<div class="card"><div class="h2" style="font-size:15px;">التواريخ (${D.slots.length})</div>`;
-    D.slots.forEach(s=>h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br><span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>${s.host_name?' · '+esc(s.host_name):' · متاح'}</div><button class="btn btn-danger btn-xs" onclick="A.removeSlot('${s.id}')">حذف</button></div>`);
+    h+=`<div class="card"><div class="h2" style="font-size:15px;">الطلعات (${D.slots.length})</div>`;
+    D.slots.forEach(s=>h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br><span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>${s.host_name?' · '+esc(s.host_name):' · متاح'}</div>${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.removeSlot('${s.id}')">حذف</button>`:''}</div>`);
     h+=`</div>`;
   }
   h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
@@ -1184,7 +1189,7 @@ function openEditUser(uid,name,phone,email){
 /* ════════════════ GLOBAL ACTIONS ════════════════ */
 window.A={
   book:bookSlot,rsvp:setRsvp,resolveSwap,adjHijri:adjustHijri,
-  openSwap:openSwapModal,openGen,genAdj,
+  openSwap:openSwapModal,openNewSlot,
   logRem,sendCustom,openBudget:openBudgetModal,
   markAllRead,markRead,deleteNotif,
   calPrev(){calYear--;selectedDate=null;renderCalendar();},
@@ -1205,7 +1210,7 @@ window.A={
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
   saveChalet(){saveChalet(document.getElementById('sN')?.value.trim(),document.getElementById('sA')?.value.trim(),document.getElementById('sM')?.value.trim(),parseFloat(document.getElementById('sLat')?.value)||null,parseFloat(document.getElementById('sLng')?.value)||null);},
-  addSlot(){addSlot(document.getElementById('nD')?.value);},
+
   removeSlot,
   addMember(){const n=document.getElementById('nM')?.value.trim();addMember(n);if(document.getElementById('nM'))document.getElementById('nM').value='';},
   removeMember,toggleAdmin,openEditUser,
