@@ -5,13 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>دوريتنا</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="دوريتنا">
-<meta name="theme-color" content="#101D23">
+<meta name="theme-color" content="#F5F0E8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Lalezar&family=Tajawal:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* ── Light Theme (default) ── */
 :root{
+  --bg:#F5F0E8;--bg-el:#EDE8DF;--bg-card:#FFFFFF;--bg-soft:#F0EBE1;
+  --amber:#B8761A;--amber-s:rgba(184,118,26,.12);
+  --ember:#B85A2A;--ember-s:rgba(184,90,42,.12);
+  --sage:#3A7D44;--sage-s:rgba(58,125,68,.12);
+  --danger:#C1554A;--danger-s:rgba(193,85,74,.12);
+  --blue:#2E6DA4;--blue-s:rgba(46,109,164,.12);
+  --purple:#6B4FA8;--purple-s:rgba(107,79,168,.12);
+  --text:#1A1208;--muted:#7A6E5F;
+  --border:rgba(26,18,8,.12);--bsoft:rgba(26,18,8,.07);
+  --shadow:0 1px 4px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --rlg:20px;--rmd:14px;--rsm:10px;
+  --fd:'Lalezar',sans-serif;--fb:'Tajawal',sans-serif;--fm:'IBM Plex Mono',monospace;
+}
+
+/* ── Dark Theme ── */
+[data-theme="dark"]{
   --bg:#101D23;--bg-el:#16262E;--bg-card:#1C333C;--bg-soft:#203945;
   --amber:#E3A23D;--amber-s:rgba(227,162,61,.16);
   --ember:#CC6B49;--ember-s:rgba(204,107,73,.16);
@@ -21,11 +39,10 @@
   --purple:#9B7FD4;--purple-s:rgba(155,127,212,.16);
   --text:#F3ECDD;--muted:#92A8AD;
   --border:rgba(243,236,221,.12);--bsoft:rgba(243,236,221,.07);
-  --rlg:20px;--rmd:14px;--rsm:10px;
-  --fd:'Lalezar',sans-serif;--fb:'Tajawal',sans-serif;--fm:'IBM Plex Mono',monospace;
+  --shadow:none;
 }
 *{box-sizing:border-box;}html,body{margin:0;padding:0;}
-body{background:radial-gradient(ellipse 600px 300px at 50% -10%,rgba(227,162,61,.10),transparent 60%),var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;-webkit-font-smoothing:antialiased;}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;}
 button,input,textarea,select{font-family:inherit;}
 
 /* ── shell ── */
@@ -51,7 +68,7 @@ button,input,textarea,select{font-family:inherit;}
 .nav-item .nav-badge{position:absolute;top:5px;right:calc(50% - 14px);background:var(--danger);color:#fff;font-size:9px;min-width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg-el);}
 
 /* ── generic ── */
-.card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:16px;margin-bottom:14px;}
+.card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);}
 .hint{font-size:12px;color:var(--muted);margin:0 2px 14px;line-height:1.7;}
 .empty{text-align:center;padding:32px 14px;color:var(--muted);border:1px dashed var(--border);border-radius:var(--rlg);font-size:13px;line-height:1.9;}
 .empty .ei{font-size:28px;display:block;margin-bottom:8px;}
@@ -283,6 +300,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
         </div>
       </div>
       <div class="top-actions">
+        <button class="icon-btn" id="themeBtn" title="تبديل الثيم">🌙</button>
         <button class="icon-btn" id="notifBtn" title="التنبيهات">
           🔔<span class="notif-badge" id="notifBadge" style="display:none;">0</span>
         </button>
@@ -1378,6 +1396,22 @@ window.A={
 
 document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>setTab(n.dataset.tab)));
 document.getElementById('refreshBtn')?.addEventListener('click',async()=>{await loadAll();render();toast('تم التحديث ✓');});
+
+// ── theme toggle ──
+(function(){
+  const saved=localStorage.getItem('dawretna-theme')||'light';
+  applyTheme(saved);
+})();
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'');
+  const btn=document.getElementById('themeBtn');
+  if(btn) btn.textContent=t==='dark'?'☀️':'🌙';
+  localStorage.setItem('dawretna-theme',t);
+}
+document.getElementById('themeBtn')?.addEventListener('click',()=>{
+  const cur=localStorage.getItem('dawretna-theme')||'light';
+  applyTheme(cur==='dark'?'light':'dark');
+});
 document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifications'));
 
 // init
