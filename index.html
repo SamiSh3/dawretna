@@ -375,7 +375,9 @@ details.dg[open] summary::before{transform:rotate(90deg);}
   </div>
 </div>
 
-<div class="modal-overlay hidden" id="adminEditModal">
+<div class="modal-overlay hidden" id="calSlotModal">
+  <div class="modal-box" id="calSlotBox"></div>
+</div>
   <div class="modal-box">
     <h2>✏️ تعديل بيانات العضو</h2>
     <input type="hidden" id="editUserId">
@@ -1018,39 +1020,89 @@ function renderCalendar(){
   // selected event detail
   if(selectedDate){
     const slot=D.slots.find(s=>s.date===selectedDate);
-    if(slot){
-      const du=daysUntil(slot.date);const isPast=du<0;
-      const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
-      let yes=0,no=0;
-      const chips=D.team.map(t=>{const rv=sRsvp.find(r=>r.member_name===t.name);if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;}).join('');
-      h+=`<div class="slot-detail" style="margin-top:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div><div class="slot-date-g">${esc(toGreg(slot.date))}</div>
-          <div class="slot-date-h">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
-          <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
-            <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:20px;height:20px;border-radius:50%;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="A.adjHijri('${slot.id}',-1)">−</button>
-            <span style="font-size:10px;color:var(--muted);">±١</span>
-            <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:20px;height:20px;border-radius:50%;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="A.adjHijri('${slot.id}',1)">+</button>
-          </div></div>
-          <button class="btn btn-ghost btn-xs" onclick="A.calClick(null)">✕</button>
-        </div>
-        ${slot.host_name?`<div style="font-size:13px;margin-bottom:6px;">صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b></div>`:(!isPast?`<button class="btn btn-primary btn-sm" onclick="A.book('${slot.id}')">🙋 احجز</button>`:'<div class="muted" style="font-size:12px;">لم يُحجز</div>')}
-        ${slot.budget?`<div style="font-size:12px;color:var(--sage);margin-bottom:6px;">💰 ${slot.budget.toLocaleString('ar')} ﷼يال${slot.budget_notes?' — '+esc(slot.budget_notes):''}</div>`:''}
-        ${chips?`<div class="attendees">${chips}</div><div class="muted" style="font-size:11px;margin-bottom:8px;">سيحضر ${yes} · اعتذر ${no}</div>`:''}
-        ${!isPast?`<div style="display:flex;gap:6px;">
-          <button class="btn btn-sage btn-sm btn-block" onclick="A.rsvp('${slot.id}','yes')">✅ سأحضر</button>
-          <button class="btn btn-danger btn-sm btn-block" onclick="A.rsvp('${slot.id}','no')">🙅 أعتذر</button>
-        </div>`:''}
-        ${myProfile?.is_admin?`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${slot.id}')">💰 الميزانية</button>`:''}
-        <details class="dg"><summary>🔔 التذكيرات</summary>
-          ${Object.entries(REM_DEFS).map(([k,l])=>{const s2=D.reminders.find(r=>r.slot_id===slot.id&&r.type===k);return`<div class="rem-row"><span style="font-size:12px;">${l}</span><a class="btn btn-ghost btn-sm" target="_blank" href="${esc(waLink(remText(k,slot)))}" onclick="A.logRem('${slot.id}','${k}')">إرسال</a></div>`;}).join('')}
-          <div style="margin-top:8px;"><textarea id="cm_${slot.id}" placeholder="رسالة مخصصة..." style="width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px;font-size:12px;min-height:44px;font-family:var(--fb);"></textarea>
-          <button class="btn btn-primary btn-sm btn-block" style="margin-top:5px;" onclick="A.sendCustom('${slot.id}')">📤 إرسال واتساب</button></div>
-        </details>
-      </div>`;
-    }
+    if(slot) openCalSlotModal(slot);
+    selectedDate=null;
   }
   document.getElementById('content').innerHTML=h;
+}
+
+function openCalSlotModal(slot){
+  const du=daysUntil(slot.date),isPast=du<0;
+  const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
+  let yes=0,no=0;
+  const chips=D.team.map(t=>{
+    const rv=sRsvp.find(r=>r.member_name===t.name);
+    if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;
+    const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');
+    return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;
+  }).join('');
+  const myRv=sRsvp.find(r=>r.member_name===myName());
+  const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
+  const outSw=myName()?D.swaps.find(s=>s.from_slot_id===slot.id&&s.requester_name===myName()):null;
+
+  let h=`
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-family:var(--fd);font-size:20px;">${esc(toGreg(slot.date))}</div>
+        <div style="font-size:12px;color:var(--amber);font-family:var(--fm);margin-top:3px;">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
+        ${!isPast?`<div style="display:flex;align-items:center;gap:4px;margin-top:6px;">
+          <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="A.adjHijriCal('${slot.id}',-1)">−</button>
+          <span style="font-size:10px;color:var(--muted);">تعديل هجري</span>
+          <button style="background:var(--bg-soft);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;" onclick="A.adjHijriCal('${slot.id}',1)">+</button>
+        </div>`:''}
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="closeModal('calSlotModal')">✕</button>
+    </div>
+
+    <!-- صاحب الطلعة -->
+    <div style="background:var(--bg-soft);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px;">
+      ${slot.host_name
+        ?`<div style="font-size:13px;">🙍 صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b> ${slot.host_name===myName()?'<span class="badge-you">أنت</span>':''}</div>`
+        :`<div style="font-size:13px;color:var(--muted);">لم يُحجز بعد</div>`
+      }
+      ${slot.budget?`<div style="font-size:12px;color:var(--sage);margin-top:5px;">💰 ${Number(slot.budget).toLocaleString('ar')} ﷼${slot.budget_notes?' — '+esc(slot.budget_notes):''}</div>`:''}
+      ${!isPast?`<span style="font-size:11px;font-family:var(--fm);color:${du<=3?'var(--ember)':'var(--muted)'};">${du===0?'اليوم! 🔥':'بعد '+du+' يوم'}</span>`:'<span style="font-size:11px;color:var(--sage);">انتهت</span>'}
+    </div>
+
+    <!-- الحضور -->
+    ${chips?`<div class="attendees" style="margin-bottom:6px;">${chips}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${D.team.length-yes-no}</div>`:''}
+
+    <!-- RSVP -->
+    ${!isPast&&slot.host_name?`<div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','yes')">✅ سأحضر</button>
+      <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
+    </div>`:''}
+
+    <!-- حجز -->
+    ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
+
+    <!-- تبديل -->
+    ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`<button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');A.openSwap('${slot.id}')">🔁 طلب تبديل</button>`:''}
+    ${inSw?`<div class="note" style="margin-bottom:10px;">🔁 <b>${esc(inSw.requester_name)}</b> طلب تبديل يومك.
+      <div style="display:flex;gap:6px;margin-top:7px;">
+        <button class="btn btn-sage btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',true);closeModal('calSlotModal')">✅ أوافق</button>
+        <button class="btn btn-danger btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',false);closeModal('calSlotModal')">❌ أرفض</button>
+      </div></div>`:''}
+    ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد على طلب التبديل.</div>`:''}
+
+    <!-- تذكيرات -->
+    <details class="dg"><summary>🔔 التذكيرات</summary>
+      ${Object.entries(REM_DEFS).map(([k,l])=>{
+        const sent=D.reminders.find(r=>r.slot_id===slot.id&&r.type===k);
+        return`<div class="rem-row"><div><span style="font-size:12px;">${l}</span>${sent?`<span style="font-size:10px;color:var(--sage);display:block;">أُرسلت</span>`:''}</div>
+        <a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="${esc(waLink(remText(k,slot)))}" onclick="A.logRem('${slot.id}','${k}')">إرسال</a></div>`;
+      }).join('')}
+      <div style="margin-top:8px;">
+        <textarea id="cm_${slot.id}" placeholder="رسالة مخصصة..." style="width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px;font-size:12px;min-height:44px;font-family:var(--fb);outline:none;"></textarea>
+        <button class="btn btn-primary btn-sm btn-block" style="margin-top:5px;" onclick="A.sendCustom('${slot.id}')">📤 إرسال واتساب</button>
+      </div>
+    </details>
+
+    ${myProfile?.is_admin?`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="closeModal('calSlotModal');A.openBudget('${slot.id}')">💰 تعديل الميزانية</button>`:''}
+  `;
+  document.getElementById('calSlotBox').innerHTML=h;
+  openModal('calSlotModal');
 }
 
 /* ── Notifications ── */
@@ -1355,6 +1407,9 @@ window.A={
   calPrev(){calYear--;selectedDate=null;renderCalendar();},
   calNext(){calYear++;selectedDate=null;renderCalendar();},
   calClick(d){selectedDate=d;renderCalendar();},
+  async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
+  async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
+  async bookCal(id){await bookSlot(id);closeModal('calSlotModal');},
   setTripsTab(t){_tripsSubTab=t;renderTrips();},
   setMoreTab(t){_moreSubTab=t;renderMore();},
   createSpecial(){createSpecial(document.getElementById('spT')?.value.trim(),document.getElementById('spD')?.value,document.getElementById('spL')?.value.trim());},
