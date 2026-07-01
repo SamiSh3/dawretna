@@ -1141,12 +1141,39 @@ async function togglePayment(slotId,memberName){
 }
 
 function renderBudget(){
-  const slotsWithBudget=D.slots.filter(s=>s.budget&&daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
-  let h=`<p class="hint">تتبع ميزانية كل طلعة — من دفع ومن لم يدفع بعد.</p>`;
+  const allUpcoming=D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
+  const slotsWithBudget=allUpcoming.filter(s=>s.budget);
+  const slotsNoBudget=allUpcoming.filter(s=>!s.budget);
+  let h=`<p class="hint">إدارة ميزانية الطلعات وتتبع من دفع ومن لم يدفع.</p>`;
+
+  // ── قسم إضافة/تعديل الميزانية للمشرفين ──
+  if(myProfile?.is_admin&&allUpcoming.length){
+    h+=`<div class="card">
+      <div class="h2" style="font-size:16px;">💰 تحديد ميزانية طلعة</div>
+      <div class="field" style="margin-top:10px;"><label>الطلعة</label>
+        <select id="budgetSlotSel">
+          ${allUpcoming.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))} ${s.budget?'— '+Number(s.budget).toLocaleString('ar')+' ر':''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label>المبلغ الكلي (ريال)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
+        <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ الميزانية</button>
+    </div>`;
+  }
+
+  // ── طلعات بدون ميزانية ──
+  if(slotsNoBudget.length&&myProfile?.is_admin){
+    h+=`<div class="note" style="margin-bottom:14px;">⚠️ ${slotsNoBudget.length} طلعة بدون ميزانية: ${slotsNoBudget.map(s=>esc(toGregShort(s.date))).join(' · ')}</div>`;
+  }
+
   if(!slotsWithBudget.length){
-    h+=`<div class="empty"><span class="ei">💰</span>لا توجد طلعات بميزانية محددة.<br>${myProfile?.is_admin?'أضف ميزانية من الواجهة الرئيسية أو التقويم.':'انتظر المشرف ليضيف الميزانية.'}</div>`;
+    h+=`<div class="empty"><span class="ei">💰</span>${myProfile?.is_admin?'حدد ميزانية طلعة من الأعلى لتظهر هنا.':'انتظر المشرف ليضيف الميزانية.'}</div>`;
     document.getElementById('content').innerHTML=h;return;
   }
+
+  // ── عرض كل طلعة ──
   slotsWithBudget.forEach(slot=>{
     const pays=D.payments.filter(p=>p.slot_id===slot.id);
     const members=D.team;
@@ -1155,6 +1182,7 @@ function renderBudget(){
     const unpaidM=members.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
     const collected=paidM.length*share;
     const pct=slot.budget?Math.min(100,Math.round(collected/slot.budget*100)):0;
+
     h+=`<div class="budget-slot">
       <div class="budget-slot-header">
         <div>
@@ -1167,41 +1195,45 @@ function renderBudget(){
           <div class="budget-total-lbl">الميزانية الكلية</div>
         </div>
       </div>
+
       <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--muted);margin:-8px 0 10px;text-align:left;">${pct}% تم تحصيله</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px;text-align:left;">${pct}% تم تحصيله — ${collected.toLocaleString('ar')} من ${Number(slot.budget).toLocaleString('ar')} ريال</div>
+
       <div class="budget-summary">
         <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
         <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger)">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
         <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber)">${share.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
-        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${collected.toLocaleString('ar')}</div><div class="budget-stat-lbl">تم تحصيله</div></div>
       </div>
+
       ${slot.budget_notes?`<div class="note" style="margin-bottom:12px;">📝 ${esc(slot.budget_notes)}</div>`:''}
+
       <div>`;
-    members.forEach(m=>{
+
+    // الأعضاء الذين دفعوا أولاً
+    [...paidM,...unpaidM].forEach(m=>{
       const pay=pays.find(p=>p.member_name===m.name);
       const paid=pay?.paid||false;
       h+=`<div class="member-payment-row">
         <div class="payment-av">${m.name[0]||'؟'}</div>
         <div class="payment-info">
           <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
-          <div class="payment-amount">${paid?`دفع ${share.toLocaleString('ar')} ريال`:`متبقي ${share.toLocaleString('ar')} ريال`}</div>
+          <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">
+            ${paid?`✅ دفع ${share.toLocaleString('ar')} ريال`:`⏳ متبقي ${share.toLocaleString('ar')} ريال`}
+          </div>
         </div>
-        <div class="payment-status">
-          ${paid?`<span class="paid-badge">✅ دفع</span>`:`<span class="unpaid-badge">⏳ لم يدفع</span>`}
-          ${myProfile?.is_admin?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" style="margin-right:4px;" onclick="A.togglePay('${slot.id}','${esc(m.name).replace(/'/g,"\\'")}')">
-            ${paid?'إلغاء':'تأكيد دفع'}
-          </button>`:''}
-        </div>
+        ${myProfile?.is_admin?`
+        <button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slot.id}','${esc(m.name).replace(/'/g,"\\'")}')">
+          ${paid?'إلغاء':'دفع ✓'}
+        </button>`:`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`}
       </div>`;
     });
+
     h+=`</div>`;
+
     if(unpaidM.length&&myProfile?.is_admin){
       const names=unpaidM.map(m=>m.name).join('، ');
-      const msg=`يا شباب، تذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${share.toLocaleString('ar')} ريال\nاللي ما دفع بعد: ${names}`;
-      h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين واتساب</a>`;
-    }
-    if(myProfile?.is_admin){
-      h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="A.openBudget('${slot.id}')">✏️ تعديل الميزانية</button>`;
+      const msg=`يا شباب 👋\nتذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${share.toLocaleString('ar')} ريال\nاللي ما دفع بعد: ${names}\nجزاكم الله خير 🙏`;
+      h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين عبر واتساب</a>`;
     }
     h+=`</div>`;
   });
@@ -1325,6 +1357,15 @@ window.A={
   addMember(){const n=document.getElementById('nM')?.value.trim();addMember(n);if(document.getElementById('nM'))document.getElementById('nM').value='';},
   removeMember,toggleAdmin,openEditUser,
   togglePay:(slotId,name)=>togglePayment(slotId,name),
+  async saveInlineBudget(){
+    const slotId=document.getElementById('budgetSlotSel')?.value;
+    const amount=parseFloat(document.getElementById('inlineBudgetAmt')?.value)||null;
+    const notes=document.getElementById('inlineBudgetNotes')?.value.trim();
+    if(!slotId){toast('اختر طلعة','error');return;}
+    if(!amount){toast('أدخل المبلغ','error');return;}
+    await sb.from('slots').update({budget:amount,budget_notes:notes||null}).eq('id',slotId);
+    await loadAll();renderBudget();toast('تم حفظ الميزانية 💰');
+  },
   sendEmailReminder(){
     const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
     if(!next){toast('ما فيه موعد قادم','error');return;}
