@@ -889,7 +889,7 @@ function renderHome(){
       <div class="hero-meta">
         ${next.host_name?`<span class="hero-host">🙍 ${esc(next.host_name)}</span>`:'<span class="hero-host muted">لم يُحجز بعد</span>'}
         <span class="hero-countdown ${du>7?'far':''}">${du===0?'اليوم! 🔥':'بعد '+du+' يوم'}</span>
-        ${next.budget?`<span class="hero-budget">💰 ${next.budget.toLocaleString('ar')} ريال</span>`:''}
+        ${next.budget?`<span class="hero-budget">💰 ${next.budget.toLocaleString('ar')} ﷼يال</span>`:''}
       </div>
       <div class="attendees">${chips||''}</div>
       ${chips?`<div class="muted" style="font-size:11px;margin-bottom:10px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`:''}
@@ -1017,7 +1017,7 @@ function renderCalendar(){
           <button class="btn btn-ghost btn-xs" onclick="A.calClick(null)">✕</button>
         </div>
         ${slot.host_name?`<div style="font-size:13px;margin-bottom:6px;">صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b></div>`:(!isPast?`<button class="btn btn-primary btn-sm" onclick="A.book('${slot.id}')">🙋 احجز</button>`:'<div class="muted" style="font-size:12px;">لم يُحجز</div>')}
-        ${slot.budget?`<div style="font-size:12px;color:var(--sage);margin-bottom:6px;">💰 ${slot.budget.toLocaleString('ar')} ريال${slot.budget_notes?' — '+esc(slot.budget_notes):''}</div>`:''}
+        ${slot.budget?`<div style="font-size:12px;color:var(--sage);margin-bottom:6px;">💰 ${slot.budget.toLocaleString('ar')} ﷼يال${slot.budget_notes?' — '+esc(slot.budget_notes):''}</div>`:''}
         ${chips?`<div class="attendees">${chips}</div><div class="muted" style="font-size:11px;margin-bottom:8px;">سيحضر ${yes} · اعتذر ${no}</div>`:''}
         ${!isPast?`<div style="display:flex;gap:6px;">
           <button class="btn btn-sage btn-sm btn-block" onclick="A.rsvp('${slot.id}','yes')">✅ سأحضر</button>
@@ -1152,7 +1152,7 @@ function renderBudget(){
       <div class="h2" style="font-size:16px;">💰 تحديد ميزانية طلعة</div>
       <div class="field" style="margin-top:10px;"><label>الطلعة</label>
         <select id="budgetSlotSel">
-          ${allUpcoming.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))} ${s.budget?'— '+Number(s.budget).toLocaleString('ar')+' ر':''}</option>`).join('')}
+          ${allUpcoming.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))} ${s.budget?'— '+Number(s.budget).toLocaleString('ar')+' ﷼':''}</option>`).join('')}
         </select>
       </div>
       <div class="row">
@@ -1191,13 +1191,13 @@ function renderBudget(){
           ${slot.host_name?`<div style="font-size:12px;color:var(--muted);margin-top:3px;">صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b></div>`:''}
         </div>
         <div style="text-align:left;">
-          <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ر</div>
+          <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ﷼</div>
           <div class="budget-total-lbl">الميزانية الكلية</div>
         </div>
       </div>
 
       <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px;text-align:left;">${pct}% تم تحصيله — ${collected.toLocaleString('ar')} من ${Number(slot.budget).toLocaleString('ar')} ريال</div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 12px;text-align:left;">${pct}% تم تحصيله — ${collected.toLocaleString('ar')} من ${Number(slot.budget).toLocaleString('ar')} ﷼يال</div>
 
       <div class="budget-summary">
         <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
@@ -1218,7 +1218,7 @@ function renderBudget(){
         <div class="payment-info">
           <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
           <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">
-            ${paid?`✅ دفع ${share.toLocaleString('ar')} ريال`:`⏳ متبقي ${share.toLocaleString('ar')} ريال`}
+            ${paid?`✅ دفع ${share.toLocaleString('ar')} ﷼يال`:`⏳ متبقي ${share.toLocaleString('ar')} ﷼يال`}
           </div>
         </div>
         ${myProfile?.is_admin?`
@@ -1232,7 +1232,7 @@ function renderBudget(){
 
     if(unpaidM.length&&myProfile?.is_admin){
       const names=unpaidM.map(m=>m.name).join('، ');
-      const msg=`يا شباب 👋\nتذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${share.toLocaleString('ar')} ريال\nاللي ما دفع بعد: ${names}\nجزاكم الله خير 🙏`;
+      const msg=`يا شباب 👋\nتذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${share.toLocaleString('ar')} ﷼يال\nاللي ما دفع بعد: ${names}\nجزاكم الله خير 🙏`;
       h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين عبر واتساب</a>`;
     }
     h+=`</div>`;
