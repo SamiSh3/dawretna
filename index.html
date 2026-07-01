@@ -183,7 +183,29 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 .mem-img{width:100%;display:block;max-height:240px;object-fit:cover;}
 .mem-body{padding:12px 14px;}
 
-/* ── login ── */
+/* ── budget tab ── */
+.budget-slot{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px;margin-bottom:14px;}
+.budget-slot-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.budget-slot-date{font-family:var(--fd);font-size:17px;}
+.budget-slot-hijri{font-size:11px;color:var(--amber);font-family:var(--fm);margin-top:2px;}
+.budget-total{font-family:var(--fd);font-size:22px;color:var(--sage);}
+.budget-total-lbl{font-size:10px;color:var(--muted);}
+.budget-progress{height:8px;background:var(--bg-el);border-radius:999px;overflow:hidden;margin-bottom:12px;}
+.budget-progress-bar{height:8px;background:linear-gradient(90deg,var(--sage),var(--amber));border-radius:999px;transition:.4s;}
+.budget-summary{display:flex;gap:10px;margin-bottom:12px;}
+.budget-stat{flex:1;background:var(--bg-el);border-radius:var(--rsm);padding:8px;text-align:center;}
+.budget-stat-num{font-family:var(--fd);font-size:18px;}
+.budget-stat-lbl{font-size:10px;color:var(--muted);}
+.member-payment-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bsoft);}
+.member-payment-row:last-of-type{border-bottom:none;}
+.payment-av{width:32px;height:32px;border-radius:50%;background:var(--bg-soft);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--amber);flex-shrink:0;overflow:hidden;}
+.payment-av img{width:100%;height:100%;object-fit:cover;}
+.payment-info{flex:1;min-width:0;}
+.payment-name{font-size:13px;font-weight:700;}
+.payment-amount{font-size:11px;color:var(--muted);}
+.payment-status{display:flex;align-items:center;gap:5px;}
+.paid-badge{background:var(--sage-s);color:var(--sage);font-size:11px;padding:3px 9px;border-radius:999px;font-weight:700;}
+.unpaid-badge{background:var(--danger-s);color:var(--danger);font-size:11px;padding:3px 9px;border-radius:999px;font-weight:700;}
 #loginScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;}
 .login-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rlg);padding:28px 22px;max-width:380px;width:100%;text-align:center;}
 .login-icon{font-size:44px;margin-bottom:8px;}
@@ -273,6 +295,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
     <div class="bottom-nav-inner">
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
       <button class="nav-item" data-tab="calendar"><span class="nav-icon">📅</span>التقويم</button>
+      <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="notifications"><span class="nav-icon">🔔</span>التنبيهات<span class="nav-badge" id="navBadge" style="display:none;"></span></button>
       <button class="nav-item" data-tab="trips"><span class="nav-icon">🎯</span>طلعات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
@@ -371,7 +394,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab='home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[]};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[]};
 let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
@@ -466,7 +489,7 @@ function updateAvatar(){
 }
 async function loadAll(){
   if(!session)return;
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,nt]=await Promise.all([
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,nt,py]=await Promise.all([
     sb.from('chalet').select('*').limit(1),
     sb.from('team_members').select('*').order('created_at'),
     sb.from('slots').select('*').order('date'),
@@ -479,11 +502,13 @@ async function loadAll(){
     sb.from('polls').select('*').order('created_at',{ascending:false}),
     sb.from('poll_votes').select('*'),
     sb.from('notifications').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50),
+    sb.from('budget_payments').select('*'),
   ]);
   D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
   D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
   D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
   D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];D.notifications=nt.data||[];
+  D.payments=py.data||[];
   updateNotifBadge();
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
@@ -836,6 +861,7 @@ function render(){
   else if(tab==='calendar')renderCalendar();
   else if(tab==='notifications')renderNotifications();
   else if(tab==='trips')renderTrips();
+  else if(tab==='budget')renderBudget();
   else if(tab==='more')renderMore();
   else if(tab==='settings')renderSettings();
   else if(tab==='admin')renderAdmin();
@@ -1098,6 +1124,90 @@ function renderTrips(){
 let _tripsSubTab='special';
 
 /* ── More (memories + settings shortcuts) ── */
+/* ── Budget ── */
+async function togglePayment(slotId,memberName){
+  const existing=D.payments.find(p=>p.slot_id===slotId&&p.member_name===memberName);
+  const slot=D.slots.find(s=>s.id===slotId);
+  const share=slot?.budget&&D.team.length?Math.round(slot.budget/D.team.length):null;
+  if(existing){
+    await sb.from('budget_payments').update({paid:!existing.paid,updated_by:myName()}).eq('id',existing.id);
+  } else {
+    await sb.from('budget_payments').upsert({slot_id:slotId,member_name:memberName,paid:true,amount:share,updated_by:myName()},{onConflict:'slot_id,member_name'});
+  }
+  if(!existing||!existing.paid){
+    await notify(memberName,'general','تم تسجيل دفعتك ✅',`طلعة ${toGregShort(slot?.date||'')}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+  }
+  await loadAll();renderBudget();
+}
+
+function renderBudget(){
+  const slotsWithBudget=D.slots.filter(s=>s.budget&&daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
+  let h=`<p class="hint">تتبع ميزانية كل طلعة — من دفع ومن لم يدفع بعد.</p>`;
+  if(!slotsWithBudget.length){
+    h+=`<div class="empty"><span class="ei">💰</span>لا توجد طلعات بميزانية محددة.<br>${myProfile?.is_admin?'أضف ميزانية من الواجهة الرئيسية أو التقويم.':'انتظر المشرف ليضيف الميزانية.'}</div>`;
+    document.getElementById('content').innerHTML=h;return;
+  }
+  slotsWithBudget.forEach(slot=>{
+    const pays=D.payments.filter(p=>p.slot_id===slot.id);
+    const members=D.team;
+    const share=members.length?Math.round(slot.budget/members.length):0;
+    const paidM=members.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
+    const unpaidM=members.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
+    const collected=paidM.length*share;
+    const pct=slot.budget?Math.min(100,Math.round(collected/slot.budget*100)):0;
+    h+=`<div class="budget-slot">
+      <div class="budget-slot-header">
+        <div>
+          <div class="budget-slot-date">${esc(toGreg(slot.date))}</div>
+          <div class="budget-slot-hijri">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
+          ${slot.host_name?`<div style="font-size:12px;color:var(--muted);margin-top:3px;">صاحب الطلعة: <b style="color:var(--amber)">${esc(slot.host_name)}</b></div>`:''}
+        </div>
+        <div style="text-align:left;">
+          <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ر</div>
+          <div class="budget-total-lbl">الميزانية الكلية</div>
+        </div>
+      </div>
+      <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin:-8px 0 10px;text-align:left;">${pct}% تم تحصيله</div>
+      <div class="budget-summary">
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger)">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber)">${share.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${collected.toLocaleString('ar')}</div><div class="budget-stat-lbl">تم تحصيله</div></div>
+      </div>
+      ${slot.budget_notes?`<div class="note" style="margin-bottom:12px;">📝 ${esc(slot.budget_notes)}</div>`:''}
+      <div>`;
+    members.forEach(m=>{
+      const pay=pays.find(p=>p.member_name===m.name);
+      const paid=pay?.paid||false;
+      h+=`<div class="member-payment-row">
+        <div class="payment-av">${m.name[0]||'؟'}</div>
+        <div class="payment-info">
+          <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
+          <div class="payment-amount">${paid?`دفع ${share.toLocaleString('ar')} ريال`:`متبقي ${share.toLocaleString('ar')} ريال`}</div>
+        </div>
+        <div class="payment-status">
+          ${paid?`<span class="paid-badge">✅ دفع</span>`:`<span class="unpaid-badge">⏳ لم يدفع</span>`}
+          ${myProfile?.is_admin?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" style="margin-right:4px;" onclick="A.togglePay('${slot.id}','${esc(m.name).replace(/'/g,"\\'")}')">
+            ${paid?'إلغاء':'تأكيد دفع'}
+          </button>`:''}
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+    if(unpaidM.length&&myProfile?.is_admin){
+      const names=unpaidM.map(m=>m.name).join('، ');
+      const msg=`يا شباب، تذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${share.toLocaleString('ar')} ريال\nاللي ما دفع بعد: ${names}`;
+      h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين واتساب</a>`;
+    }
+    if(myProfile?.is_admin){
+      h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="A.openBudget('${slot.id}')">✏️ تعديل الميزانية</button>`;
+    }
+    h+=`</div>`;
+  });
+  document.getElementById('content').innerHTML=h;
+}
+
 function renderMore(){
   let h=`<div style="display:flex;gap:7px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;">
     <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
@@ -1214,6 +1324,7 @@ window.A={
   removeSlot,
   addMember(){const n=document.getElementById('nM')?.value.trim();addMember(n);if(document.getElementById('nM'))document.getElementById('nM').value='';},
   removeMember,toggleAdmin,openEditUser,
+  togglePay:(slotId,name)=>togglePayment(slotId,name),
   sendEmailReminder(){
     const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
     if(!next){toast('ما فيه موعد قادم','error');return;}
