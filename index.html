@@ -378,6 +378,8 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 <div class="modal-overlay hidden" id="calSlotModal">
   <div class="modal-box" id="calSlotBox"></div>
 </div>
+
+<div class="modal-overlay hidden" id="adminEditModal">
   <div class="modal-box">
     <h2>✏️ تعديل بيانات العضو</h2>
     <input type="hidden" id="editUserId">
@@ -418,15 +420,30 @@ let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},te
 let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
+let _loggedIn=false;
+
 async function initAuth(){
-  const {data}=await sb.auth.getSession();
+  const{data}=await sb.auth.getSession();
   session=data.session;
+
   sb.auth.onAuthStateChange(async(ev,s)=>{
     session=s;
-    if(ev==='SIGNED_IN'){await afterLogin();}
-    else if(ev==='SIGNED_OUT'){showLogin();}
+    if((ev==='SIGNED_IN'||ev==='TOKEN_REFRESHED'||ev==='INITIAL_SESSION')&&s&&!_loggedIn){
+      _loggedIn=true;
+      await afterLogin();
+    } else if(ev==='SIGNED_OUT'){
+      _loggedIn=false;
+      myProfile=null;
+      showLogin();
+    }
   });
-  if(session)await afterLogin(); else showLogin();
+
+  if(session&&!_loggedIn){
+    _loggedIn=true;
+    await afterLogin();
+  } else if(!session){
+    showLogin();
+  }
 }
 async function afterLogin(){
   await loadProfile();
@@ -482,7 +499,12 @@ async function doEmailSignup(){
 }
 function showErr(m){const el=document.getElementById('loginErr');el.textContent=m;el.style.display='block';}
 function hideErr(){document.getElementById('loginErr').style.display='none';}
-document.getElementById('signOutBtn').onclick=async()=>{closeModal('profileModal');await sb.auth.signOut();};
+document.getElementById('signOutBtn').onclick=async()=>{
+  closeModal('profileModal');
+  _loggedIn=false;
+  myProfile=null;
+  await sb.auth.signOut();
+};
 
 /* ════════════════ DATA ════════════════ */
 async function loadProfile(){
