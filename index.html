@@ -452,6 +452,10 @@ async function initAuth(){
   });
 }
 async function afterLogin(){
+  // أزل الـ hash من الـ URL بعد OAuth لتجنب ##access_token في المرة القادمة
+  if(window.location.hash){
+    window.history.replaceState(null,'',window.location.pathname);
+  }
   await loadProfile();
   await loadAll();
   await checkAutoReminders();
@@ -470,7 +474,9 @@ function showApp(){
 
 // Google
 document.getElementById('googleBtn').onclick=async()=>{
-  const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+  // نظّف الرابط من أي hash قديم لتجنب ##access_token
+  const cleanUrl=window.location.origin+window.location.pathname;
+  const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:cleanUrl}});
   if(error)showErr(error.message);
 };
 
