@@ -423,43 +423,40 @@ let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 let _loggedIn=false;
 
 async function initAuth(){
+  // أزل hash فوراً قبل أي شيء عشان Supabase يقرأه أولاً
+  const hasOAuthHash = window.location.hash&&window.location.hash.includes('access_token');
+
   sb.auth.onAuthStateChange(async(ev,s)=>{
     session=s;
-
+    // تجاهل SIGNED_OUT إذا كان في الـ URL oauth hash (stale token conflict)
     if(ev==='SIGNED_OUT'){
-      _loggedIn=false;
-      myProfile=null;
-      showLogin();
+      if(!hasOAuthHash){_loggedIn=false;myProfile=null;showLogin();}
       return;
     }
-
-    // INITIAL_SESSION يطلق دائماً أول شيء عند تحميل الصفحة
-    if(ev==='INITIAL_SESSION'){
-      if(s&&!_loggedIn){
-        _loggedIn=true;
-        await afterLogin();
-      } else if(!s){
-        showLogin();
-      }
-      return;
-    }
-
-    // SIGNED_IN يطلق بعد OAuth redirect أو تسجيل دخول ناجح
-    if(ev==='SIGNED_IN'&&s&&!_loggedIn){
-      _loggedIn=true;
-      await afterLogin();
-    }
+    if(s&&!_loggedIn){_loggedIn=true;await afterLogin();}
   });
+
+  try{
+    const{data}=await sb.auth.getSession();
+    if(data.session&&!_loggedIn){
+      session=data.session;_loggedIn=true;await afterLogin();
+    } else if(!data.session){
+      setTimeout(()=>{if(!_loggedIn)showLogin();},1200);
+    }
+  }catch(e){setTimeout(()=>{if(!_loggedIn)showLogin();},1200);}
 }
+
 async function afterLogin(){
-  // أزل الـ hash من الـ URL بعد OAuth لتجنب ##access_token في المرة القادمة
-  if(window.location.hash){
-    window.history.replaceState(null,'',window.location.pathname);
+  // امسح الـ hash بعد ما Supabase استخدمه
+  if(window.location.hash&&window.location.hash.includes('access_token')){
+    window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
-  await loadProfile();
-  await loadAll();
-  await checkAutoReminders();
-  showApp();render();
+  try{
+    await loadProfile();
+    await loadAll();
+    await checkAutoReminders();
+  }catch(e){console.error('afterLogin:',e);}
+  finally{showApp();render();}
 }
 function showLogin(){
   document.getElementById('loadingScreen').style.display='none';
@@ -513,9 +510,10 @@ function showErr(m){const el=document.getElementById('loginErr');el.textContent=
 function hideErr(){document.getElementById('loginErr').style.display='none';}
 document.getElementById('signOutBtn').onclick=async()=>{
   closeModal('profileModal');
-  _loggedIn=false;
-  myProfile=null;
+  _loggedIn=false; myProfile=null;
   await sb.auth.signOut();
+  // reload الصفحة عشان نمسح أي stale state في الـ memory والـ localStorage
+  window.location.href=window.location.origin+window.location.pathname;
 };
 
 /* ════════════════ DATA ════════════════ */
