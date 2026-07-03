@@ -304,7 +304,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
         <button class="icon-btn" id="notifBtn" title="التنبيهات">
           🔔<span class="notif-badge" id="notifBadge" style="display:none;">0</span>
         </button>
-        <button class="avatar-btn" id="profileBtn" id="avatarEl">؟</button>
+        <button class="avatar-btn" id="profileBtn">؟</button>
       </div>
     </div>
     <main id="content"></main>
@@ -496,15 +496,45 @@ async function doEmailLogin(){
 }
 async function doEmailSignup(){
   hideErr();
-  // تحقق من حالة التسجيل
-  const{data:setting}=await sb.from('app_settings').select('value').eq('key','registrations_enabled').single();
-  if(setting?.value==='false'){showErr('التسجيل مغلق حالياً. تواصل مع المشرف.');return;}
-  const email=document.getElementById('loginEmail').value.trim(),pass=document.getElementById('loginPass').value,name=document.getElementById('loginName').value.trim();
-  if(!email||!pass||!name){showErr('عبّي كل الحقول');return;}
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const name=document.getElementById('loginName').value.trim();
+  if(!email||!pass||!name){showErr('عبّي الاسم والإيميل وكلمة المرور');return;}
   if(pass.length<6){showErr('كلمة المرور 6 أحرف على الأقل');return;}
-  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name},emailRedirectTo:window.location.href}});
-  if(error)showErr(error.message.includes('already')?'هذا الإيميل مسجل من قبل':error.message);
-  else toast('تم الإنشاء! تحقق من بريدك إذا طُلب تأكيد ✅');
+  if(!/\S+@\S+\.\S+/.test(email)){showErr('الإيميل غير صحيح');return;}
+
+  // تحقق حالة التسجيل (anon read)
+  try{
+    const{data:s}=await sb.from('app_settings').select('value').eq('key','registrations_enabled').maybeSingle();
+    if(s?.value==='false'){showErr('التسجيل مغلق. تواصل مع المشرف.');return;}
+  }catch(e){}
+
+  const cleanUrl=window.location.origin+window.location.pathname;
+  const{data,error}=await sb.auth.signUp({
+    email,password:pass,
+    options:{data:{full_name:name},emailRedirectTo:cleanUrl}
+  });
+
+  if(error){
+    if(error.message.includes('already registered')||error.message.includes('already')){
+      showErr('هذا الإيميل مسجل من قبل — جرب تسجيل الدخول');
+    } else if(error.message.includes('rate')){
+      showErr('كثرت المحاولات، انتظر قليلاً وحاول مرة ثانية');
+    } else {
+      showErr(error.message);
+    }
+    return;
+  }
+
+  // إذا المستخدم يحتاج تأكيد إيميل
+  if(data.user&&!data.session){
+    toast('📧 تم إرسال رسالة التأكيد لبريدك — تحقق منه وفعّل الحساب');
+    document.getElementById('loginName').value='';
+    document.getElementById('nameField').style.display='none';
+  } else if(data.session){
+    // تسجيل مباشر بدون تأكيد
+    toast('تم إنشاء الحساب بنجاح ✅');
+  }
 }
 function showErr(m){const el=document.getElementById('loginErr');el.textContent=m;el.style.display='block';}
 function hideErr(){document.getElementById('loginErr').style.display='none';}
@@ -530,16 +560,20 @@ async function loadProfile(){
 function updateAvatar(){
   const btn=document.getElementById('profileBtn');
   if(!btn||!myProfile)return;
-  if(myProfile.avatar_url) btn.innerHTML=`<img src="${esc(myProfile.avatar_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-  else btn.textContent=(myProfile.name||'?')[0];
-  // add admin tab in bottom nav if needed
+  if(myProfile.avatar_url){
+    btn.innerHTML=`<img src="${esc(myProfile.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+  } else {
+    const initial=(myProfile.name||myProfile.email||'?')[0].toUpperCase();
+    btn.innerHTML=`<span style="font-size:15px;font-weight:700;color:var(--amber);line-height:1;">${esc(initial)}</span>`;
+  }
+  // add admin tab
   if(myProfile.is_admin&&!document.querySelector('[data-tab=admin]')){
     const nav=document.querySelector('.bottom-nav-inner');
-    const btn=document.createElement('button');
-    btn.className='nav-item';btn.dataset.tab='admin';
-    btn.innerHTML='<span class="nav-icon">👑</span>مشرف';
-    nav.appendChild(btn);
-    btn.addEventListener('click',()=>{setTab('admin');});
+    const t=document.createElement('button');
+    t.className='nav-item';t.dataset.tab='admin';
+    t.innerHTML='<span class="nav-icon">👑</span>مشرف';
+    nav.appendChild(t);
+    t.addEventListener('click',()=>setTab('admin'));
   }
 }
 async function loadAll(){
@@ -814,7 +848,13 @@ async function addSlot(date){
   if(D.slots.find(s=>s.date===date)){toast('التاريخ موجود','error');return;}
   await sb.from('slots').insert({date,hijri_offset:0});await loadAll();render();toast('تمت الإضافة');
 }
-async function removeSlot(id){await sb.from('slots').delete().eq('id',id);await loadAll();render();}
+async function removeSlot(id){
+  const slot=D.slots.find(s=>s.id===id);
+  if(!slot)return;
+  if(!confirm(`هل تريد حذف طلعة ${toGregShort(slot.date)}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
+  await sb.from('slots').delete().eq('id',id);
+  await loadAll();render();toast('تم حذف الطلعة');
+}
 async function addMember(name){
   if(!name)return;
   await sb.from('team_members').upsert({name},{onConflict:'name'});await loadAll();render();
