@@ -56,10 +56,49 @@ button,input,textarea,select{font-family:inherit;}
 .icon-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--muted);width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;transition:.15s;position:relative;}
 .icon-btn:hover{color:var(--amber);border-color:var(--amber);}
 .notif-badge{position:absolute;top:-3px;right:-3px;background:var(--danger);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg);}
-.avatar-btn{background:var(--bg-card);border:2px solid var(--amber);width:35px;height:35px;border-radius:50%;overflow:hidden;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--amber);}
-.avatar-btn img{width:100%;height:100%;object-fit:cover;}
+.avatar-btn{
+  background:var(--amber-s);border:2.5px solid var(--amber);
+  width:36px;height:36px;min-width:36px;border-radius:50%;overflow:hidden;
+  cursor:pointer;flex-shrink:0;padding:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.avatar-btn img{
+  width:100%;height:100%;
+  object-fit:cover;display:block;
+  border-radius:50%;flex-shrink:0;
+}
+.avatar-btn .av-init{
+  font-size:15px;font-weight:700;color:var(--amber);line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;
+}
 
-/* ── bottom nav ── */
+/* ── calendar dual ── */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.cal-year{font-family:var(--fd);font-size:22px;}
+.months-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.month-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rmd);padding:14px;box-shadow:var(--shadow);}
+.month-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:8px;}
+.month-greg{font-family:var(--fd);font-size:17px;font-weight:400;}
+.month-hijri{font-size:11px;color:var(--amber);font-family:var(--fm);}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.day-hdr{font-size:9px;color:var(--muted);text-align:center;padding:3px 0;font-weight:700;}
+.day-cell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:8px;cursor:default;padding:3px 1px;min-height:38px;
+}
+.day-greg{font-size:12px;font-weight:600;line-height:1.2;color:var(--text);}
+.day-hij{font-size:8px;color:var(--muted);line-height:1;margin-top:1px;}
+.day-cell.today{background:var(--amber-s);}
+.day-cell.today .day-greg{color:var(--amber);font-weight:800;}
+.day-cell.today .day-hij{color:var(--amber);}
+.day-cell.has-event{background:var(--ember);cursor:pointer;border-radius:10px;}
+.day-cell.has-event .day-greg{color:#fff;font-weight:800;}
+.day-cell.has-event .day-hij{color:rgba(255,255,255,.85);}
+.day-cell.past-event{background:var(--sage-s);cursor:pointer;border-radius:10px;}
+.day-cell.past-event .day-greg{color:var(--sage);font-weight:700;}
+.day-cell.past-event .day-hij{color:var(--sage);}
+.event-popup{background:var(--bg-el);border:1px solid var(--border);border-radius:var(--rmd);padding:12px;margin-top:10px;}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-el);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:40;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;width:100%;max-width:520px;}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px 6px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-size:10px;font-weight:700;transition:.15s;position:relative;}
@@ -123,21 +162,6 @@ button,input,textarea,select{font-family:inherit;}
 .stat-num{font-family:var(--fd);font-size:26px;color:var(--amber);line-height:1;}
 .stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
 
-/* ── calendar ── */
-.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-.cal-year{font-family:var(--fd);font-size:22px;}
-.months-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.month-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rmd);padding:12px;}
-.month-header{display:flex;flex-direction:column;margin-bottom:8px;}
-.month-greg{font-size:13px;font-weight:700;}
-.month-hijri{font-size:10px;color:var(--amber);margin-top:1px;}
-.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.day-hdr{font-size:8.5px;color:var(--muted);text-align:center;padding:2px 0;font-weight:700;}
-.day-cell{font-size:10px;text-align:center;padding:3px 1px;border-radius:6px;cursor:default;line-height:1.4;}
-.day-cell.today{background:var(--amber-s);color:var(--amber);font-weight:700;}
-.day-cell.has-event{background:var(--ember);color:#fff;font-weight:700;cursor:pointer;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:auto;}
-.day-cell.past-event{background:var(--sage-s);color:var(--sage);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:auto;}
-.event-popup{background:var(--bg-el);border:1px solid var(--border);border-radius:var(--rmd);padding:12px;margin-top:10px;}
 
 /* ── notifications ── */
 .notif-item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--bsoft);cursor:pointer;transition:.15s;}
@@ -561,12 +585,11 @@ function updateAvatar(){
   const btn=document.getElementById('profileBtn');
   if(!btn||!myProfile)return;
   if(myProfile.avatar_url){
-    btn.innerHTML=`<img src="${esc(myProfile.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    btn.innerHTML=`<img src="${esc(myProfile.avatar_url)}" alt="">`;
   } else {
     const initial=(myProfile.name||myProfile.email||'?')[0].toUpperCase();
-    btn.innerHTML=`<span style="font-size:15px;font-weight:700;color:var(--amber);line-height:1;">${esc(initial)}</span>`;
+    btn.innerHTML=`<span class="av-init">${esc(initial)}</span>`;
   }
-  // add admin tab
   if(myProfile.is_admin&&!document.querySelector('[data-tab=admin]')){
     const nav=document.querySelector('.bottom-nav-inner');
     const t=document.createElement('button');
@@ -1071,39 +1094,95 @@ function renderHome(){
 let calYear=new Date().getFullYear();
 let selectedDate=null;
 function renderCalendar(){
-  const eventDates=new Set(D.slots.map(s=>s.date));
+  // بناء خريطة الأحداث مع التاريخ الهجري المعدّل
+  const eventMap={}; // gregorian_date → slot
+  D.slots.forEach(s=>{eventMap[s.date]=s;});
+
+  const today=todayISO();
   const dayNames=['أح','إث','ثل','أر','خم','جم','سب'];
+
+  function getHijriDay(iso){
+    const d=new Date(iso+'T00:00:00');
+    for(const l of['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
+      try{const v=d.toLocaleDateString(l,{day:'numeric'});if(v)return v.trim();}catch(e){}
+    }
+    return '';
+  }
+  function getHijriMonthYear(year,m){
+    const d=new Date(year,m,15); // منتصف الشهر أدق
+    try{return d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'});}
+    catch(e){return '';}
+  }
+  // الهجري المعدّل للحدث (مع hijri_offset)
+  function getEventHijriDay(slot){
+    const d=new Date(slot.date+'T00:00:00');
+    if(slot.hijri_offset) d.setDate(d.getDate()+slot.hijri_offset);
+    for(const l of['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
+      try{const v=d.toLocaleDateString(l,{day:'numeric'});if(v)return v.trim();}catch(e){}
+    }
+    return '';
+  }
+
   let h=`<div class="cal-nav">
     <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">◀</button>
-    <span class="cal-year">${calYear}</span>
+    <div style="text-align:center;">
+      <div class="cal-year">${calYear} م</div>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="A.calNext()">▶</button>
-  </div><div class="months-grid">`;
-  const today=todayISO();
+  </div>
+  <div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>طلعة قادمة</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;opacity:.6;"></span>طلعة منتهية</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber-s);border:1px solid var(--amber);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>اليوم</span>
+  </div>
+  <div class="months-grid">`;
+
   for(let m=0;m<12;m++){
-    const d=new Date(calYear,m,1);
-    const gregMonth=d.toLocaleDateString('ar-SA',{month:'long'});
-    const hijriMonth=toHijri(d.toISOString().slice(0,10),0).split(' ').slice(0,2).join(' ');
-    const firstDay=(d.getDay()+1)%7;// shift to start from Sunday
+    const firstD=new Date(calYear,m,1);
+    const gregMonthName=firstD.toLocaleDateString('ar-SA',{month:'long'});
+    const hijriMonthYear=getHijriMonthYear(calYear,m);
+    const firstDay=(firstD.getDay()+1)%7;
     const daysInMonth=new Date(calYear,m+1,0).getDate();
-    h+=`<div class="month-card"><div class="month-header"><div class="month-greg">${gregMonth}</div><div class="month-hijri">${hijriMonth}</div></div>
-    <div class="day-grid">`;
+    const monthPrefix=`${calYear}-${String(m+1).padStart(2,'0')}-`;
+    const hasEvents=Object.keys(eventMap).some(d=>d.startsWith(monthPrefix));
+
+    h+=`<div class="month-card">
+      <div class="month-header">
+        <div>
+          <div class="month-greg">${esc(gregMonthName)} ${calYear}</div>
+          <div class="month-hijri">${esc(hijriMonthYear)}</div>
+        </div>
+        ${hasEvents?`<span style="font-size:10px;background:var(--ember-s);color:var(--ember);padding:2px 7px;border-radius:999px;">📅 فيه طلعة</span>`:''}
+      </div>
+      <div class="day-grid">`;
+
     dayNames.forEach(n=>h+=`<div class="day-hdr">${n}</div>`);
-    for(let i=0;i<firstDay;i++)h+=`<div></div>`;
+    for(let i=0;i<firstDay;i++) h+=`<div></div>`;
+
     for(let day=1;day<=daysInMonth;day++){
       const iso=`${calYear}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const hasEv=eventDates.has(iso);
-      const slot=D.slots.find(s=>s.date===iso);
+      const slot=eventMap[iso];
       const isPast=daysUntil(iso)<0;
       const isTod=iso===today;
-      const cls=hasEv?(isPast?'day-cell past-event':'day-cell has-event'):(isTod?'day-cell today':'day-cell');
-      const onclick=hasEv?`onclick="A.calClick('${iso}')"` :'';
-      h+=`<div class="${cls}" ${onclick}>${day}</div>`;
+
+      let cls='day-cell';
+      if(slot)    cls+=isPast?' past-event':' has-event';
+      else if(isTod) cls+=' today';
+
+      // الرقم الهجري — إذا حدث استخدم الهجري المعدّل
+      const hijDay=slot?getEventHijriDay(slot):getHijriDay(iso);
+
+      const onclick=slot?`onclick="A.calClick('${iso}')"` :'';
+
+      h+=`<div class="${cls}" ${onclick} title="${slot?esc(toGreg(slot.date))+' — '+esc(toHijri(slot.date,slot.hijri_offset||0)):''}">
+        <span class="day-greg">${day}</span>
+        <span class="day-hij">${hijDay}</span>
+      </div>`;
     }
     h+=`</div></div>`;
   }
   h+=`</div>`;
 
-  // selected event detail
   if(selectedDate){
     const slot=D.slots.find(s=>s.date===selectedDate);
     if(slot) openCalSlotModal(slot);
