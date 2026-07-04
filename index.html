@@ -512,7 +512,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab='home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],settings:{}};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{}};
 let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
@@ -732,7 +732,7 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st]=await Promise.all([
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
     sb.from('chalet').select('*').limit(1),
     sb.from('team_members').select('*').order('created_at'),
     sb.from('slots').select('*').order('date'),
@@ -746,12 +746,14 @@ async function loadAll(){
     sb.from('poll_votes').select('*'),
     sb.from('budget_payments').select('*'),
     sb.from('app_settings').select('*'),
+    sb.from('annual_payments').select('*'),
   ]);
   D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
   D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
   D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
   D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
   D.payments=py.data||[];
+  D.annualPayments=ap.data||[];
   D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
   // notifications تحتاج session
   if(session){
@@ -1594,6 +1596,176 @@ function renderBudget(){
   const budgetType=D.chalet.budget_type||'per_slot';
   const annualBudget=D.chalet.annual_budget||0;
   const budgetYear=D.chalet.budget_year||new Date().getFullYear();
+  const allUpcoming=D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
+
+  let h=`<p class="hint">إدارة ميزانية الطلعات وتتبع من دفع ومن لم يدفع.</p>`;
+
+  // ── إعداد نوع الميزانية للمشرف ──
+  if(myProfile?.is_admin){
+    h+=`<div class="card">
+      <div class="h2" style="font-size:16px;">⚙️ نوع الميزانية</div>
+      <div style="display:flex;gap:8px;margin:12px 0;">
+        <button class="btn ${budgetType==='per_slot'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('per_slot')">📅 لكل طلعة</button>
+        <button class="btn ${budgetType==='annual'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('annual')">📆 سنوي</button>
+      </div>
+
+      ${budgetType==='annual'?`
+      <hr class="sep">
+      <div class="h2" style="font-size:15px;">الميزانية السنوية</div>
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label>السنة</label>
+          <select id="budgetYearSel">
+            ${[2025,2026,2027,2028].map(y=>`<option value="${y}" ${y===budgetYear?'selected':''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>المبلغ السنوي (﷼)</label>
+          <input type="number" id="annualBudgetAmt" value="${annualBudget||''}" placeholder="مثال: 15000" min="0">
+        </div>
+      </div>
+      <div class="note" style="margin-bottom:10px;">
+        نصيب كل عضو عن السنة كاملة:
+        <b style="color:var(--amber)">${D.team.length?Math.round((annualBudget||0)/D.team.length).toLocaleString('ar'):0} ﷼</b>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget()">حفظ</button>
+      `:`
+      <hr class="sep">
+      <div class="h2" style="font-size:15px;">تحديد ميزانية طلعة</div>
+      <div class="field" style="margin-top:8px;"><label>الطلعة</label>
+        <select id="budgetSlotSel">
+          ${allUpcoming.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))} ${s.budget?'— '+Number(s.budget).toLocaleString('ar')+' ﷼':''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label>المبلغ (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
+        <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ</button>
+      `}
+    </div>`;
+  }
+
+  // ── عرض سنوي (دفعة واحدة للسنة) ──
+  if(budgetType==='annual'){
+    if(!annualBudget){
+      h+=`<div class="empty"><span class="ei">💰</span>${myProfile?.is_admin?'حدد الميزانية السنوية من الأعلى.':'انتظر المشرف ليضيف الميزانية السنوية.'}</div>`;
+      document.getElementById('content').innerHTML=h;return;
+    }
+    const memberShare=D.team.length?Math.round(annualBudget/D.team.length):0;
+    const yearPays=D.annualPayments.filter(p=>p.year===budgetYear);
+    const paidM=D.team.filter(m=>yearPays.find(p=>p.member_name===m.name&&p.paid));
+    const unpaidM=D.team.filter(m=>!yearPays.find(p=>p.member_name===m.name&&p.paid));
+    const collected=paidM.length*memberShare;
+    const pct=annualBudget?Math.min(100,Math.round(collected/annualBudget*100)):0;
+
+    h+=`<div class="budget-slot">
+      <div class="budget-slot-header">
+        <div>
+          <div class="budget-slot-date">ميزانية ${budgetYear}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px;">دفعة واحدة للسنة كاملة</div>
+        </div>
+        <div style="text-align:left;">
+          <div class="budget-total">${Number(annualBudget).toLocaleString('ar')} ﷼</div>
+          <div class="budget-total-lbl">الميزانية السنوية</div>
+        </div>
+      </div>
+      <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;text-align:left;">${pct}% — ${collected.toLocaleString('ar')} من ${Number(annualBudget).toLocaleString('ar')} ﷼</div>
+      <div class="budget-summary">
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger)">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber)">${memberShare.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+      </div>
+      <div>`;
+
+    [...paidM,...unpaidM].forEach(m=>{
+      const paid=!!yearPays.find(p=>p.member_name===m.name&&p.paid);
+      h+=`<div class="member-payment-row">
+        <div class="payment-av">${m.name[0]||'؟'}</div>
+        <div class="payment-info">
+          <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
+          <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">
+            ${paid?`✅ دفع ${memberShare.toLocaleString('ar')} ﷼`:`⏳ متبقي ${memberShare.toLocaleString('ar')} ﷼`}
+          </div>
+        </div>
+        ${myProfile?.is_admin
+          ?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay(${budgetYear},'${esc(m.name).replace(/'/g,"\\'")}',${paid})">
+              ${paid?'إلغاء':'دفع ✓'}
+            </button>`
+          :`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`}
+      </div>`;
+    });
+
+    h+=`</div>`;
+    if(unpaidM.length&&myProfile?.is_admin){
+      const names=unpaidM.map(m=>m.name).join('، ');
+      const msg=`يا شباب 👋\nتذكير بالاشتراك السنوي ${budgetYear} 💰\nنصيب الفرد: ${memberShare.toLocaleString('ar')} ﷼\nاللي ما دفع بعد: ${names}\nجزاكم الله خير 🙏`;
+      h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين واتساب</a>`;
+    }
+    h+=`</div>`;
+    document.getElementById('content').innerHTML=h;return;
+  }
+
+  // ── عرض لكل طلعة ──
+  const slotsWithBudget=allUpcoming.filter(s=>s.budget);
+  if(!slotsWithBudget.length){
+    h+=`<div class="empty"><span class="ei">💰</span>${myProfile?.is_admin?'حدد ميزانية طلعة من الأعلى.':'انتظر المشرف ليضيف الميزانية.'}</div>`;
+    document.getElementById('content').innerHTML=h;return;
+  }
+  slotsWithBudget.forEach(slot=>{
+    const pays=D.payments.filter(p=>p.slot_id===slot.id);
+    const mShare=D.team.length?Math.round(slot.budget/D.team.length):0;
+    const paidM=D.team.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
+    const unpaidM=D.team.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
+    const collected=paidM.length*mShare;
+    const pct=slot.budget?Math.min(100,Math.round(collected/slot.budget*100)):0;
+    h+=`<div class="budget-slot">
+      <div class="budget-slot-header">
+        <div>
+          <div class="budget-slot-date">${esc(toGregShort(slot.date))}</div>
+          <div class="budget-slot-hijri">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
+        </div>
+        <div style="text-align:left;">
+          <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ﷼</div>
+          <div class="budget-total-lbl">ميزانية الطلعة</div>
+        </div>
+      </div>
+      <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin:-6px 0 10px;text-align:left;">${pct}% — ${collected.toLocaleString('ar')} من ${Number(slot.budget).toLocaleString('ar')} ﷼</div>
+      <div class="budget-summary">
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger)">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber)">${mShare.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+      </div>
+      ${slot.budget_notes?`<div class="note" style="margin-bottom:10px;">📝 ${esc(slot.budget_notes)}</div>`:''}
+      <div>`;
+    [...paidM,...unpaidM].forEach(m=>{
+      const paid=!!pays.find(p=>p.member_name===m.name&&p.paid);
+      h+=`<div class="member-payment-row">
+        <div class="payment-av">${m.name[0]||'؟'}</div>
+        <div class="payment-info">
+          <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
+          <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">${paid?`✅ دفع ${mShare.toLocaleString('ar')} ﷼`:`⏳ متبقي ${mShare.toLocaleString('ar')} ﷼`}</div>
+        </div>
+        ${myProfile?.is_admin
+          ?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slot.id}','${esc(m.name).replace(/'/g,"\\'")}')">
+              ${paid?'إلغاء':'دفع ✓'}
+            </button>`
+          :`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`}
+      </div>`;
+    });
+    h+=`</div>`;
+    if(unpaidM.length&&myProfile?.is_admin){
+      const names=unpaidM.map(m=>m.name).join('، ');
+      const msg=`يا شباب 👋\nتذكير بميزانية طلعة ${toGregShort(slot.date)} 💰\nنصيب الفرد: ${mShare.toLocaleString('ar')} ﷼\nاللي ما دفع بعد: ${names}\nجزاكم الله خير 🙏`;
+      h+=`<a class="map-btn" style="margin-top:10px;" href="${esc(waLink(msg))}" target="_blank" rel="noopener">📤 تذكير المتأخرين واتساب</a>`;
+    }
+    h+=`</div>`;
+  });
+  document.getElementById('content').innerHTML=h;
+}
+  const budgetType=D.chalet.budget_type||'per_slot';
+  const annualBudget=D.chalet.annual_budget||0;
+  const budgetYear=D.chalet.budget_year||new Date().getFullYear();
   const yearSlots=D.slots.filter(s=>s.date.startsWith(budgetYear+''));
   const allUpcoming=D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
 
@@ -1886,6 +2058,14 @@ window.A={
     toast(newVal==='false'?'🔒 التسجيل مغلق':'✅ التسجيل مفعّل');
   },
   togglePay:(slotId,name)=>togglePayment(slotId,name),
+  async toggleAnnualPay(year,name,currentPaid){
+    await sb.from('annual_payments').upsert(
+      {year,member_name:name,paid:!currentPaid,updated_by:myName()},
+      {onConflict:'year,member_name'}
+    );
+    if(!currentPaid) await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
+    await loadAll();renderBudget();
+  },
   async setBudgetType(type){
     if(D.chalet.id) await sb.from('chalet').update({budget_type:type}).eq('id',D.chalet.id);
     else await sb.from('chalet').insert({name:D.chalet.name||'دوريتنا',budget_type:type});
