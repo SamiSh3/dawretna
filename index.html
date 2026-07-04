@@ -76,26 +76,47 @@ button,input,textarea,select{font-family:inherit;}
 /* ── calendar dual ── */
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
 .cal-year{font-family:var(--fd);font-size:22px;}
-.months-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+.months-grid{display:grid;grid-template-columns:1fr;gap:16px;}
 .month-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rmd);padding:14px;box-shadow:var(--shadow);}
-.month-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:8px;}
-.month-greg{font-family:var(--fd);font-size:17px;font-weight:400;}
-.month-hijri{font-size:11px;color:var(--amber);font-family:var(--fm);}
-.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
-.day-hdr{font-size:9px;color:var(--muted);text-align:center;padding:3px 0;font-weight:700;}
+.month-header{margin-bottom:10px;}
+.month-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.month-greg{font-family:var(--fd);font-size:18px;font-weight:400;color:var(--text);}
+.month-hijri-badge{
+  font-size:11px;color:var(--amber);font-family:var(--fm);
+  background:var(--amber-s);padding:3px 9px;border-radius:999px;white-space:nowrap;
+}
+.month-divider{height:1px;background:linear-gradient(90deg,var(--amber-s),transparent);margin-bottom:8px;}
+/* رؤوس أيام الأسبوع مزدوجة */
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.day-hdr{font-size:9px;color:var(--muted);text-align:center;padding:4px 0;font-weight:700;}
 .day-cell{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  border-radius:8px;cursor:default;padding:3px 1px;min-height:38px;
+  border-radius:8px;cursor:default;padding:4px 2px;min-height:44px;gap:1px;
+  transition:background .15s;
 }
-.day-greg{font-size:12px;font-weight:600;line-height:1.2;color:var(--text);}
-.day-hij{font-size:8px;color:var(--muted);line-height:1;margin-top:1px;}
-.day-cell.today{background:var(--amber-s);}
-.day-cell.today .day-greg{color:var(--amber);font-weight:800;}
+/* الرقم الميلادي */
+.day-greg{
+  font-size:13px;font-weight:700;line-height:1.1;color:var(--text);
+}
+/* الرقم الهجري */
+.day-hij{
+  font-size:9px;font-weight:500;color:var(--muted);line-height:1;
+  font-family:var(--fm);
+}
+/* اليوم الحالي */
+.day-cell.today{background:var(--amber-s);border:1.5px solid var(--amber);}
+.day-cell.today .day-greg{color:var(--amber);font-weight:900;}
 .day-cell.today .day-hij{color:var(--amber);}
-.day-cell.has-event{background:var(--ember);cursor:pointer;border-radius:10px;}
-.day-cell.has-event .day-greg{color:#fff;font-weight:800;}
-.day-cell.has-event .day-hij{color:rgba(255,255,255,.85);}
-.day-cell.past-event{background:var(--sage-s);cursor:pointer;border-radius:10px;}
+/* طلعة قادمة */
+.day-cell.has-event{
+  background:var(--ember);cursor:pointer;border-radius:10px;
+  box-shadow:0 2px 8px rgba(204,107,73,.4);
+}
+.day-cell.has-event .day-greg{color:#fff;font-size:14px;}
+.day-cell.has-event .day-hij{color:rgba(255,255,255,.9);font-size:10px;}
+.day-cell.has-event:hover{filter:brightness(1.1);}
+/* طلعة منتهية */
+.day-cell.past-event{background:var(--sage-s);cursor:pointer;border-radius:10px;border:1px solid rgba(143,185,150,.4);}
 .day-cell.past-event .day-greg{color:var(--sage);font-weight:700;}
 .day-cell.past-event .day-hij{color:var(--sage);}
 .event-popup{background:var(--bg-el);border:1px solid var(--border);border-radius:var(--rmd);padding:12px;margin-top:10px;}
@@ -1148,11 +1169,11 @@ function renderCalendar(){
 
     h+=`<div class="month-card">
       <div class="month-header">
-        <div>
-          <div class="month-greg">${esc(gregMonthName)} ${calYear}</div>
-          <div class="month-hijri">${esc(hijriMonthYear)}</div>
+        <div class="month-title-row">
+          <span class="month-greg">${esc(gregMonthName)} ${calYear}</span>
+          <span class="month-hijri-badge">${esc(hijriMonthYear)}</span>
         </div>
-        ${hasEvents?`<span style="font-size:10px;background:var(--ember-s);color:var(--ember);padding:2px 7px;border-radius:999px;">📅 فيه طلعة</span>`:''}
+        <div class="month-divider"></div>
       </div>
       <div class="day-grid">`;
 
