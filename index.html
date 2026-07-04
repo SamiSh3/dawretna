@@ -390,7 +390,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
-      <button class="nav-item" data-tab="calendar"><span class="nav-icon" id="calNavIcon" style="font-size:16px;font-weight:900;font-family:var(--fd);">📅</span>التقويم</button>
+      <button class="nav-item" data-tab="calendar"><span class="nav-icon" id="calNavIcon" style="font-size:17px;font-weight:900;font-family:var(--fd);line-height:1;">5</span>التقويم</button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
@@ -2025,6 +2025,10 @@ document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifi
 
 // init
 (async function(){
+  // تحديث رقم اليوم في أيقونة التقويم فوراً
+  const _ci=document.getElementById('calNavIcon');
+  if(_ci) _ci.textContent=new Date().getDate();
+
   await initAuth();
 })();
 })();
