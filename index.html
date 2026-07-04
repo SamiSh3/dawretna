@@ -1257,11 +1257,11 @@ function renderCalendar(){
   }
 
   let h=`<div class="cal-nav">
-    <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">▶</button>
+    <button class="btn btn-ghost btn-sm" onclick="A.calNext()">▶</button>
     <div style="text-align:center;">
       <div class="cal-year">${calYear} م</div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="A.calNext()">◀</button>
+    <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">◀</button>
   </div>
   <div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>طلعة قادمة</span>
