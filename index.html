@@ -788,8 +788,19 @@ function updateNotifBadge(){
 
 /* ════════════════ UTILS ════════════════ */
 function esc(s){return(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function daysUntil(d){const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(d+'T00:00:00')-t)/86400000);}
-function toast(m,t){const el=document.getElementById('toast');el.textContent=m;el.className=t==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
+// ── توقيت الرياض ──
+const TZ = 'Asia/Riyadh';
+function nowRiyadh(){
+  // تاريخ ووقت الرياض كـ Date object
+  return new Date(new Date().toLocaleString('en-US', {timeZone: TZ}));
+}
+function todayISO(){
+  return new Date().toLocaleDateString('en-CA', {timeZone: TZ}); // YYYY-MM-DD
+}
+function daysUntil(d){
+  const t=nowRiyadh(); t.setHours(0,0,0,0);
+  return Math.round((new Date(d+'T00:00:00')-t)/86400000);
+}function toast(m,t){const el=document.getElementById('toast');el.textContent=m;el.className=t==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
 function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
 function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
 window.openModal=openModal;
@@ -847,7 +858,7 @@ function toGregShort(date){
   const d=new Date(date+'T00:00:00');
   try{return d.toLocaleDateString('ar-SA',{day:'numeric',month:'long'});}catch(e){return date;}
 }
-function todayISO(){return new Date().toISOString().slice(0,10);}
+
 function timeAgo(iso){
   const d=Math.floor((Date.now()-new Date(iso))/60000);
   if(d<1)return'الآن';if(d<60)return d+' دقيقة';
@@ -1062,7 +1073,7 @@ async function removeMember(name){await sb.from('team_members').delete().eq('nam
 
 // إيجاد أقرب أول ثلاثاء في شهر هجري قادم
 function nextFirstTuesday(){
-  const today=new Date();today.setHours(0,0,0,0);
+  const today=nowRiyadh();today.setHours(0,0,0,0);
   let cur=new Date(today);
   for(let i=0;i<90;i++){
     if(cur.getDay()===2){// ثلاثاء
@@ -1211,7 +1222,7 @@ function render(){
   updateAvatar();
   // تحديث أيقونة التقويم برقم اليوم
   const calIcon=document.getElementById('calDayText');
-  if(calIcon) calIcon.textContent=new Date().getDate();
+  if(calIcon) calIcon.textContent=nowRiyadh().getDate();
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
@@ -1318,15 +1329,14 @@ function renderHome(){
 }
 
 /* ── Calendar ── */
-let calYear=new Date().getFullYear();
+let calYear=nowRiyadh().getFullYear();
 let selectedDate=null;
 function renderCalendar(){
   // بناء خريطة الأحداث مع التاريخ الهجري المعدّل
   const eventMap={}; // gregorian_date → slot
   D.slots.forEach(s=>{eventMap[s.date]=s;});
 
-  const today=todayISO();
-  const dayNames=['أح','إث','ثل','أر','خم','جم','سب'];
+  const today=todayISO();  const dayNames=['أح','إث','ثل','أر','خم','جم','سب'];
 
   function getHijriDay(iso){
     const d=new Date(iso+'T00:00:00');
@@ -2065,7 +2075,7 @@ document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifi
 (async function(){
   // تحديث رقم اليوم في أيقونة التقويم فوراً
   const _cd=document.getElementById('calDayText');
-  if(_cd) _cd.textContent=new Date().getDate();
+  if(_cd) _cd.textContent=nowRiyadh().getDate();
 
   await initAuth();
 })();
