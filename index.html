@@ -1399,7 +1399,7 @@ function renderCalendar(){
     const firstD=new Date(calYear,m,1);
     const gregMonthName=firstD.toLocaleDateString('ar-SA',{month:'long'});
     const hijriMonthYear=getHijriMonthsInGreg(calYear,m);
-    const firstDay=(firstD.getDay()+1)%7;
+    const firstDay=firstD.getDay(); // 0=أحد, 1=إثنين ... 6=سبت
     const daysInMonth=new Date(calYear,m+1,0).getDate();
     const monthPrefix=`${calYear}-${String(m+1).padStart(2,'0')}-`;
     const hasEvents=Object.keys(eventMap).some(d=>d.startsWith(monthPrefix));
