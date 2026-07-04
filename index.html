@@ -466,45 +466,47 @@ let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
 let _loggedIn=false;
+let _loginTimer=null; // لإلغاء setTimeout إذا نجح afterLogin قبله
 
 async function initAuth(){
-  // نعتمد فقط على getSession() كمصدر حقيقة
-  // الـ listener يعالج فقط TOKEN_REFRESHED و SIGNED_IN
-  // SIGNED_OUT يُتجاهل تماماً (الخروج يتم بـ page reload)
   sb.auth.onAuthStateChange(async(ev,s)=>{
-    if(ev==='SIGNED_OUT') return; // page reload يتكفل بهذا
+    if(ev==='SIGNED_OUT') return;
     if(s&&!_loggedIn){
+      if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
       session=s;
       _loggedIn=true;
       await afterLogin();
     }
   });
 
-  // المصدر الرئيسي: getSession
   try{
     const{data}=await sb.auth.getSession();
     if(data?.session&&!_loggedIn){
+      if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
       session=data.session;
       _loggedIn=true;
       await afterLogin();
     } else if(!data?.session){
-      // لا جلسة — انتظر ثانية للـ listener (OAuth redirect)
-      setTimeout(()=>{if(!_loggedIn)showLogin();},1500);
+      _loginTimer=setTimeout(()=>{
+        if(!_loggedIn) showLogin();
+      },2000);
     }
   }catch(e){
     console.error('getSession:',e);
-    setTimeout(()=>{if(!_loggedIn)showLogin();},1500);
+    _loginTimer=setTimeout(()=>{if(!_loggedIn)showLogin();},2000);
   }
 
-  // ضمان احتياطي نهائي
+  // ضمان احتياطي نهائي بعد 8 ثواني
   setTimeout(()=>{
     if(document.getElementById('loadingScreen')?.style.display!=='none'){
       if(_loggedIn)showApp();else showLogin();
     }
-  },6000);
+  },8000);
 }
 
 async function afterLogin(){
+  // ألغِ أي timer لـ showLogin معلّق
+  if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
   if(window.location.hash&&window.location.hash.includes('access_token')){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
@@ -512,14 +514,13 @@ async function afterLogin(){
   render();
   try{
     await loadProfile();
-    render(); // حدّث الأفاتار فور تحميل الـ profile
+    render();
     await loadAll();
-    render(); // حدّث البيانات الكاملة
+    render();
   }catch(e){
     console.error('data load error:',e);
-    toast('تعذّر تحميل البيانات — حدّث الصفحة','error');
+    render(); // ارسم ما عندنا حتى لو في خطأ
   }
-  // checkAutoReminders منفصلة — لا تأثر على تحميل البيانات
   checkAutoReminders().catch(e=>console.error('reminders:',e));
 }
 function showLogin(){
