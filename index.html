@@ -468,35 +468,40 @@ let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 let _loggedIn=false;
 
 async function initAuth(){
-  // أزل hash فوراً قبل أي شيء عشان Supabase يقرأه أولاً
-  const hasOAuthHash = window.location.hash&&window.location.hash.includes('access_token');
-
+  // نعتمد فقط على getSession() كمصدر حقيقة
+  // الـ listener يعالج فقط TOKEN_REFRESHED و SIGNED_IN
+  // SIGNED_OUT يُتجاهل تماماً (الخروج يتم بـ page reload)
   sb.auth.onAuthStateChange(async(ev,s)=>{
-    session=s;
-    // تجاهل SIGNED_OUT إذا كان في الـ URL oauth hash (stale token conflict)
-    if(ev==='SIGNED_OUT'){
-      if(!hasOAuthHash){_loggedIn=false;myProfile=null;showLogin();}
-      return;
+    if(ev==='SIGNED_OUT') return; // page reload يتكفل بهذا
+    if(s&&!_loggedIn){
+      session=s;
+      _loggedIn=true;
+      await afterLogin();
     }
-    if(s&&!_loggedIn){_loggedIn=true;await afterLogin();}
   });
 
+  // المصدر الرئيسي: getSession
   try{
     const{data}=await sb.auth.getSession();
-    if(data.session&&!_loggedIn){
-      session=data.session;_loggedIn=true;await afterLogin();
-    } else if(!data.session){
-      setTimeout(()=>{if(!_loggedIn)showLogin();},1200);
+    if(data?.session&&!_loggedIn){
+      session=data.session;
+      _loggedIn=true;
+      await afterLogin();
+    } else if(!data?.session){
+      // لا جلسة — انتظر ثانية للـ listener (OAuth redirect)
+      setTimeout(()=>{if(!_loggedIn)showLogin();},1500);
     }
-  }catch(e){setTimeout(()=>{if(!_loggedIn)showLogin();},1200);}
+  }catch(e){
+    console.error('getSession:',e);
+    setTimeout(()=>{if(!_loggedIn)showLogin();},1500);
+  }
 
-  // ضمان احتياطي — لا تبقى على شاشة التحميل أكثر من 5 ثواني
+  // ضمان احتياطي نهائي
   setTimeout(()=>{
-    const ls=document.getElementById('loadingScreen');
-    if(ls&&ls.style.display!=='none'){
+    if(document.getElementById('loadingScreen')?.style.display!=='none'){
       if(_loggedIn)showApp();else showLogin();
     }
-  },5000);
+  },6000);
 }
 
 async function afterLogin(){
