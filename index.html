@@ -489,6 +489,14 @@ async function initAuth(){
       setTimeout(()=>{if(!_loggedIn)showLogin();},1200);
     }
   }catch(e){setTimeout(()=>{if(!_loggedIn)showLogin();},1200);}
+
+  // ضمان احتياطي — لا تبقى على شاشة التحميل أكثر من 5 ثواني
+  setTimeout(()=>{
+    const ls=document.getElementById('loadingScreen');
+    if(ls&&ls.style.display!=='none'){
+      if(_loggedIn)showApp();else showLogin();
+    }
+  },5000);
 }
 
 async function afterLogin(){
@@ -496,12 +504,18 @@ async function afterLogin(){
   if(window.location.hash&&window.location.hash.includes('access_token')){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
+  // أظهر التطبيق فوراً — لا تنتظر تحميل البيانات
+  showApp();
+  render();
+  // حمّل البيانات في الخلفية ثم أعد الرسم
   try{
     await loadProfile();
     await loadAll();
     await checkAutoReminders();
-  }catch(e){console.error('afterLogin:',e);}
-  finally{showApp();render();}
+    render(); // أعد الرسم بعد اكتمال البيانات
+  }catch(e){
+    console.error('afterLogin data load:',e);
+  }
 }
 function showLogin(){
   document.getElementById('loadingScreen').style.display='none';
