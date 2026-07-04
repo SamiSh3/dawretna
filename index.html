@@ -790,16 +790,18 @@ function updateNotifBadge(){
 function esc(s){return(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 // ── توقيت الرياض ──
 const TZ = 'Asia/Riyadh';
-function nowRiyadh(){
-  // تاريخ ووقت الرياض كـ Date object
-  return new Date(new Date().toLocaleString('en-US', {timeZone: TZ}));
-}
-function todayISO(){
-  return new Date().toLocaleDateString('en-CA', {timeZone: TZ}); // YYYY-MM-DD
-}
+const _rzFmt = new Intl.DateTimeFormat('en-CA', {timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit'});
+const _rzDay  = new Intl.DateTimeFormat('en-US', {timeZone:TZ, day:'numeric'});
+const _rzYear = new Intl.DateTimeFormat('en-US', {timeZone:TZ, year:'numeric'});
+
+function todayISO(){ return _rzFmt.format(new Date()); } // YYYY-MM-DD
+function todayDayNum(){ return parseInt(_rzDay.format(new Date())); }
+function todayYear(){ return parseInt(_rzYear.format(new Date())); }
+function nowRiyadh(){ return new Date(todayISO()+'T00:00:00'); }
+
 function daysUntil(d){
-  const t=nowRiyadh(); t.setHours(0,0,0,0);
-  return Math.round((new Date(d+'T00:00:00')-t)/86400000);
+  const today = new Date(todayISO()+'T00:00:00');
+  return Math.round((new Date(d+'T00:00:00')-today)/86400000);
 }function toast(m,t){const el=document.getElementById('toast');el.textContent=m;el.className=t==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
 function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
 function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
@@ -1222,7 +1224,7 @@ function render(){
   updateAvatar();
   // تحديث أيقونة التقويم برقم اليوم
   const calIcon=document.getElementById('calDayText');
-  if(calIcon) calIcon.textContent=nowRiyadh().getDate();
+  if(calIcon) calIcon.textContent=todayDayNum();
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
@@ -1329,7 +1331,7 @@ function renderHome(){
 }
 
 /* ── Calendar ── */
-let calYear=nowRiyadh().getFullYear();
+let calYear=todayYear();
 let selectedDate=null;
 function renderCalendar(){
   // بناء خريطة الأحداث مع التاريخ الهجري المعدّل
@@ -2075,7 +2077,7 @@ document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifi
 (async function(){
   // تحديث رقم اليوم في أيقونة التقويم فوراً
   const _cd=document.getElementById('calDayText');
-  if(_cd) _cd.textContent=nowRiyadh().getDate();
+  if(_cd) _cd.textContent=todayDayNum();
 
   await initAuth();
 })();
