@@ -1211,9 +1211,40 @@ function renderCalendar(){
     return '';
   }
   function getHijriMonthYear(year,m){
-    const d=new Date(year,m,15); // منتصف الشهر أدق
+    const d=new Date(year,m,15);
     try{return d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'});}
     catch(e){return '';}
+  }
+
+  // استخرج كل الأشهر الهجرية المتداخلة في شهر ميلادي
+  function getHijriMonthsInGreg(year, m){
+    const daysInMonth = new Date(year, m+1, 0).getDate();
+    const seen = new Map(); // month_name → true
+    const result = [];
+    const locales = ['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic'];
+    for(let day=1; day<=daysInMonth; day++){
+      const d = new Date(year, m, day);
+      for(const l of locales){
+        try{
+          const monthName = d.toLocaleDateString(l, {month:'long'});
+          if(monthName && !seen.has(monthName)){
+            seen.set(monthName, true);
+            result.push(monthName);
+          }
+          break;
+        }catch(e){}
+      }
+    }
+    // أضف السنة الهجرية (من منتصف الشهر)
+    let hijriYear = '';
+    try{
+      const mid = new Date(year, m, 15);
+      const locs = ['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic'];
+      for(const l of locs){
+        try{ hijriYear = mid.toLocaleDateString(l,{year:'numeric'}); break; }catch(e){}
+      }
+    }catch(e){}
+    return result.join(' — ') + (hijriYear ? ' ' + hijriYear : '');
   }
   // الهجري المعدّل للحدث (مع hijri_offset)
   function getEventHijriDay(slot){
@@ -1242,7 +1273,7 @@ function renderCalendar(){
   for(let m=0;m<12;m++){
     const firstD=new Date(calYear,m,1);
     const gregMonthName=firstD.toLocaleDateString('ar-SA',{month:'long'});
-    const hijriMonthYear=getHijriMonthYear(calYear,m);
+    const hijriMonthYear=getHijriMonthsInGreg(calYear,m);
     const firstDay=(firstD.getDay()+1)%7;
     const daysInMonth=new Date(calYear,m+1,0).getDate();
     const monthPrefix=`${calYear}-${String(m+1).padStart(2,'0')}-`;
