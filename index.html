@@ -666,8 +666,7 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  if(!session)return;
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,nt,py,st]=await Promise.all([
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st]=await Promise.all([
     sb.from('chalet').select('*').limit(1),
     sb.from('team_members').select('*').order('created_at'),
     sb.from('slots').select('*').order('date'),
@@ -679,16 +678,21 @@ async function loadAll(){
     sb.from('memories').select('*').order('created_at',{ascending:false}),
     sb.from('polls').select('*').order('created_at',{ascending:false}),
     sb.from('poll_votes').select('*'),
-    sb.from('notifications').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50),
     sb.from('budget_payments').select('*'),
     sb.from('app_settings').select('*'),
   ]);
   D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
   D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
   D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
-  D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];D.notifications=nt.data||[];
+  D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
   D.payments=py.data||[];
   D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
+  // notifications تحتاج session
+  if(session){
+    const nt=await sb.from('notifications').select('*')
+      .eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50);
+    D.notifications=nt.data||[];
+  }
   updateNotifBadge();
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
