@@ -390,7 +390,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
-      <button class="nav-item" data-tab="calendar"><span class="nav-icon">📅</span>التقويم</button>
+      <button class="nav-item" data-tab="calendar"><span class="nav-icon" id="calNavIcon" style="font-size:16px;font-weight:900;font-family:var(--fd);">📅</span>التقويم</button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
@@ -1170,7 +1170,10 @@ function render(){
   document.getElementById('chaletTitle').textContent=D.chalet.name||'دوريتنا';
   document.getElementById('chaletSub').textContent=D.chalet.address||'جدول الطلعات';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===tab));
-  updateAvatar(); // تحديث الأيقونة في كل render
+  updateAvatar();
+  // تحديث أيقونة التقويم برقم اليوم
+  const calIcon=document.getElementById('calNavIcon');
+  if(calIcon) calIcon.textContent=new Date().getDate();
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
