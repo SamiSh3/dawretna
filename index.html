@@ -800,18 +800,41 @@ document.addEventListener('click',function(e){
 });
 function waLink(t){return'https://wa.me/?text='+encodeURIComponent(t);}
 function normNum(s){return(s||'').replace(/[٠-٩]/g,c=>c.charCodeAt(0)-0x0660).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-0x06F0);}
+// تقويم أم القرى - Locale الرسمي المعتمد
+const UMQ='ar-SA-u-ca-islamic-umalqura';
+const UMQ_EN='en-SA-u-ca-islamic-umalqura';
+
 function hijriDayNum(d){
-  for(const l of['en-u-ca-islamic-umalqura','en-u-ca-islamic']){
-    try{const n=parseInt(d.toLocaleDateString(l,{day:'numeric'}),10);if(!isNaN(n)&&n>0)return n;}catch(e){}
-  }
-  try{return parseInt(normNum(d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{day:'numeric'}).trim()),10)||0;}catch(e){return 0;}
+  // نستخدم locale إنجليزي لأم القرى للحصول على أرقام غربية قابلة للتحويل
+  try{
+    const n=parseInt(d.toLocaleDateString(UMQ_EN,{day:'numeric'}),10);
+    if(!isNaN(n)&&n>0)return n;
+  }catch(e){}
+  // fallback: تحويل الأرقام العربية
+  try{return parseInt(normNum(d.toLocaleDateString(UMQ,{day:'numeric'}).trim()),10)||0;}catch(e){return 0;}
 }
+
 function toHijri(date,offset){
-  const d=new Date(date+'T00:00:00');if(offset)d.setDate(d.getDate()+offset);
-  for(const l of['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
-    try{const f=d.toLocaleDateString(l,{day:'numeric',month:'long',year:'numeric'});if(f&&f.length>3)return f;}catch(e){}
-  }
+  const d=new Date(date+'T00:00:00');
+  if(offset)d.setDate(d.getDate()+offset);
+  try{
+    const f=d.toLocaleDateString(UMQ,{day:'numeric',month:'long',year:'numeric'});
+    if(f&&f.length>3)return f;
+  }catch(e){}
   return '';
+}
+
+function toHijriParts(date,offset){
+  const d=new Date(date+'T00:00:00');
+  if(offset)d.setDate(d.getDate()+offset);
+  try{
+    return {
+      day:d.toLocaleDateString(UMQ,{day:'numeric'}),
+      month:d.toLocaleDateString(UMQ,{month:'long'}),
+      year:d.toLocaleDateString(UMQ,{year:'numeric'}),
+      full:d.toLocaleDateString(UMQ,{day:'numeric',month:'long',year:'numeric'})
+    };
+  }catch(e){return{day:'',month:'',year:'',full:''};}
 }
 function toGreg(date){
   const d=new Date(date+'T00:00:00');
@@ -1304,14 +1327,14 @@ function renderCalendar(){
 
   function getHijriDay(iso){
     const d=new Date(iso+'T00:00:00');
-    for(const l of['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
+    for(const l of[UMQ]){
       try{const v=d.toLocaleDateString(l,{day:'numeric'});if(v)return v.trim();}catch(e){}
     }
     return '';
   }
   function getHijriMonthYear(year,m){
     const d=new Date(year,m,15);
-    try{return d.toLocaleDateString('ar-SA-u-ca-islamic-umalqura',{month:'long',year:'numeric'});}
+    try{return d.toLocaleDateString(UMQ,{month:'long',year:'numeric'});}
     catch(e){return '';}
   }
 
@@ -1320,7 +1343,7 @@ function renderCalendar(){
     const daysInMonth = new Date(year, m+1, 0).getDate();
     const seen = new Map(); // month_name → true
     const result = [];
-    const locales = ['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic'];
+    const locales = [UMQ,UMQ,UMQ];
     for(let day=1; day<=daysInMonth; day++){
       const d = new Date(year, m, day);
       for(const l of locales){
@@ -1338,7 +1361,7 @@ function renderCalendar(){
     let hijriYear = '';
     try{
       const mid = new Date(year, m, 15);
-      const locs = ['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic'];
+      const locs = [UMQ,UMQ,UMQ];
       for(const l of locs){
         try{ hijriYear = mid.toLocaleDateString(l,{year:'numeric'}); break; }catch(e){}
       }
@@ -1349,7 +1372,7 @@ function renderCalendar(){
   function getEventHijriDay(slot){
     const d=new Date(slot.date+'T00:00:00');
     if(slot.hijri_offset) d.setDate(d.getDate()+slot.hijri_offset);
-    for(const l of['ar-SA-u-ca-islamic-umalqura','ar-u-ca-islamic-umalqura','ar-SA-u-ca-islamic']){
+    for(const l of[UMQ]){
       try{const v=d.toLocaleDateString(l,{day:'numeric'});if(v)return v.trim();}catch(e){}
     }
     return '';
