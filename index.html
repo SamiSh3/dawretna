@@ -184,7 +184,39 @@ button,input,textarea,select{font-family:inherit;}
 .stat-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
 
 
-/* ── notifications ── */
+/* ── notifications popup ── */
+#notifPopup{
+  position:fixed;top:0;right:0;left:0;bottom:0;z-index:55;
+  display:none;align-items:flex-start;justify-content:flex-end;
+  padding:60px 8px 0;
+  background:rgba(8,14,17,.5);
+  backdrop-filter:blur(2px);
+}
+#notifPopup.open{display:flex;}
+.notif-panel{
+  background:var(--bg-el);border:1px solid var(--border);
+  border-radius:var(--rlg);width:100%;max-width:380px;
+  max-height:70vh;display:flex;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,.3);
+  animation:slideDown .2s ease-out;
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+.notif-panel-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;border-bottom:1px solid var(--bsoft);flex-shrink:0;
+}
+.notif-panel-body{overflow-y:auto;flex:1;padding:4px 0;}
+.notif-panel-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:11px 16px;border-bottom:1px solid var(--bsoft);cursor:pointer;
+  transition:background .12s;
+}
+.notif-panel-item:last-of-type{border-bottom:none;}
+.notif-panel-item:hover{background:var(--bg-soft);}
+.notif-panel-item.unread{background:var(--amber-s);}
+.notif-panel-footer{
+  padding:10px 16px;border-top:1px solid var(--bsoft);flex-shrink:0;
+}
 .notif-item{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--bsoft);cursor:pointer;transition:.15s;}
 .notif-item:last-of-type{border-bottom:none;}
 .notif-item:hover{background:var(--bg-soft);margin:0 -16px;padding:11px 16px;}
@@ -360,7 +392,6 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
       <button class="nav-item" data-tab="calendar"><span class="nav-icon">📅</span>التقويم</button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
-      <button class="nav-item" data-tab="notifications"><span class="nav-icon">🔔</span>التنبيهات<span class="nav-badge" id="navBadge" style="display:none;"></span></button>
       <button class="nav-item" data-tab="trips"><span class="nav-icon">🎯</span>طلعات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
     </div>
@@ -417,6 +448,25 @@ details.dg[open] summary::before{transform:rotate(90deg);}
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary btn-block" id="newSlotConfirmBtn">إضافة الطلعة</button>
       <button class="btn btn-ghost" id="newSlotCancelBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications Popup -->
+<div id="notifPopup" onclick="if(event.target===this)closeNotifPopup()">
+  <div class="notif-panel" id="notifPanelInner">
+    <div class="notif-panel-header">
+      <span style="font-family:var(--fd);font-size:18px;">التنبيهات</span>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="btn btn-ghost btn-xs" id="markAllReadBtn">قراءة الكل</button>
+        <button class="icon-btn" onclick="closeNotifPopup()" style="width:28px;height:28px;font-size:13px;">✕</button>
+      </div>
+    </div>
+    <div class="notif-panel-body" id="notifPanelBody">
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">لا يوجد تنبيهات</div>
+    </div>
+    <div class="notif-panel-footer">
+      <button class="btn btn-ghost btn-block btn-sm" onclick="A.sendEmailReminder()">📧 تذكير بالإيميل</button>
     </div>
   </div>
 </div>
@@ -1077,7 +1127,39 @@ document.getElementById('saveProfileBtn').onclick=async()=>{
   await sb.from('profiles').update({phone_wa:ph}).eq('id',session.user.id);
   myProfile.phone_wa=ph;closeModal('profileModal');toast('تم الحفظ ✅');
 };
-document.getElementById('notifBtn').onclick=()=>setTab('notifications');
+function openNotifPopup(){
+  const icons={week_reminder:'⏰',three_day_reminder:'⏰',day_reminder:'🔥',swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
+  const body=document.getElementById('notifPanelBody');
+  const markBtn=document.getElementById('markAllReadBtn');
+  if(markBtn) markBtn.style.display=D.notifications.some(n=>!n.read)?'inline-flex':'none';
+  if(!body)return;
+  if(!D.notifications.length){
+    body.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">🔔 لا يوجد تنبيهات</div>`;
+  }else{
+    body.innerHTML=D.notifications.map(n=>`
+      <div class="notif-panel-item ${n.read?'':'unread'}" onclick="A.markRead('${n.id}')">
+        <span style="font-size:20px;flex-shrink:0;">${icons[n.type]||'🔔'}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;">${esc(n.title)}</div>
+          ${n.body?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(n.body)}</div>`:''}
+          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}</div>
+        </div>
+        ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;margin-top:4px;"></div>`:''}
+      </div>`).join('');
+  }
+  document.getElementById('notifPopup').classList.add('open');
+}
+function closeNotifPopup(){
+  document.getElementById('notifPopup').classList.remove('open');
+}
+window.closeNotifPopup=closeNotifPopup;
+
+document.getElementById('markAllReadBtn')?.addEventListener('click',async(e)=>{
+  e.stopPropagation();
+  await markAllRead();
+  openNotifPopup();
+});
+document.getElementById('notifBtn').onclick=openNotifPopup;
 
 /* ════════════════ RENDER FUNCTIONS ════════════════ */
 function setTab(t){tab=t;render();}
@@ -1090,7 +1172,7 @@ function render(){
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
-  else if(tab==='notifications')renderNotifications();
+  else if(tab==='notifications'){tab='home';renderHome();} // تحويل قديم
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
   else if(tab==='more')renderMore();
