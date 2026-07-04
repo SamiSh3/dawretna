@@ -1890,19 +1890,20 @@ function renderBudget(){
     [...paidM,...unpaidM].forEach(m=>{
       const pay=pays.find(p=>p.member_name===m.name);
       const paid=pay?.paid||false;
+      const safeName=esc(m.name).replace(/'/g,'&#39;');
+      const youBadge=m.name===myName()?` <span class="badge-you">أنت</span>`:'';
+      const payBtn=myProfile?.is_admin
+        ?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slot.id}','${safeName}')">${paid?'إلغاء':'دفع ✓'}</button>`
+        :`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`;
       h+=`<div class="member-payment-row">
         <div class="payment-av">${m.name[0]||'؟'}</div>
         <div class="payment-info">
-          <div class="payment-name">${esc(m.name)}${m.name===myName()?` <span class="badge-you">أنت</span>`:''}</div>
+          <div class="payment-name">${esc(m.name)}${youBadge}</div>
           <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">
             ${paid?`✅ دفع ${mShare.toLocaleString('ar')} ﷼`:`⏳ متبقي ${mShare.toLocaleString('ar')} ﷼`}
           </div>
         </div>
-        ${myProfile?.is_admin
-          ?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slot.id}','${esc(m.name).replace(/'/g,"\\'")}')">
-              ${paid?'إلغاء':'دفع ✓'}
-            </button>`
-          :`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`}
+        ${payBtn}
       </div>`;
     });
 
