@@ -466,9 +466,13 @@ let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
 let _loggedIn=false;
-let _loginTimer=null; // لإلغاء setTimeout إذا نجح afterLogin قبله
+let _loginTimer=null;
 
 async function initAuth(){
+  // ابدأ تحميل البيانات العامة فوراً (anon RLS مفتوح)
+  loadAll().then(()=>{ if(_loggedIn||document.getElementById('app').style.display==='block') render(); })
+           .catch(e=>console.error('initial loadAll:',e));
+
   sb.auth.onAuthStateChange(async(ev,s)=>{
     if(ev==='SIGNED_OUT') return;
     if(s&&!_loggedIn){
@@ -487,16 +491,13 @@ async function initAuth(){
       _loggedIn=true;
       await afterLogin();
     } else if(!data?.session){
-      _loginTimer=setTimeout(()=>{
-        if(!_loggedIn) showLogin();
-      },2000);
+      _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
     }
   }catch(e){
     console.error('getSession:',e);
-    _loginTimer=setTimeout(()=>{if(!_loggedIn)showLogin();},2000);
+    _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
   }
 
-  // ضمان احتياطي نهائي بعد 8 ثواني
   setTimeout(()=>{
     if(document.getElementById('loadingScreen')?.style.display!=='none'){
       if(_loggedIn)showApp();else showLogin();
