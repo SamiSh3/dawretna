@@ -500,21 +500,20 @@ async function initAuth(){
 }
 
 async function afterLogin(){
-  // امسح الـ hash بعد ما Supabase استخدمه
   if(window.location.hash&&window.location.hash.includes('access_token')){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
-  // أظهر التطبيق فوراً — لا تنتظر تحميل البيانات
   showApp();
   render();
-  // حمّل البيانات في الخلفية ثم أعد الرسم
   try{
     await loadProfile();
     await loadAll();
     await checkAutoReminders();
-    render(); // أعد الرسم بعد اكتمال البيانات
+    render();
   }catch(e){
-    console.error('afterLogin data load:',e);
+    console.error('data load error:',e);
+    toast('تعذّر تحميل البيانات — تحقق من اتصالك وحدّث الصفحة','error');
+    render(); // اعرض ما تم تحميله
   }
 }
 function showLogin(){
@@ -608,11 +607,33 @@ document.getElementById('signOutBtn').onclick=async()=>{
 /* ════════════════ DATA ════════════════ */
 async function loadProfile(){
   if(!session)return;
-  const{data}=await sb.from('profiles').select('*').eq('id',session.user.id).single();
-  myProfile=data;
-  if(!myProfile){
-    const{data:np}=await sb.from('profiles').insert({id:session.user.id,name:session.user.user_metadata?.full_name||session.user.email?.split('@')[0],email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url}).select().single();
-    myProfile=np;
+  try{
+    const{data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
+    if(data){
+      myProfile=data;
+    } else {
+      // Profile غير موجود — أنشئه
+      const name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||session.user.email?.split('@')[0]||'مستخدم';
+      const{data:np}=await sb.from('profiles').upsert({
+        id:session.user.id,
+        name,
+        email:session.user.email,
+        avatar_url:session.user.user_metadata?.avatar_url||null
+      },{onConflict:'id'}).select().maybeSingle();
+      myProfile=np;
+      // أضفه لـ team_members
+      if(name) await sb.from('team_members').upsert({name},{onConflict:'name'});
+    }
+  }catch(e){
+    console.error('loadProfile error:',e);
+    // fallback — استخدم بيانات الجلسة مباشرة
+    myProfile={
+      id:session.user.id,
+      name:session.user.user_metadata?.full_name||session.user.email?.split('@')[0]||'مستخدم',
+      email:session.user.email,
+      avatar_url:session.user.user_metadata?.avatar_url||null,
+      is_admin:false
+    };
   }
   updateAvatar();
 }
