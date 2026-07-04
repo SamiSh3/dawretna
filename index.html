@@ -618,14 +618,17 @@ async function loadProfile(){
 }
 function updateAvatar(){
   const btn=document.getElementById('profileBtn');
-  if(!btn||!myProfile)return;
-  if(myProfile.avatar_url){
-    btn.innerHTML=`<img src="${esc(myProfile.avatar_url)}" alt="">`;
+  if(!btn)return;
+  // استخدم myProfile أو بيانات session مباشرة كـ fallback
+  const avatarUrl=myProfile?.avatar_url||session?.user?.user_metadata?.avatar_url||null;
+  const name=myProfile?.name||session?.user?.user_metadata?.full_name||session?.user?.email?.split('@')[0]||'?';
+  if(avatarUrl){
+    btn.innerHTML=`<img src="${esc(avatarUrl)}" alt="">`;
   } else {
-    const initial=(myProfile.name||myProfile.email||'?')[0].toUpperCase();
-    btn.innerHTML=`<span class="av-init">${esc(initial)}</span>`;
+    btn.innerHTML=`<span class="av-init">${esc(name[0].toUpperCase())}</span>`;
   }
-  if(myProfile.is_admin&&!document.querySelector('[data-tab=admin]')){
+  // أضف تبويب المشرف إذا لزم
+  if(myProfile?.is_admin&&!document.querySelector('[data-tab=admin]')){
     const nav=document.querySelector('.bottom-nav-inner');
     const t=document.createElement('button');
     t.className='nav-item';t.dataset.tab='admin';
@@ -1020,6 +1023,7 @@ function render(){
   document.getElementById('chaletTitle').textContent=D.chalet.name||'دوريتنا';
   document.getElementById('chaletSub').textContent=D.chalet.address||'جدول الطلعات';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===tab));
+  updateAvatar(); // تحديث الأيقونة في كل render
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
