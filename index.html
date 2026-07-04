@@ -392,7 +392,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
       <button class="nav-item" data-tab="calendar"><span class="nav-icon">📅</span>التقويم</button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
-      <button class="nav-item" data-tab="trips"><span class="nav-icon">🎯</span>طلعات</button>
+      <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
     </div>
   </nav>
@@ -1174,11 +1174,11 @@ function render(){
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
-  else if(tab==='notifications'){tab='home';renderHome();} // تحويل قديم
+  else if(tab==='notifications'){tab='home';renderHome();}
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
-  else if(tab==='more')renderMore();
   else if(tab==='settings')renderSettings();
+  else if(tab==='more')renderMore();
   else if(tab==='admin')renderAdmin();
 }
 
@@ -1764,10 +1764,12 @@ function renderBudget(){
   document.getElementById('content').innerHTML=h;
 }
 function renderMore(){
-  let h=`<div style="display:flex;gap:7px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;">
-    <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
-    <button class="btn ${_moreSubTab==='settings'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;justify-content:center;" onclick="A.setMoreTab('settings')">⚙️ إعدادات</button>
+  let h=`<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
+    <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
+    <button class="btn ${_moreSubTab==='special'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('special')">🔥 خاصة</button>
+    <button class="btn ${_moreSubTab==='polls'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('polls')">📊 استطلاع</button>
   </div>`;
+
   if(_moreSubTab==='memories'){
     h+=`<div class="card"><div class="h2">📸 ذكرى جديدة</div>
     <div class="field"><label>الوصف</label><textarea id="memC" placeholder="وش صار؟"></textarea></div>
@@ -1782,17 +1784,71 @@ function renderMore(){
       <div style="font-size:10.5px;color:var(--muted);margin-top:7px;font-family:var(--fm);">${esc(toGreg(m.date))} · ${esc(m.author_name||'')}
       ${myName()&&(m.author_name===myName()||myProfile?.is_admin)?` <button class="btn btn-danger btn-xs" onclick="A.delMem('${m.id}')">حذف</button>`:''}</div></div></div>`;
     });
+
+  } else if(_moreSubTab==='special'){
+    const isAdmin=myProfile?.is_admin;
+    if(isAdmin){
+      h+=`<div class="card"><div class="h2">➕ طلعة خاصة</div>
+      <div class="field"><label>العنوان</label><input type="text" id="spT" placeholder="شواء، رحلة..."></div>
+      <div class="row"><div class="field"><label>التاريخ</label><input type="date" id="spD"></div>
+      <div class="field"><label>المكان</label><input type="text" id="spL"></div></div>
+      <button class="btn btn-primary btn-block" onclick="A.createSpecial()">إنشاء</button></div>`;
+    } else {
+      h+=`<div class="note" style="margin-bottom:14px;">🔒 المشرفون فقط يمكنهم إنشاء طلعات خاصة.</div>`;
+    }
+    if(!D.specials.length)h+=`<div class="empty"><span class="ei">🔥</span>لا توجد طلعات خاصة.</div>`;
+    else D.specials.forEach(t=>{
+      const pts=D.parts.filter(p=>p.trip_id===t.id).map(p=>p.member_name);
+      const joined=myName()&&pts.includes(myName());
+      h+=`<div class="sp-card"><div class="title">${esc(t.title)}</div>
+      <div class="muted" style="font-size:12px;">${esc(toGreg(t.date))}${t.location?' · '+esc(t.location):''}</div>
+      <div style="font-size:11px;color:var(--amber);margin-top:3px;">${esc(toHijri(t.date,0))}</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:5px;">👥 ${pts.length}: ${pts.map(esc).join('، ')||'—'}</div>
+      <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:8px;" onclick="A.toggleJoin('${t.id}')">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
+    });
+
   } else {
-    renderSettingsInto(h);return;
+    // polls
+    h+=`<div class="card"><div class="h2">📊 استطلاع جديد</div>
+    <div class="field"><label>السؤال</label><input type="text" id="pollQ" placeholder="وش نطبخ؟"></div>
+    <div id="pollOpts"><div class="field"><label>خيار ١</label><input type="text" class="pi" placeholder="خيار..."></div>
+    <div class="field"><label>خيار ٢</label><input type="text" class="pi" placeholder="خيار..."></div></div>
+    <div style="margin-bottom:10px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt()">+ خيار</button></div>
+    <button class="btn btn-primary btn-block" onclick="A.createPoll()">إنشاء</button></div>`;
+    if(!D.polls.length)h+=`<div class="empty"><span class="ei">📊</span>لا يوجد استطلاعات.</div>`;
+    else D.polls.forEach(poll=>{
+      const opts=Array.isArray(poll.options)?poll.options:JSON.parse(poll.options||'[]');
+      const pV=D.votes.filter(v=>v.poll_id===poll.id),total=pV.length;
+      const myV=myName()?pV.find(v=>v.member_name===myName()):null;
+      h+=`<div class="poll-card">
+        <div style="display:flex;justify-content:space-between;gap:8px;">
+          <div class="poll-q">${esc(poll.question)}</div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            ${!poll.closed&&(myProfile?.is_admin||myName()===poll.created_by)?`<button class="btn btn-danger btn-xs" onclick="A.closePoll('${poll.id}')">إغلاق</button>`:''}
+            ${myProfile?.is_admin||myName()===poll.created_by?`<button class="btn btn-ghost btn-xs" onclick="A.deletePoll('${poll.id}')">حذف</button>`:''}
+          </div>
+        </div>
+        ${poll.closed?`<span style="font-size:10.5px;background:var(--danger-s);color:var(--danger);padding:2px 8px;border-radius:999px;">مغلق</span>`:''}
+        <div>`;
+      opts.forEach((op,i)=>{
+        const cnt=pV.filter(v=>v.option_idx===i).length,pct=total?Math.round(cnt/total*100):0,vt=myV?.option_idx===i;
+        h+=`<div class="poll-opt" onclick="${!myV&&!poll.closed?`A.vote('${poll.id}',${i})`:''}">
+          <span class="opt-label" title="${esc(op)}">${esc(op)}</span>
+          <div class="opt-bar-wrap"><div class="opt-bar ${vt?'voted':''}" style="width:${pct}%"></div></div>
+          <span class="opt-count">${cnt}</span>
+          ${vt?'<span class="voted-badge">✓</span>':''}
+        </div>`;
+      });
+      h+=`</div><div class="muted" style="font-size:10.5px;margin-top:6px;">${total} صوت</div></div>`;
+    });
   }
   document.getElementById('content').innerHTML=h;
 }
 let _moreSubTab='memories';
 
 /* ── Settings ── */
-function renderSettings(){renderSettingsInto('');}
-function renderSettingsInto(prefix){
-  let h=prefix;
+function renderSettings(){
+  let h='';
   h+=`<div class="card"><div class="h2">📍 بيانات الشاليه</div>
   <div class="field"><label>الاسم</label><input type="text" id="sN" value="${esc(D.chalet.name)}"></div>
   <div class="field"><label>العنوان</label><textarea id="sA">${esc(D.chalet.address||'')}</textarea></div>
