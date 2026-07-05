@@ -1130,10 +1130,14 @@ async function removeSlot(id){
   await loadAll();render();toast('تم حذف الطلعة');
 }
 async function addMember(name){
+  if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم إضافة أعضاء','error');return;}
   if(!name)return;
   await sb.from('team_members').upsert({name},{onConflict:'name'});await loadAll();render();
 }
-async function removeMember(name){await sb.from('team_members').delete().eq('name',name);await loadAll();render();}
+async function removeMember(name){
+  if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم حذف أعضاء','error');return;}
+  await sb.from('team_members').delete().eq('name',name);await loadAll();render();
+}
 
 // إيجاد أقرب أول ثلاثاء في شهر هجري قادم
 function nextFirstTuesday(){
@@ -2018,8 +2022,13 @@ function renderSettings(){
     h+=`</div>`;
   }
   h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
-  D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button></span>`);
-  h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div></div>
+  D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}${myProfile?.is_admin?`<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button>`:''}</span>`);
+  if(myProfile?.is_admin){
+    h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div>`;
+  } else {
+    h+=`</div>`;
+  }
+  h+=`</div>`;
   <div class="note">البيانات محفوظة في Supabase.</div>`;
   document.getElementById('content').innerHTML=h;
 }
