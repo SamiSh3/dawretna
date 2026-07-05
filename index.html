@@ -732,6 +732,8 @@ async function loadProfile(){
       myProfile=np;
       // أضفه لـ team_members
       if(name) await sb.from('team_members').upsert({name},{onConflict:'name'});
+      // أخبر المشرفين بالعضو الجديد
+      await notifyAdmins('new_member',`عضو جديد انضم 👤`,`${name} (${session.user.email||''}) سجّل في التطبيق`);
     }
   }catch(e){
     console.error('loadProfile error:',e);
@@ -894,13 +896,19 @@ function timeAgo(iso){
 /* ════════════════ NOTIFICATIONS ════════════════ */
 async function notify(name,type,title,body,slotId){
   if(!name)return;
-  const{data:p}=await sb.from('profiles').select('id').eq('name',name).single();
+  const{data:p}=await sb.from('profiles').select('id').eq('name',name).maybeSingle();
   if(!p)return;
   try{await sb.from('notifications').insert({user_id:p.id,type,title,body,related_slot_id:slotId||null});}catch(e){}
 }
 async function notifyAll(type,title,body,slotId){
   for(const m of D.team){
     if(m.name!==myName())await notify(m.name,type,title,body,slotId);
+  }
+}
+async function notifyAdmins(type,title,body){
+  const{data:admins}=await sb.from('profiles').select('name').eq('is_admin',true);
+  for(const a of(admins||[])){
+    if(a.name!==myName())await notify(a.name,type,title,body,null);
   }
 }
 async function markAllRead(){
@@ -1009,6 +1017,9 @@ document.getElementById('saveBudgetBtn').onclick=async()=>{
   const amount=parseFloat(document.getElementById('budgetAmount').value)||null;
   const notes=document.getElementById('budgetNotes').value.trim();
   await sb.from('slots').update({budget:amount,budget_notes:notes}).eq('id',id);
+  const slot=D.slots.find(s=>s.id===id);
+  const perPerson=D.team.length&&amount?Math.round(amount/D.team.length):0;
+  await notifyAll('general',`تم تحديد ميزانية طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amount||0).toLocaleString('ar')} ﷼${perPerson?' ('+perPerson.toLocaleString('ar')+' ﷼ للفرد)':''}`);
   closeModal('budgetModal');await loadAll();render();toast('تم حفظ الميزانية 💰');
 };
 document.getElementById('cancelBudgetBtn').onclick=()=>closeModal('budgetModal');
@@ -1025,6 +1036,7 @@ function openBudgetModal(slotId){
 async function createSpecial(title,date,location){
   const{error}=await sb.from('special_trips').insert({title,date,location:location||null,creator_name:myName()}).select().single();
   if(error){toast('المشرفون فقط يمكنهم إنشاء طلعات خاصة','error');return;}
+  await notifyAll('new_special',`طلعة خاصة جديدة 🔥 ${esc(title)}`,`${toGregShort(date)}${location?' — '+location:''}`,null);
   await loadAll();render();toast('تم الإنشاء 🎉');
 }
 async function toggleJoin(id){
@@ -1052,6 +1064,7 @@ async function createPoll(q,opts){
 async function addMemory(cap,img,date){
   if(!cap){toast('اكتب وصف','error');return;}
   await sb.from('memories').insert({caption:cap,image_url:img||null,date,author_name:myName()});
+  await notifyAll('new_memory',`${esc(myName())} أضاف ذكرى 📸`,`${toGregShort(date)} — ${cap.slice(0,40)}`,null);
   await loadAll();render();toast('تمت الإضافة 📸');
 }
 
@@ -2095,11 +2108,13 @@ window.A={
     await loadAll();renderBudget();
   },
   async saveAnnualBudget(){
-    const year=parseInt(document.getElementById('budgetYearSel')?.value)||new Date().getFullYear();
+    const year=parseInt(document.getElementById('budgetYearSel')?.value)||todayYear();
     const amt=parseFloat(document.getElementById('annualBudgetAmt')?.value)||null;
     if(!amt){toast('أدخل المبلغ','error');return;}
     if(D.chalet.id) await sb.from('chalet').update({annual_budget:amt,budget_year:year}).eq('id',D.chalet.id);
     else await sb.from('chalet').insert({name:'دوريتنا',annual_budget:amt,budget_year:year});
+    const perPerson=D.team.length?Math.round(amt/D.team.length):0;
+    await notifyAll('general',`تم تحديد الميزانية السنوية ${year} 💰`,`المبلغ الكلي: ${Number(amt).toLocaleString('ar')} ﷼ — نصيب الفرد: ${perPerson.toLocaleString('ar')} ﷼`);
     await loadAll();renderBudget();toast('تم حفظ الميزانية السنوية 💰');
   },
   async saveChaletName(){
@@ -2136,6 +2151,9 @@ window.A={
     if(!slotId){toast('اختر طلعة','error');return;}
     if(!amount){toast('أدخل المبلغ','error');return;}
     await sb.from('slots').update({budget:amount,budget_notes:notes||null}).eq('id',slotId);
+    const slot=D.slots.find(s=>s.id===slotId);
+    const perPerson=D.team.length?Math.round(amount/D.team.length):0;
+    await notifyAll('general',`تم تحديد ميزانية طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amount).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
     await loadAll();renderBudget();toast('تم حفظ الميزانية 💰');
   },
   sendEmailReminder(){
