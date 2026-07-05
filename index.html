@@ -597,11 +597,16 @@ async function afterLogin(){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
+  render(); // رسم فوري لإظهار التطبيق
   try{
     await loadProfile();
+    render(); // تحديث الأفاتار والاسم
     await loadAll();
-  }catch(e){console.error('afterLogin:',e);}
-  render();
+    render(); // عرض البيانات الكاملة
+  }catch(e){
+    console.error('afterLogin error:',e);
+    render();
+  }
   checkAutoReminders().catch(()=>{});
 }
 
@@ -1268,6 +1273,15 @@ function render(){
 function renderHome(){
   const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
   let h='';
+
+  // مؤشر تحميل إذا لم تصل البيانات بعد
+  if(!D.slots.length&&!D.team.length){
+    h+=`<div style="text-align:center;padding:40px 20px;">
+      <div class="spin" style="width:24px;height:24px;margin:0 auto 12px;"></div>
+      <p style="color:var(--muted);font-size:13px;">يتم تحميل البيانات...</p>
+    </div>`;
+    document.getElementById('content').innerHTML=h;return;
+  }
 
   if(next){
     const du=daysUntil(next.date),off=next.hijri_offset||0;
