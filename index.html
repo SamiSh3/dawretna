@@ -591,27 +591,25 @@ async function initAuth(){
   },8000);
 }
 
+// مساعد timeout
+function withTimeout(promise, ms=8000){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
+  ]);
+}
+
 async function afterLogin(){
   if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
   if(window.location.hash?.includes('access_token')){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
+  // تحميل الـ profile مع timeout 5 ثواني
+  try{ await withTimeout(loadProfile(), 5000); }catch(e){ console.warn('profile timeout/error:', e); }
+  // تحميل البيانات مع timeout 10 ثواني
+  try{ await withTimeout(loadAll(), 10000); }catch(e){ console.warn('loadAll timeout/error:', e); }
   render();
-  try{
-    await loadProfile();
-    render();
-    await loadAll();
-    render();
-  }catch(e){
-    // أظهر الخطأ مرئياً للتشخيص
-    const c=document.getElementById('content');
-    if(c) c.innerHTML=`<div class="card" style="border-color:var(--danger);">
-      <div style="color:var(--danger);font-weight:700;margin-bottom:8px;">⚠️ خطأ في تحميل البيانات</div>
-      <div style="font-size:12px;font-family:monospace;color:var(--muted);word-break:break-all;">${esc(String(e))}</div>
-      <button class="btn btn-primary btn-sm btn-block" style="margin-top:10px;" onclick="location.reload()">🔄 إعادة تحميل</button>
-    </div>`;
-  }
   checkAutoReminders().catch(()=>{});
 }
 
