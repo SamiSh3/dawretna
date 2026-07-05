@@ -597,15 +597,20 @@ async function afterLogin(){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
-  render(); // رسم فوري لإظهار التطبيق
+  render();
   try{
     await loadProfile();
-    render(); // تحديث الأفاتار والاسم
-    await loadAll();
-    render(); // عرض البيانات الكاملة
-  }catch(e){
-    console.error('afterLogin error:',e);
     render();
+    await loadAll();
+    render();
+  }catch(e){
+    // أظهر الخطأ مرئياً للتشخيص
+    const c=document.getElementById('content');
+    if(c) c.innerHTML=`<div class="card" style="border-color:var(--danger);">
+      <div style="color:var(--danger);font-weight:700;margin-bottom:8px;">⚠️ خطأ في تحميل البيانات</div>
+      <div style="font-size:12px;font-family:monospace;color:var(--muted);word-break:break-all;">${esc(String(e))}</div>
+      <button class="btn btn-primary btn-sm btn-block" style="margin-top:10px;" onclick="location.reload()">🔄 إعادة تحميل</button>
+    </div>`;
   }
   checkAutoReminders().catch(()=>{});
 }
@@ -762,42 +767,32 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
-  const base=SB_URL+'/rest/v1/';
-  async function q(table,params=''){
-    try{
-      const r=await fetch(base+table+'?'+params,{headers:H});
-      if(!r.ok){console.error(table,'status:',r.status);return[];}
-      return await r.json();
-    }catch(e){console.error(table,'fetch error:',e);return[];}
-  }
-  const[ch,tm,sl,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
-    q('chalet','limit=1'),
-    q('team_members','order=created_at'),
-    q('slots','order=date'),
-    q('rsvps','select=*'),
-    q('swap_requests','status=eq.pending'),
-    q('reminders','select=*'),
-    q('special_trips','order=date'),
-    q('special_trip_participants','select=*'),
-    q('memories','order=created_at.desc'),
-    q('polls','order=created_at.desc'),
-    q('poll_votes','select=*'),
-    q('budget_payments','select=*'),
-    q('app_settings','select=*'),
-    q('annual_payments','select=*'),
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
+    sb.from('chalet').select('*').limit(1),
+    sb.from('team_members').select('*').order('created_at'),
+    sb.from('slots').select('*').order('date'),
+    sb.from('rsvps').select('*'),
+    sb.from('swap_requests').select('*').eq('status','pending'),
+    sb.from('reminders').select('*'),
+    sb.from('special_trips').select('*').order('date'),
+    sb.from('special_trip_participants').select('*'),
+    sb.from('memories').select('*').order('created_at',{ascending:false}),
+    sb.from('polls').select('*').order('created_at',{ascending:false}),
+    sb.from('poll_votes').select('*'),
+    sb.from('budget_payments').select('*'),
+    sb.from('app_settings').select('*'),
+    sb.from('annual_payments').select('*'),
   ]);
-  D.chalet=ch[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
-  D.team=tm||[];D.slots=sl||[];D.rsvps=rv||[];D.swaps=sw||[];
-  D.reminders=rm||[];D.specials=sp||[];D.parts=pt||[];
-  D.memories=mm||[];D.polls=po||[];D.votes=vt||[];
-  D.payments=py||[];D.annualPayments=ap||[];
-  D.settings={};(st||[]).forEach(r=>D.settings[r.key]=r.value);
+  D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
+  D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
+  D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
+  D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
+  D.payments=py.data||[];D.annualPayments=ap.data||[];
+  D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
   if(session){
-    try{
-      const r=await fetch(base+'notifications?user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token}});
-      D.notifications=r.ok?await r.json():[];
-    }catch(e){D.notifications=[];}
+    const nt=await sb.from('notifications').select('*')
+      .eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50);
+    D.notifications=nt.data||[];
   }
   updateNotifBadge();
 }
