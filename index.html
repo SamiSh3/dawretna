@@ -622,10 +622,10 @@ async function afterLogin(){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
-  // تحميل الـ profile مع timeout 5 ثواني
-  try{ await withTimeout(loadProfile(), 5000); }catch(e){ console.warn('profile timeout/error:', e); }
-  // تحميل البيانات مع timeout 10 ثواني
-  try{ await withTimeout(loadAll(), 10000); }catch(e){ console.warn('loadAll timeout/error:', e); }
+  render();
+  await loadProfile();
+  render();
+  await loadAll(); // يعمل render داخلياً بعد البيانات الأساسية
   render();
   checkAutoReminders().catch(()=>{});
 }
@@ -782,22 +782,27 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json'};
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)};
   const api=async(path)=>{
-    try{
-      const r=await fetch(SB_URL+'/rest/v1/'+path,{headers:H});
-      if(!r.ok) return [];
-      return await r.json();
-    }catch(e){return [];}
+    try{const r=await fetch(SB_URL+'/rest/v1/'+path,{headers:H});
+    return r.ok?await r.json():[];}catch(e){return [];}
   };
 
-  const [team,slots,rsvps,swaps,reminders,specials,parts,
-         memories,polls,votes,payments,annualPay,settings,chalet]=
+  // ── المرحلة الأولى: البيانات الأساسية (سريعة) ──
+  const [chalet,team,slots,rsvps,swaps]=await Promise.all([
+    api('chalet?select=*&limit=1'),
+    api('team_members?select=*&order=created_at'),
+    api('slots?select=*&order=date'),
+    api('rsvps?select=*'),
+    api('swap_requests?select=*&status=eq.pending'),
+  ]);
+  if(chalet[0]) D.chalet=chalet[0];
+  D.team=team; D.slots=slots; D.rsvps=rsvps; D.swaps=swaps;
+  render(); // ← render فوري بمجرد وصول البيانات الأساسية
+
+  // ── المرحلة الثانية: البيانات الثانوية (في الخلفية) ──
+  const [reminders,specials,parts,memories,polls,votes,payments,annualPay,settings]=
     await Promise.all([
-      api('team_members?select=*&order=created_at'),
-      api('slots?select=*&order=date'),
-      api('rsvps?select=*'),
-      api('swap_requests?select=*&status=eq.pending'),
       api('reminders?select=*'),
       api('special_trips?select=*&order=date'),
       api('special_trip_participants?select=*'),
@@ -807,11 +812,7 @@ async function loadAll(){
       api('budget_payments?select=*'),
       api('annual_payments?select=*'),
       api('app_settings?select=*'),
-      api('chalet?select=*&limit=1'),
     ]);
-
-  if(chalet[0]) D.chalet=chalet[0];
-  D.team=team; D.slots=slots; D.rsvps=rsvps; D.swaps=swaps;
   D.reminders=reminders; D.specials=specials; D.parts=parts;
   D.memories=memories; D.polls=polls; D.votes=votes;
   D.payments=payments; D.annualPayments=annualPay;
