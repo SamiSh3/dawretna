@@ -768,10 +768,10 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap,lc]=await Promise.all([
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
     sb.from('chalet').select('*').limit(1),
     sb.from('team_members').select('*').order('created_at'),
-    sb.from('slots').select('*,location:locations(id,name,address,map_url,lat,lng)').order('date'),
+    sb.from('slots').select('*').order('date'),
     sb.from('rsvps').select('*'),
     sb.from('swap_requests').select('*').eq('status','pending'),
     sb.from('reminders').select('*'),
@@ -783,15 +783,12 @@ async function loadAll(){
     sb.from('budget_payments').select('*'),
     sb.from('app_settings').select('*'),
     sb.from('annual_payments').select('*'),
-    sb.from('locations').select('*').order('created_at'),
   ]);
   D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
   D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
   D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
   D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
-  D.payments=py.data||[];
-  D.annualPayments=ap.data||[];
-  D.locations=lc.data||[];
+  D.payments=py.data||[];D.annualPayments=ap.data||[];
   D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
   // notifications تحتاج session
   if(session){
@@ -1331,15 +1328,14 @@ function renderHome(){
 
     // map
     // موقع الطلعة (من location المرتبط أو الافتراضي)
-    const slotLoc=next.location||(D.locations.find(l=>l.is_default)||D.locations[0]);
-    if(slotLoc?.lat&&slotLoc?.lng){
+    if(D.chalet.lat&&D.chalet.lng){
       h+=`<div class="map-embed">
-        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${slotLoc.lng-.008},${slotLoc.lat-.008},${slotLoc.lng+.008},${slotLoc.lat+.008}&layer=mapnik&marker=${slotLoc.lat},${slotLoc.lng}" loading="lazy"></iframe>
+        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${D.chalet.lng-.008},${D.chalet.lat-.008},${D.chalet.lng+.008},${D.chalet.lat+.008}&layer=mapnik&marker=${D.chalet.lat},${D.chalet.lng}" loading="lazy"></iframe>
       </div>`;
     }
-    if(slotLoc?.map_url||slotLoc?.lat){
-      const murl=slotLoc.map_url||(slotLoc.lat?`https://maps.google.com/?q=${slotLoc.lat},${slotLoc.lng}`:'');
-      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 ${esc(slotLoc.name||'فتح في خرائط جوجل')}</a>`;
+    if(D.chalet.map_url||D.chalet.lat){
+      const murl=D.chalet.map_url||(D.chalet.lat?`https://maps.google.com/?q=${D.chalet.lat},${D.chalet.lng}`:'');
+      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 فتح في خرائط جوجل</a>`;
     }
     h+=`</div>`;
   } else {
