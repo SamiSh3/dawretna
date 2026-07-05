@@ -1428,8 +1428,9 @@ function renderCalendar(){
 
   let h=`<div class="cal-nav">
     <button class="btn btn-ghost btn-sm" onclick="A.calNext()">▶</button>
-    <div style="text-align:center;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
       <div class="cal-year">${calYear} م</div>
+      <button class="btn btn-primary btn-xs" onclick="A.goToday()" style="padding:3px 14px;font-size:11px;border-radius:999px;">📍 اليوم</button>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">◀</button>
   </div>
@@ -1449,7 +1450,7 @@ function renderCalendar(){
     const monthPrefix=`${calYear}-${String(m+1).padStart(2,'0')}-`;
     const hasEvents=Object.keys(eventMap).some(d=>d.startsWith(monthPrefix));
 
-    h+=`<div class="month-card">
+    h+=`<div class="month-card" id="month-${calYear}-${m}">
       <div class="month-header">
         <div class="month-title-row">
           <span class="month-greg">${esc(gregMonthName)} ${calYear}</span>
@@ -2039,6 +2040,17 @@ window.A={
   markAllRead,markRead,deleteNotif,
   calPrev(){calYear--;selectedDate=null;renderCalendar();},
   calNext(){calYear++;selectedDate=null;renderCalendar();},
+  goToday(){
+    calYear=todayYear();
+    selectedDate=null;
+    renderCalendar();
+    // تمرير للشهر الحالي بعد الرسم
+    requestAnimationFrame(()=>{
+      const todayMonth=new Date(todayISO()+'T00:00:00').getMonth();
+      const el=document.getElementById(`month-${calYear}-${todayMonth}`);
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    });
+  },
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
   async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
