@@ -342,7 +342,8 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 
 <!-- login -->
 <div id="loginScreen" style="display:none;">
-  <div class="login-card">
+  <!-- شاشة تسجيل الدخول -->
+  <div class="login-card" id="loginView">
     <div class="login-icon">🏕️</div>
     <h1>دوريتنا</h1>
     <p>منظم طلعات الشاليه للشلة — جدول، حجز، تبديل، واستطلاعات.</p>
@@ -350,19 +351,37 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       تسجيل الدخول بجوجل
     </button>
-
     <div class="divider"><span>أو بالإيميل</span></div>
     <div style="text-align:right;">
       <div class="field"><input type="email" id="loginEmail" placeholder="الإيميل" dir="ltr" style="text-align:left;"></div>
       <div class="field"><input type="password" id="loginPass" placeholder="كلمة المرور" dir="ltr" style="text-align:left;"></div>
-      <div id="nameField" class="field" style="display:none;"><input type="text" id="loginName" placeholder="اسمك الكامل"></div>
     </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-primary btn-block" id="emailLoginBtn">دخول</button>
-      <button class="btn btn-ghost" id="emailSignupBtn">حساب جديد</button>
-    </div>
+    <button class="btn btn-primary btn-block" id="emailLoginBtn">دخول</button>
     <p id="loginErr" style="color:var(--danger);font-size:12px;margin:8px 0 0;display:none;"></p>
+    <div style="text-align:center;margin-top:14px;">
+      <span style="font-size:13px;color:var(--muted);">ما عندك حساب؟</span>
+      <button id="showSignupBtn" style="background:none;border:none;color:var(--amber);font-size:13px;font-weight:700;cursor:pointer;padding:0 6px;font-family:inherit;">إنشاء حساب جديد</button>
+    </div>
   </div>
+
+  <!-- شاشة إنشاء حساب جديد -->
+  <div class="login-card" id="signupView" style="display:none;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button id="backToLoginBtn" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0;line-height:1;">←</button>
+      <div>
+        <h1 style="margin:0;font-size:22px;">حساب جديد</h1>
+        <p style="margin:2px 0 0;font-size:12px;color:var(--muted);">إنشاء حساب في دوريتنا</p>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="field"><input type="text" id="signupName" placeholder="اسمك الكامل"></div>
+      <div class="field"><input type="email" id="signupEmail" placeholder="الإيميل" dir="ltr" style="text-align:left;"></div>
+      <div class="field"><input type="password" id="signupPass" placeholder="كلمة المرور (٦ أحرف على الأقل)" dir="ltr" style="text-align:left;"></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="emailSignupBtn">إنشاء الحساب</button>
+    <p id="signupErr" style="color:var(--danger);font-size:12px;margin:8px 0 0;display:none;"></p>
+  </div>
+
   <p class="login-note">🔒 بياناتك محفوظة آمنة عبر Supabase</p>
 </div>
 
@@ -617,73 +636,66 @@ function showApp(){
 
 // Google
 document.getElementById('googleBtn').onclick=async()=>{
-  // نظّف الرابط من أي hash قديم لتجنب ##access_token
   const cleanUrl=window.location.origin+window.location.pathname;
   const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:cleanUrl}});
   if(error)showErr(error.message);
 };
 
-// Email
-let signupMode=false;
-document.getElementById('emailSignupBtn').onclick=()=>{
-  const nf=document.getElementById('nameField');
-  if(nf.style.display==='none'){nf.style.display='block';toast('عبّي اسمك ثم اضغط "حساب جديد" مرة ثانية');return;}
-  doEmailSignup();
-};
-document.getElementById('emailLoginBtn').onclick=doEmailLogin;
-['loginEmail','loginPass'].forEach(id=>document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')doEmailLogin();}));
+// التبديل بين شاشتي الدخول والتسجيل
+function showErr(m){const el=document.getElementById('loginErr');el.textContent=m;el.style.display='block';}
+function hideErr(){document.getElementById('loginErr').style.display='none';}
+function showSignupErr(m){const el=document.getElementById('signupErr');el.textContent=m;el.style.display='block';}
+function hideSignupErr(){document.getElementById('signupErr').style.display='none';}
 
+document.getElementById('showSignupBtn').onclick=()=>{
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('signupView').style.display='block';
+  hideErr();hideSignupErr();
+};
+document.getElementById('backToLoginBtn').onclick=()=>{
+  document.getElementById('signupView').style.display='none';
+  document.getElementById('loginView').style.display='block';
+  hideErr();hideSignupErr();
+};
+
+// تسجيل الدخول
 async function doEmailLogin(){
   hideErr();
-  const email=document.getElementById('loginEmail').value.trim(),pass=document.getElementById('loginPass').value;
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
   if(!email||!pass){showErr('عبّي الإيميل وكلمة المرور');return;}
   const{error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error)showErr(error.message.includes('Invalid')?'إيميل أو كلمة المرور غير صحيحة':error.message);
 }
-async function doEmailSignup(){
-  hideErr();
-  const email=document.getElementById('loginEmail').value.trim();
-  const pass=document.getElementById('loginPass').value;
-  const name=document.getElementById('loginName').value.trim();
-  if(!email||!pass||!name){showErr('عبّي الاسم والإيميل وكلمة المرور');return;}
-  if(pass.length<6){showErr('كلمة المرور 6 أحرف على الأقل');return;}
-  if(!/\S+@\S+\.\S+/.test(email)){showErr('الإيميل غير صحيح');return;}
+document.getElementById('emailLoginBtn').onclick=doEmailLogin;
+document.getElementById('loginEmail')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEmailLogin();});
+document.getElementById('loginPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEmailLogin();});
 
-  // تحقق حالة التسجيل (anon read)
+// إنشاء حساب جديد
+async function doEmailSignup(){
+  hideSignupErr();
+  const name=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const pass=document.getElementById('signupPass').value;
+  if(!name||!email||!pass){showSignupErr('عبّي جميع الحقول');return;}
+  if(pass.length<6){showSignupErr('كلمة المرور 6 أحرف على الأقل');return;}
+  if(!/\S+@\S+\.\S+/.test(email)){showSignupErr('الإيميل غير صحيح');return;}
   try{
     const{data:s}=await sb.from('app_settings').select('value').eq('key','registrations_enabled').maybeSingle();
-    if(s?.value==='false'){showErr('التسجيل مغلق. تواصل مع المشرف.');return;}
+    if(s?.value==='false'){showSignupErr('التسجيل مغلق. تواصل مع المشرف.');return;}
   }catch(e){}
-
   const cleanUrl=window.location.origin+window.location.pathname;
-  const{data,error}=await sb.auth.signUp({
-    email,password:pass,
-    options:{data:{full_name:name},emailRedirectTo:cleanUrl}
-  });
-
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name},emailRedirectTo:cleanUrl}});
   if(error){
-    if(error.message.includes('already registered')||error.message.includes('already')){
-      showErr('هذا الإيميل مسجل من قبل — جرب تسجيل الدخول');
-    } else if(error.message.includes('rate')){
-      showErr('كثرت المحاولات، انتظر قليلاً وحاول مرة ثانية');
-    } else {
-      showErr(error.message);
-    }
+    if(error.message.includes('already'))showSignupErr('هذا الإيميل مسجل — سجّل دخول');
+    else if(error.message.includes('rate'))showSignupErr('كثرت المحاولات، انتظر قليلاً');
+    else showSignupErr(error.message);
     return;
   }
-
-  // إذا المستخدم يحتاج تأكيد إيميل
-  if(data.user&&!data.session){
-    toast('📧 تم إرسال رسالة التأكيد لبريدك — تحقق منه وفعّل الحساب');
-    document.getElementById('loginName').value='';
-    document.getElementById('nameField').style.display='none';
-  } else if(data.session){
-    // تسجيل مباشر بدون تأكيد
-    toast('تم إنشاء الحساب بنجاح ✅');
-  }
+  toast('تم إنشاء الحساب بنجاح ✅');
 }
-function showErr(m){const el=document.getElementById('loginErr');el.textContent=m;el.style.display='block';}
-function hideErr(){document.getElementById('loginErr').style.display='none';}
+document.getElementById('emailSignupBtn').onclick=doEmailSignup;
+document.getElementById('signupPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEmailSignup();});
 document.getElementById('signOutBtn').onclick=async()=>{
   closeModal('profileModal');
   _loggedIn=false; myProfile=null;
