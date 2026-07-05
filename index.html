@@ -1415,7 +1415,6 @@ function renderHome(){
       const murl=mapUrl||(lat?`https://maps.google.com/?q=${lat},${lng}`:'');
       h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">🗺️ فتح في خرائط جوجل</a>`;
     }
-    }
     h+=`</div>`;
   } else {
     h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.</div>`;
