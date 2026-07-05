@@ -633,30 +633,9 @@ async function afterLogin(){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
-
-  // ── 1: اعرض cache فوراً لو موجود ──
-  try{
-    const cached=localStorage.getItem('dawretna_cache');
-    if(cached){
-      const c=JSON.parse(cached);
-      Object.assign(D,c);
-      _dataLoaded=true;
-      render();
-    }
-  }catch(e){}
-
-  // ── 2: حمّل Profile و Data معاً ──
-  await Promise.all([loadProfile(), loadAll()]);
+  try{await loadProfile();}catch(e){}
+  try{await loadAll();}catch(e){}
   render();
-
-  // ── 3: حفظ cache ──
-  try{
-    localStorage.setItem('dawretna_cache', JSON.stringify({
-      chalet:D.chalet, team:D.team, slots:D.slots,
-      rsvps:D.rsvps, swaps:D.swaps
-    }));
-  }catch(e){}
-
   checkAutoReminders().catch(()=>{});
 }
 
@@ -1333,31 +1312,6 @@ function render(){
 
 /* ── Home ── */
 function renderHome(){
-  // skeleton لحين وصول البيانات الأساسية
-  if(!_dataLoaded){
-    document.getElementById('content').innerHTML=`
-      <div class="sk-card">
-        <div class="skeleton sk-line sm" style="width:80px;margin-bottom:12px;"></div>
-        <div class="skeleton sk-line lg" style="width:70%;"></div>
-        <div class="skeleton sk-line sm" style="width:50%;margin-bottom:16px;"></div>
-        <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <div class="skeleton" style="height:26px;border-radius:999px;flex:1;"></div>
-          <div class="skeleton" style="height:26px;border-radius:999px;width:80px;"></div>
-        </div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          ${[1,2,3].map(()=>`<div class="skeleton" style="height:24px;border-radius:999px;width:60px;"></div>`).join('')}
-        </div>
-        <div style="display:flex;gap:8px;">
-          <div class="skeleton" style="height:36px;border-radius:999px;flex:1;"></div>
-          <div class="skeleton" style="height:36px;border-radius:999px;flex:1;"></div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;margin-bottom:16px;">
-        ${[1,2,3].map(()=>`<div class="sk-card" style="flex:1;padding:12px;text-align:center;"><div class="skeleton" style="height:26px;width:40px;margin:0 auto 6px;"></div><div class="skeleton sk-line sm" style="margin:0 auto;width:50%;"></div></div>`).join('')}
-      </div>`;
-    return;
-  }
-
   const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
   let h='';
 
