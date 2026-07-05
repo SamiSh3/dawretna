@@ -1658,7 +1658,7 @@ function openCalSlotModal(slot){
 
     <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
-    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
+    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="A.cancelBook('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
     ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`
@@ -2178,6 +2178,7 @@ window.A={
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
   async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
   async bookCal(id){await bookSlot(id);closeModal('calSlotModal');},
+  cancelBook:(id)=>cancelBookSlot(id),
   resolveSwap:(id,a)=>resolveSwap(id,a),
   async cancelSwap(swapId){
     if(!confirm('إلغاء طلب التبديل؟'))return;
