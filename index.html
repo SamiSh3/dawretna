@@ -2187,6 +2187,7 @@ window.A={
       body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
     await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
   },
+  async saveSlotTitle(slotId){
     const inp=document.getElementById('slotTitleInp_'+slotId);
     if(!inp)return;
     const title=inp.value.trim()||null;
