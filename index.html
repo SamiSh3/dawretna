@@ -337,7 +337,6 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 <div id="loadingScreen">
   <span style="font-size:38px;" class="flicker">🏕️</span>
   <p style="color:var(--muted);font-size:13px;">يجهز دوريتنا...</p>
-  <p id="loadDbg" style="color:var(--muted);font-size:11px;font-family:monospace;"></p>
 </div>
 
 <!-- login -->
@@ -554,20 +553,6 @@ let _loggedIn=false;
 let _loginTimer=null;
 
 async function initAuth(){
-  // اختبار مباشر — fetch بسيط بدون Supabase client
-  const dbg=document.getElementById('loadDbg');
-  try{
-    const r=await fetch('https://ncljmdpwdeznyytbnrgz.supabase.co/rest/v1/slots?select=date&limit=3',{
-      headers:{
-        'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jbGptZHB3ZGV6bnl5dGJucmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODU1NTIsImV4cCI6MjA5NzY2MTU1Mn0.tJC_gXgW-KuiFN_j8EoQeeXcuWtR9H9mKeZ7MoT-qI0'
-      }
-    });
-    const d=await r.json();
-    if(dbg) dbg.textContent=`DB: ${Array.isArray(d)?d.length+' طلعات':JSON.stringify(d).slice(0,80)} (${r.status})`;
-  }catch(e){
-    if(dbg) dbg.textContent='خطأ في الاتصال: '+e.message;
-  }
-
   // ابدأ تحميل البيانات العامة فوراً (anon RLS مفتوح)
   loadAll().then(()=>{ if(_loggedIn||document.getElementById('app').style.display==='block') render(); })
            .catch(e=>console.error('initial loadAll:',e));
