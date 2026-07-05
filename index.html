@@ -327,7 +327,18 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #loadingScreen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:100;}
-@keyframes flicker{0%,100%{transform:scale(1);}50%{transform:scale(1.07)rotate(-2deg);}}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skeleton{
+  background:linear-gradient(90deg,var(--bg-soft) 25%,var(--bg-el) 50%,var(--bg-soft) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s infinite;
+  border-radius:var(--rsm);
+}
+.sk-line{height:14px;margin-bottom:8px;}
+.sk-line.lg{height:22px;}
+.sk-line.sm{height:10px;width:60%;}
+.sk-circle{border-radius:50%;}
+.sk-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:20px;margin-bottom:14px;}
 .flicker{animation:flicker 2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.35);}}
 </style>
@@ -564,7 +575,7 @@ const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true
 
 let session=null,myProfile=null,tab='home';
 let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[]};
-let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
+let _dataLoaded=false; // هل اكتمل تحميل البيانات الأساسية؟
 
 /* ════════════════ AUTH ════════════════ */
 let _loggedIn=false;
@@ -719,7 +730,7 @@ document.getElementById('emailSignupBtn').onclick=doEmailSignup;
 document.getElementById('signupPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEmailSignup();});
 document.getElementById('signOutBtn').onclick=async()=>{
   closeModal('profileModal');
-  _loggedIn=false; myProfile=null;
+  _loggedIn=false; myProfile=null; _dataLoaded=false;
   await sb.auth.signOut();
   // reload الصفحة عشان نمسح أي stale state في الـ memory والـ localStorage
   window.location.href=window.location.origin+window.location.pathname;
@@ -798,6 +809,7 @@ async function loadAll(){
   ]);
   if(chalet[0]) D.chalet=chalet[0];
   D.team=team; D.slots=slots; D.rsvps=rsvps; D.swaps=swaps;
+  _dataLoaded=true; // البيانات الأساسية جاهزة
   render(); // ← render فوري بمجرد وصول البيانات الأساسية
 
   // ── المرحلة الثانية: البيانات الثانوية (في الخلفية) ──
@@ -1305,6 +1317,31 @@ function render(){
 
 /* ── Home ── */
 function renderHome(){
+  // skeleton لحين وصول البيانات الأساسية
+  if(!_dataLoaded){
+    document.getElementById('content').innerHTML=`
+      <div class="sk-card">
+        <div class="skeleton sk-line sm" style="width:80px;margin-bottom:12px;"></div>
+        <div class="skeleton sk-line lg" style="width:70%;"></div>
+        <div class="skeleton sk-line sm" style="width:50%;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div class="skeleton" style="height:26px;border-radius:999px;flex:1;"></div>
+          <div class="skeleton" style="height:26px;border-radius:999px;width:80px;"></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          ${[1,2,3].map(()=>`<div class="skeleton" style="height:24px;border-radius:999px;width:60px;"></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="skeleton" style="height:36px;border-radius:999px;flex:1;"></div>
+          <div class="skeleton" style="height:36px;border-radius:999px;flex:1;"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        ${[1,2,3].map(()=>`<div class="sk-card" style="flex:1;padding:12px;text-align:center;"><div class="skeleton" style="height:26px;width:40px;margin:0 auto 6px;"></div><div class="skeleton sk-line sm" style="margin:0 auto;width:50%;"></div></div>`).join('')}
+      </div>`;
+    return;
+  }
+
   const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
   let h='';
 
