@@ -612,6 +612,10 @@ function showLogin(){
   document.getElementById('loadingScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('app').style.display='none';
+  // تأكد من عرض شاشة الدخول وليس التسجيل
+  document.getElementById('loginView').style.display='block';
+  document.getElementById('signupView').style.display='none';
+  hideErr();
 }
 function showApp(){
   document.getElementById('loadingScreen').style.display='none';
@@ -678,6 +682,9 @@ async function doEmailSignup(){
     return;
   }
   toast('تم إنشاء الحساب بنجاح ✅');
+  // ارجع لشاشة الدخول
+  document.getElementById('signupView').style.display='none';
+  document.getElementById('loginView').style.display='block';
 }
 document.getElementById('emailSignupBtn').onclick=doEmailSignup;
 document.getElementById('signupPass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doEmailSignup();});
