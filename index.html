@@ -1276,8 +1276,8 @@ document.getElementById('notifBtn').onclick=openNotifPopup;
 function setTab(t){tab=t;render();}
 
 function render(){
-  document.getElementById('chaletTitle').textContent=D.chalet.name||'دوريتنا';
-  document.getElementById('chaletSub').textContent=D.chalet.address||'جدول الطلعات';
+  document.getElementById('chaletTitle').textContent='دوريتنا';
+  document.getElementById('chaletSub').textContent=D.chalet.name&&D.chalet.name!=='دوريتنا'?D.chalet.name:D.chalet.address||'جدول طلعات الشلة';
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===tab));
   updateAvatar();
   // تحديث أيقونة التقويم برقم اليوم
