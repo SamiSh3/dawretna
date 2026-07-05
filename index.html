@@ -595,6 +595,8 @@ let _loggedIn=false;
 let _loginTimer=null;
 
 async function initAuth(){
+  const hasOAuth=window.location.hash?.includes('access_token');
+
   sb.auth.onAuthStateChange(async(ev,s)=>{
     if(ev==='SIGNED_OUT') return;
     if(s&&!_loggedIn){
@@ -605,39 +607,28 @@ async function initAuth(){
   });
 
   try{
-    // timeout لـ getSession - لو فشلت بعد 3 ثواني اعرض الـ login
     const sessionResult=await Promise.race([
       sb.auth.getSession(),
-      new Promise(r=>setTimeout(()=>r({data:{session:null},timedOut:true}),3000))
+      new Promise(r=>setTimeout(()=>r({data:{session:null}}),5000))
     ]);
     const data=sessionResult.data;
     if(data?.session&&!_loggedIn){
       if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
       session=data.session; _loggedIn=true;
       await afterLogin();
-    } else if(!data?.session){
-      _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },1500);
+    } else if(!data?.session&&!hasOAuth){
+      _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
     }
   }catch(e){
-    console.error('getSession error:',e);
-    _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },1000);
+    if(!hasOAuth) _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
   }
 
   setTimeout(()=>{
     const ls=document.getElementById('loadingScreen');
     if(ls&&ls.style.display!=='none'){
-      if(_loggedIn)showApp();
-      else showLogin();
+      if(_loggedIn)showApp();else showLogin();
     }
-  },4000);
-}
-
-// مساعد timeout
-function withTimeout(promise, ms=8000){
-  return Promise.race([
-    promise,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))
-  ]);
+  },10000);
 }
 
 async function afterLogin(){
@@ -767,10 +758,10 @@ async function loadProfile(){
     if(rows[0]){
       myProfile=rows[0];
     } else {
-      // Profile غير موجود — أنشئه
+      // Profile غير موجود — أنشئه (UPSERT يتجنب التعارض مع الـ trigger)
       const name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||session.user.email?.split('@')[0]||'مستخدم';
       await fetch(SB_URL+'/rest/v1/profiles',{
-        method:'POST',headers:{...H,'Prefer':'resolution=merge-duplicates'},
+        method:'POST',headers:{...H,'Prefer':'resolution=merge-duplicates,return=minimal'},
         body:JSON.stringify({id:session.user.id,name,email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url||null})
       });
       myProfile={id:session.user.id,name,email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url||null,is_admin:false};
