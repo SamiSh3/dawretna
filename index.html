@@ -990,6 +990,15 @@ async function bookSlot(id){
   await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,`${slot?toGregShort(slot.date):''}`,id);
   await loadAll();render();toast('تم الحجز 🏕️');
 }
+async function cancelBookSlot(id){
+  const slot=D.slots.find(s=>s.id===id);
+  if(!slot)return;
+  if(!myProfile?.is_admin&&slot.host_name!==myName()){toast('ليس لك صلاحية','error');return;}
+  if(!confirm(`هل تريد إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
+  await sb.from('slots').update({host_name:null}).eq('id',id);
+  await notifyAll('general',`${esc(myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
+  await loadAll();render();toast('تم إلغاء الحجز');
+}
 async function setRsvp(slotId,status){
   await sb.from('rsvps').upsert({slot_id:slotId,member_name:myName(),status},{onConflict:'slot_id,member_name'});
   const slot=D.slots.find(s=>s.id===slotId);
@@ -1624,17 +1633,22 @@ function openCalSlotModal(slot){
       <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
     </div>`:''}
 
-    <!-- حجز -->
+    <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
+    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
-    ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`<button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');A.openSwap('${slot.id}')">🔁 طلب تبديل</button>`:''}
-    ${inSw?`<div class="note" style="margin-bottom:10px;">🔁 <b>${esc(inSw.requester_name)}</b> طلب تبديل يومك.
+    ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`
+    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');A.openSwap('${slot.id}')">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
+    ${inSw?`<div class="note" style="margin-bottom:10px;border-color:var(--amber);">
+      🔁 <b>${esc(inSw.requester_name)}</b> يريد تبديل موعده معك
+      ${D.slots.find(s=>s.id===inSw.from_slot_id)?`<div style="font-size:11px;color:var(--muted);margin:3px 0;">يعطيك: ${toGregShort(D.slots.find(s=>s.id===inSw.from_slot_id).date)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:7px;">
         <button class="btn btn-sage btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',true);closeModal('calSlotModal')">✅ أوافق</button>
         <button class="btn btn-danger btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',false);closeModal('calSlotModal')">❌ أرفض</button>
       </div></div>`:''}
-    ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد على طلب التبديل.</div>`:''}
+    ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد <b>${esc(D.slots.find(s=>s.id===outSw.to_slot_id)?.host_name||'')}</b> على طلب التبديل.
+      <button class="btn btn-danger btn-xs" style="margin-top:6px;" onclick="A.cancelSwap('${outSw.id}')">إلغاء الطلب</button></div>`:''}
 
     <!-- تذكيرات -->
     <details class="dg"><summary>🔔 التذكيرات</summary>
@@ -2139,6 +2153,12 @@ window.A={
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
   async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
   async bookCal(id){await bookSlot(id);closeModal('calSlotModal');},
+  resolveSwap:(id,a)=>resolveSwap(id,a),
+  async cancelSwap(swapId){
+    if(!confirm('إلغاء طلب التبديل؟'))return;
+    await sb.from('swap_requests').delete().eq('id',swapId);
+    await loadAll();render();toast('تم إلغاء طلب التبديل');
+  },
   setTripsTab(t){_tripsSubTab=t;renderTrips();},
   setMoreTab(t){_moreSubTab=t;renderMore();},
   createSpecial(){createSpecial(document.getElementById('spT')?.value.trim(),document.getElementById('spD')?.value,document.getElementById('spL')?.value.trim());},
