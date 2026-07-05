@@ -1282,15 +1282,6 @@ function renderHome(){
   const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
   let h='';
 
-  // مؤشر تحميل إذا لم تصل البيانات بعد
-  if(!D.slots.length&&!D.team.length){
-    h+=`<div style="text-align:center;padding:40px 20px;">
-      <div class="spin" style="width:24px;height:24px;margin:0 auto 12px;"></div>
-      <p style="color:var(--muted);font-size:13px;">يتم تحميل البيانات...</p>
-    </div>`;
-    document.getElementById('content').innerHTML=h;return;
-  }
-
   if(next){
     const du=daysUntil(next.date),off=next.hijri_offset||0;
     const greg=toGreg(next.date),hijri=toHijri(next.date,off);
