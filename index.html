@@ -982,43 +982,61 @@ async function checkAutoReminders(){
 }
 
 /* ════════════════ ACTIONS ════════════════ */
+function apiHeaders(){
+  return {'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'};
+}
+async function patchRow(table,id,data){
+  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),body:JSON.stringify(data)});
+}
+async function postRow(table,data,prefer='return=minimal'){
+  await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{...apiHeaders(),'Prefer':prefer},body:JSON.stringify(data)});
+}
+async function deleteRow(table,id){
+  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+}
+
 async function bookSlot(id){
   const mn=myName();
-  await sb.from('slots').update({host_name:mn}).eq('id',id);
-  await sb.from('team_members').upsert({name:mn},{onConflict:'name'});
+  await patchRow('slots',id,{host_name:mn});
   const slot=D.slots.find(s=>s.id===id);
-  await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,`${slot?toGregShort(slot.date):''}`,id);
+  await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,slot?toGregShort(slot.date):'',id);
   await loadAll();render();toast('تم الحجز 🏕️');
 }
 async function cancelBookSlot(id){
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
   if(!myProfile?.is_admin&&slot.host_name!==myName()){toast('ليس لك صلاحية','error');return;}
-  if(!confirm(`هل تريد إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
-  await sb.from('slots').update({host_name:null}).eq('id',id);
+  if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
+  await patchRow('slots',id,{host_name:null});
   await notifyAll('general',`${esc(myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
   await loadAll();render();toast('تم إلغاء الحجز');
 }
 async function setRsvp(slotId,status){
-  await sb.from('rsvps').upsert({slot_id:slotId,member_name:myName(),status},{onConflict:'slot_id,member_name'});
+  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+  await fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
+    body:JSON.stringify({slot_id:slotId,member_name:myName(),status})});
   const slot=D.slots.find(s=>s.id===slotId);
   if(slot?.host_name&&slot.host_name!==myName()){
-    await notify(slot.host_name,'rsvp',`${esc(myName())} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,toGregShort(slotId.date||slot.date),slotId);
+    await notify(slot.host_name,'rsvp',`${esc(myName())} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,toGregShort(slot.date),slotId);
   }
   await loadAll();render();toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
 }
 async function resolveSwap(swapId,accept){
   const sw=D.swaps.find(s=>s.id===swapId);if(!sw)return;
   if(accept){
-    const fs=D.slots.find(s=>s.id===sw.from_slot_id),ts=D.slots.find(s=>s.id===sw.to_slot_id);
-    await sb.from('slots').update({host_name:ts.host_name}).eq('id',fs.id);
-    await sb.from('slots').update({host_name:fs.host_name}).eq('id',ts.id);
-    await notify(sw.requester_name,'swap_accepted','طلب التبديل قُبل ✅',`تم تبديل يوم ${toGregShort(fs.date)}`,sw.from_slot_id);
+    const fs=D.slots.find(s=>s.id===sw.from_slot_id);
+    const ts=D.slots.find(s=>s.id===sw.to_slot_id);
+    if(!fs||!ts){toast('خطأ: لم يتم العثور على الطلعات','error');return;}
+    await patchRow('slots',fs.id,{host_name:ts.host_name||null});
+    await patchRow('slots',ts.id,{host_name:fs.host_name||null});
+    await notify(sw.requester_name,'swap_accepted','طلب التبديل قُبل ✅',
+      `تم تبديل ${toGregShort(fs.date)} مع ${toGregShort(ts.date)}`,sw.from_slot_id);
   } else {
-    await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌','',sw.from_slot_id);
+    await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌',
+      `رفض ${esc(myName())} طلب التبديل`,sw.from_slot_id);
   }
-  await sb.from('swap_requests').update({status:accept?'accepted':'rejected'}).eq('id',swapId);
-  await loadAll();render();toast(accept?'تم التبديل 🔁':'تم الرفض');
+  await patchRow('swap_requests',swapId,{status:accept?'accepted':'rejected'});
+  await loadAll();render();toast(accept?'✅ تم التبديل':'❌ تم الرفض');
 }
 async function adjustHijri(id,delta){
   const s=D.slots.find(x=>x.id===id);if(!s)return;
@@ -1231,9 +1249,13 @@ document.getElementById('swapCancelBtn').onclick=()=>closeModal('swapModal');
 document.getElementById('swapConfirmBtn').onclick=async()=>{
   const fromId=document.getElementById('swapSel').value;
   if(!fromId||!_swapToSlotId)return;
-  await sb.from('swap_requests').insert({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'});
+  await postRow('swap_requests',{from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'});
   const toSlot=D.slots.find(s=>s.id===_swapToSlotId);
-  if(toSlot?.host_name){await notify(toSlot.host_name,'swap_request',`${esc(myName())} طلب تبديل 🔁`,`يريد يومك ${toGregShort(toSlot.date)} مقابل يومه`,toSlot.id);}
+  const fromSlot=D.slots.find(s=>s.id===fromId);
+  if(toSlot?.host_name){
+    await notify(toSlot.host_name,'swap_request',`${esc(myName())} طلب تبديل 🔁`,
+      `يريد يومك ${toGregShort(toSlot.date)} مقابل يومه ${fromSlot?toGregShort(fromSlot.date):''}`,toSlot.id);
+  }
   closeModal('swapModal');await loadAll();render();toast('طلب التبديل أُرسل ⏳');
 };
 
