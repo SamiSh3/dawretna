@@ -476,6 +476,12 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <button class="btn btn-ghost btn-sm" id="adjPlus">+ يوم</button>
     </div>
     <div class="field">
+      <label>موقع الاجتماع</label>
+      <select id="newSlotLocation">
+        <option value="">— بدون موقع —</option>
+      </select>
+    </div>
+    <div class="field">
       <label>الميزانية (ريال) — اختياري</label>
       <input type="number" id="newSlotBudget" placeholder="مثال: 1500" min="0">
     </div>
@@ -550,7 +556,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab='home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{}};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[]};
 let _swapToSlotId=null,_genCandidates=[],_genOffsets={};
 
 /* ════════════════ AUTH ════════════════ */
@@ -762,10 +768,10 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
+  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap,lc]=await Promise.all([
     sb.from('chalet').select('*').limit(1),
     sb.from('team_members').select('*').order('created_at'),
-    sb.from('slots').select('*').order('date'),
+    sb.from('slots').select('*,location:locations(id,name,address,map_url,lat,lng)').order('date'),
     sb.from('rsvps').select('*'),
     sb.from('swap_requests').select('*').eq('status','pending'),
     sb.from('reminders').select('*'),
@@ -777,6 +783,7 @@ async function loadAll(){
     sb.from('budget_payments').select('*'),
     sb.from('app_settings').select('*'),
     sb.from('annual_payments').select('*'),
+    sb.from('locations').select('*').order('created_at'),
   ]);
   D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
   D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
@@ -784,6 +791,7 @@ async function loadAll(){
   D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
   D.payments=py.data||[];
   D.annualPayments=ap.data||[];
+  D.locations=lc.data||[];
   D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
   // notifications تحتاج session
   if(session){
@@ -1118,6 +1126,13 @@ function openNewSlot(){
   if(sugEl) sugEl.textContent=`المقترح: أقرب أول ثلاثاء في شهر هجري — ${toGreg(suggested)}`;
   document.getElementById('newSlotBudget').value='';
   document.getElementById('newSlotBudgetNotes').value='';
+  // تحديث قائمة المواقع
+  const sel=document.getElementById('newSlotLocation');
+  if(sel){
+    const def=D.locations.find(l=>l.is_default);
+    sel.innerHTML=`<option value="">— بدون موقع —</option>`+
+      D.locations.map(l=>`<option value="${l.id}" ${l.is_default?'selected':''}>${esc(l.name)}</option>`).join('');
+  }
   updateNewSlotHijri();
   openModal('newSlotModal');
 }
@@ -1140,7 +1155,8 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   if(D.slots.find(s=>s.date===date)){toast('هذا التاريخ موجود من قبل','error');return;}
   const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
   const notes=document.getElementById('newSlotBudgetNotes').value.trim();
-  await sb.from('slots').insert({date,hijri_offset:0,budget:budget||null,budget_notes:notes||null});
+  const locationId=document.getElementById('newSlotLocation')?.value||null;
+  await sb.from('slots').insert({date,hijri_offset:0,budget:budget||null,budget_notes:notes||null,location_id:locationId||null});
   await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',toGreg(date),null);
   closeModal('newSlotModal');await loadAll();render();toast('تمت إضافة الطلعة ✅');
 };
@@ -1302,14 +1318,16 @@ function renderHome(){
     if(outSw)h+=`<div class="note" style="margin-top:8px;">⏳ بانتظار رد ${esc(next.host_name||'')} على التبديل.</div>`;
 
     // map
-    if(D.chalet.lat&&D.chalet.lng){
+    // موقع الطلعة (من location المرتبط أو الافتراضي)
+    const slotLoc=next.location||(D.locations.find(l=>l.is_default)||D.locations[0]);
+    if(slotLoc?.lat&&slotLoc?.lng){
       h+=`<div class="map-embed">
-        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${D.chalet.lng-.008},${D.chalet.lat-.008},${D.chalet.lng+.008},${D.chalet.lat+.008}&layer=mapnik&marker=${D.chalet.lat},${D.chalet.lng}" loading="lazy"></iframe>
+        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${slotLoc.lng-.008},${slotLoc.lat-.008},${slotLoc.lng+.008},${slotLoc.lat+.008}&layer=mapnik&marker=${slotLoc.lat},${slotLoc.lng}" loading="lazy"></iframe>
       </div>`;
     }
-    if(D.chalet.map_url||D.chalet.lat){
-      const murl=D.chalet.map_url||(D.chalet.lat?`https://maps.google.com/?q=${D.chalet.lat},${D.chalet.lng}`:'');
-      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 فتح في خرائط جوجل</a>`;
+    if(slotLoc?.map_url||slotLoc?.lat){
+      const murl=slotLoc.map_url||(slotLoc.lat?`https://maps.google.com/?q=${slotLoc.lat},${slotLoc.lng}`:'');
+      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 ${esc(slotLoc.name||'فتح في خرائط جوجل')}</a>`;
     }
     h+=`</div>`;
   } else {
@@ -1917,27 +1935,50 @@ let _moreSubTab='memories';
 /* ── Settings ── */
 function renderSettings(){
   let h='';
-  h+=`<div class="card"><div class="h2">📍 بيانات الشاليه</div>
-  <div class="field"><label>الاسم</label><input type="text" id="sN" value="${esc(D.chalet.name)}"></div>
-  <div class="field"><label>العنوان</label><textarea id="sA">${esc(D.chalet.address||'')}</textarea></div>
-  <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="sM" value="${esc(D.chalet.map_url||'')}" placeholder="https://maps.google.com/..."></div>
+  h+=`<div class="card"><div class="h2">🏕️ اسم الدورية</div>
+  <div class="field" style="margin-top:10px;"><label>الاسم</label><input type="text" id="sN" value="${esc(D.chalet.name)}"></div>
+  <button class="btn btn-primary btn-block" onclick="A.saveChaletName()">حفظ الاسم</button></div>
+
+  <div class="card"><div class="h2">📍 مواقع الاجتماع</div>
+  <p style="font-size:12px;color:var(--muted);margin:4px 0 12px;">أضف مواقع الشاليه أو أي موقع اجتماع تستخدمونه.</p>
+  ${D.locations.map(loc=>`<div class="rem-row">
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;">${esc(loc.name)} ${loc.is_default?'<span class="badge-you">افتراضي</span>':''}</div>
+      ${loc.address?`<div style="font-size:11px;color:var(--muted);">${esc(loc.address)}</div>`:''}
+    </div>
+    <div style="display:flex;gap:4px;">
+      ${!loc.is_default&&myProfile?.is_admin?`<button class="btn btn-ghost btn-xs" onclick="A.setDefaultLoc('${loc.id}')">افتراضي</button>`:''}
+      ${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.deleteLoc('${loc.id}')">حذف</button>`:''}
+    </div>
+  </div>`).join('')}
+  ${myProfile?.is_admin?`<hr class="sep">
+  <div class="h2" style="font-size:14px;margin-bottom:10px;">➕ إضافة موقع</div>
+  <div class="field"><label>الاسم</label><input type="text" id="locName" placeholder="اسم الموقع"></div>
+  <div class="field"><label>العنوان</label><input type="text" id="locAddr" placeholder="العنوان"></div>
+  <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="locMap" placeholder="https://maps.google.com/..."></div>
   <div class="row">
-    <div class="field"><label>خط العرض (Latitude)</label><input type="number" id="sLat" step="any" value="${D.chalet.lat||''}" placeholder="24.7136"></div>
-    <div class="field"><label>خط الطول (Longitude)</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
+    <div class="field"><label>Latitude</label><input type="number" id="locLat" step="any" placeholder="24.7136"></div>
+    <div class="field"><label>Longitude</label><input type="number" id="locLng" step="any" placeholder="46.6753"></div>
   </div>
-  <p style="font-size:11px;color:var(--muted);margin:0 0 10px;">للحصول على الإحداثيات: افتح جوجل ماب → كليك يمين على الموقع → انسخ الأرقام.</p>
-  <button class="btn btn-primary btn-block" onclick="A.saveChalet()">حفظ</button></div>
+  <button class="btn btn-primary btn-block" onclick="A.addLocation()">إضافة موقع</button>`:''}</div>
+
   ${myProfile?.is_admin?`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
   <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`:''}\``;
   if(D.slots.length){
     h+=`<div class="card"><div class="h2" style="font-size:15px;">الطلعات (${D.slots.length})</div>`;
-    D.slots.forEach(s=>h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br><span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>${s.host_name?' · '+esc(s.host_name):' · متاح'}</div>${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.removeSlot('${s.id}')">حذف</button>`:''}</div>`);
+    D.slots.forEach(s=>{
+      const loc=s.location;
+      h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br>
+      <span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>
+      ${loc?` · 📍${esc(loc.name)}`:''}${s.host_name?' · '+esc(s.host_name):' · متاح'}</div>
+      ${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.removeSlot('${s.id}')">حذف</button>`:''}</div>`;
+    });
     h+=`</div>`;
   }
   h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
   D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button></span>`);
   h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div></div>
-  <div class="note">البيانات محفوظة في Supabase. تسجيل الدخول بجوجل يحتاج استضافة على رابط عام.</div>`;
+  <div class="note">البيانات محفوظة في Supabase.</div>`;
   document.getElementById('content').innerHTML=h;
 }
 
@@ -2049,7 +2090,33 @@ window.A={
     else await sb.from('chalet').insert({name:'دوريتنا',annual_budget:amt,budget_year:year});
     await loadAll();renderBudget();toast('تم حفظ الميزانية السنوية 💰');
   },
-  async saveInlineBudget(){
+  async saveChaletName(){
+    const name=document.getElementById('sN')?.value.trim();
+    if(!name)return;
+    if(D.chalet.id) await sb.from('chalet').update({name}).eq('id',D.chalet.id);
+    else await sb.from('chalet').insert({name});
+    await loadAll();render();toast('تم حفظ الاسم ✅');
+  },
+  async addLocation(){
+    const name=document.getElementById('locName')?.value.trim();
+    const addr=document.getElementById('locAddr')?.value.trim();
+    const mapUrl=document.getElementById('locMap')?.value.trim();
+    const lat=parseFloat(document.getElementById('locLat')?.value)||null;
+    const lng=parseFloat(document.getElementById('locLng')?.value)||null;
+    if(!name){toast('أدخل اسم الموقع','error');return;}
+    const isFirst=!D.locations.length;
+    await sb.from('locations').insert({name,address:addr||null,map_url:mapUrl||null,lat,lng,is_default:isFirst});
+    await loadAll();renderSettings();toast('تمت إضافة الموقع ✅');
+  },
+  async deleteLoc(id){
+    await sb.from('locations').delete().eq('id',id);
+    await loadAll();renderSettings();
+  },
+  async setDefaultLoc(id){
+    await sb.from('locations').update({is_default:false});
+    await sb.from('locations').update({is_default:true}).eq('id',id);
+    await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ✅');
+  },
     const slotId=document.getElementById('budgetSlotSel')?.value;
     const amount=parseFloat(document.getElementById('inlineBudgetAmt')?.value)||null;
     const notes=document.getElementById('inlineBudgetNotes')?.value.trim();
