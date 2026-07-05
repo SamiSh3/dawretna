@@ -745,28 +745,25 @@ document.getElementById('signOutBtn').onclick=async()=>{
 /* ════════════════ DATA ════════════════ */
 async function loadProfile(){
   if(!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
+  const ctrl=new AbortController();
+  setTimeout(()=>ctrl.abort(),5000);
   try{
-    const{data,error}=await sb.from('profiles').select('*').eq('id',session.user.id).maybeSingle();
-    if(data){
-      myProfile=data;
+    const r=await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+session.user.id+'&select=*&limit=1',{headers:H,signal:ctrl.signal});
+    const rows=r.ok?await r.json():[];
+    if(rows[0]){
+      myProfile=rows[0];
     } else {
       // Profile غير موجود — أنشئه
       const name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||session.user.email?.split('@')[0]||'مستخدم';
-      const{data:np}=await sb.from('profiles').upsert({
-        id:session.user.id,
-        name,
-        email:session.user.email,
-        avatar_url:session.user.user_metadata?.avatar_url||null
-      },{onConflict:'id'}).select().maybeSingle();
-      myProfile=np;
-      // أضفه لـ team_members
-      if(name) await sb.from('team_members').upsert({name},{onConflict:'name'});
-      // أخبر المشرفين بالعضو الجديد
-      await notifyAdmins('new_member',`عضو جديد انضم 👤`,`${name} (${session.user.email||''}) سجّل في التطبيق`);
+      await fetch(SB_URL+'/rest/v1/profiles',{
+        method:'POST',headers:{...H,'Prefer':'resolution=merge-duplicates'},
+        body:JSON.stringify({id:session.user.id,name,email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url||null})
+      });
+      myProfile={id:session.user.id,name,email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url||null,is_admin:false};
     }
   }catch(e){
-    console.error('loadProfile error:',e);
-    // fallback — استخدم بيانات الجلسة مباشرة
+    // fallback من بيانات الجلسة
     myProfile={
       id:session.user.id,
       name:session.user.user_metadata?.full_name||session.user.email?.split('@')[0]||'مستخدم',
@@ -801,40 +798,36 @@ function updateAvatar(){
 async function loadAll(){
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json'};
 
-  // طلب واحد يجيب كل البيانات
-  try{
-    const r=await fetch(SB_URL+'/rest/v1/rpc/get_app_data',{method:'POST',headers:H,body:'{}'});
-    if(r.ok){
-      const d=await r.json();
-      if(d.chalet) D.chalet=d.chalet;
-      D.team=d.team||[]; D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
-      D.specials=d.specials||[]; D.parts=d.parts||[];
-      D.polls=d.polls||[]; D.votes=d.votes||[];
-      D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
-      D.settings={}; (d.settings||[]).forEach(s=>D.settings[s.key]=s.value);
-    }
-  }catch(e){console.error('loadAll RPC:',e);}
-
-  // memories منفصلة (كبيرة)
-  try{
-    const rm=await fetch(SB_URL+'/rest/v1/memories?select=*&order=created_at.desc',{headers:H});
-    if(rm.ok) D.memories=await rm.json();
-  }catch(e){D.memories=[];}
-
-  // notifications تحتاج user_id
-  if(session){
+  const fetchWithTimeout=async(url,opts={},ms=6000)=>{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),ms);
     try{
-      const rn=await fetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50',{headers:H});
-      if(rn.ok) D.notifications=await rn.json();
-    }catch(e){D.notifications=[];}
+      const r=await fetch(url,{...opts,headers:H,signal:ctrl.signal});
+      clearTimeout(tid);
+      return r.ok?await r.json():null;
+    }catch(e){clearTimeout(tid);return null;}
+  };
+
+  // RPC واحدة تجيب كل البيانات
+  const d=await fetchWithTimeout(SB_URL+'/rest/v1/rpc/get_app_data',{method:'POST',body:'{}'});
+
+  if(d){
+    if(d.chalet) D.chalet=d.chalet;
+    D.team=d.team||[]; D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
+    D.specials=d.specials||[]; D.parts=d.parts||[];
+    D.polls=d.polls||[]; D.votes=d.votes||[];
+    D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
+    D.settings={}; (d.settings||[]).forEach(s=>D.settings[s.key]=s.value);
   }
 
-  // reminders
-  try{
-    const rr=await fetch(SB_URL+'/rest/v1/reminders?select=*',{headers:H});
-    if(rr.ok) D.reminders=await rr.json();
-  }catch(e){D.reminders=[];}
-
+  // باقي البيانات بالتوازي مع timeout
+  const [memories,reminders,notifications]= await Promise.all([
+    fetchWithTimeout(SB_URL+'/rest/v1/memories?select=*&order=created_at.desc'),
+    fetchWithTimeout(SB_URL+'/rest/v1/reminders?select=*'),
+    session?fetchWithTimeout(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50'):Promise.resolve([]),
+  ]);
+  D.memories=memories||[]; D.reminders=reminders||[];
+  if(session) D.notifications=notifications||[];
   updateNotifBadge();
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
