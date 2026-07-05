@@ -562,16 +562,11 @@ let _loggedIn=false;
 let _loginTimer=null;
 
 async function initAuth(){
-  // ابدأ تحميل البيانات العامة فوراً (anon RLS مفتوح)
-  loadAll().then(()=>{ if(_loggedIn||document.getElementById('app').style.display==='block') render(); })
-           .catch(e=>console.error('initial loadAll:',e));
-
   sb.auth.onAuthStateChange(async(ev,s)=>{
     if(ev==='SIGNED_OUT') return;
     if(s&&!_loggedIn){
       if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
-      session=s;
-      _loggedIn=true;
+      session=s; _loggedIn=true;
       await afterLogin();
     }
   });
@@ -580,14 +575,12 @@ async function initAuth(){
     const{data}=await sb.auth.getSession();
     if(data?.session&&!_loggedIn){
       if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
-      session=data.session;
-      _loggedIn=true;
+      session=data.session; _loggedIn=true;
       await afterLogin();
     } else if(!data?.session){
       _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
     }
   }catch(e){
-    console.error('getSession:',e);
     _loginTimer=setTimeout(()=>{ if(!_loggedIn) showLogin(); },2000);
   }
 
@@ -599,24 +592,20 @@ async function initAuth(){
 }
 
 async function afterLogin(){
-  // ألغِ أي timer لـ showLogin معلّق
   if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
-  if(window.location.hash&&window.location.hash.includes('access_token')){
+  if(window.location.hash?.includes('access_token')){
     window.history.replaceState(null,'',window.location.origin+window.location.pathname);
   }
   showApp();
-  render();
   try{
     await loadProfile();
-    render();
     await loadAll();
-    render();
-  }catch(e){
-    console.error('data load error:',e);
-    render(); // ارسم ما عندنا حتى لو في خطأ
-  }
-  checkAutoReminders().catch(e=>console.error('reminders:',e));
+  }catch(e){console.error('afterLogin:',e);}
+  render();
+  checkAutoReminders().catch(()=>{});
 }
+
+
 function showLogin(){
   document.getElementById('loadingScreen').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
