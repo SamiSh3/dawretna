@@ -549,6 +549,15 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 <script>
 (function(){
 'use strict';
+// تحقق من تحميل Supabase
+if(!window.supabase){
+  console.error('Supabase library failed to load!');
+  setTimeout(function(){
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('loginScreen').style.display='flex';
+  },100);
+  return;
+}
 const SB_URL='https://ncljmdpwdeznyytbnrgz.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jbGptZHB3ZGV6bnl5dGJucmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODU1NTIsImV4cCI6MjA5NzY2MTU1Mn0.tJC_gXgW-KuiFN_j8EoQeeXcuWtR9H9mKeZ7MoT-qI0';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
@@ -2201,6 +2210,18 @@ document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifi
   await initAuth();
 })();
 })();
+</script>
+<script>
+// Fallback مستقل - يعمل حتى لو الكود الرئيسي فشل
+setTimeout(function(){
+  var ls=document.getElementById('loadingScreen');
+  if(!ls||ls.style.display==='none')return;
+  ls.style.display='none';
+  // اعرض صفحة تسجيل الدخول كـ fallback
+  var li=document.getElementById('loginScreen');
+  if(li) li.style.display='flex';
+  console.warn('Fallback triggered - main script may have failed');
+},5000);
 </script>
 </body>
 </html>
