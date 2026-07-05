@@ -2117,6 +2117,7 @@ window.A={
     await sb.from('locations').update({is_default:true}).eq('id',id);
     await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ✅');
   },
+  async saveInlineBudget(){
     const slotId=document.getElementById('budgetSlotSel')?.value;
     const amount=parseFloat(document.getElementById('inlineBudgetAmt')?.value)||null;
     const notes=document.getElementById('inlineBudgetNotes')?.value.trim();
