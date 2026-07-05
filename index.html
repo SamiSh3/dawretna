@@ -1358,9 +1358,12 @@ function renderHome(){
     }
     h+=`</div>`;
   } else {
-    h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.<br>اضغط + لإضافة مواعيد.</div>`;
+    h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.</div>`;
   }
-  if(myProfile?.is_admin){
+
+  // زر إضافة طلعة للمشرفين — يظهر دائماً لو تم تأكيد الصلاحية
+  const isAdmin=myProfile?.is_admin;
+  if(isAdmin){
     h+=`<button class="btn btn-primary btn-block" style="margin-bottom:14px;" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button>`;
   }
 
