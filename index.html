@@ -466,6 +466,10 @@ details.dg[open] summary::before{transform:rotate(90deg);}
     <h2>➕ طلعة جديدة</h2>
     <p class="sub" id="newSlotSuggest"></p>
     <div class="field">
+      <label>عنوان الطلعة — اختياري</label>
+      <input type="text" id="newSlotTitle" placeholder="مثال: طلعة ربيع، شواء الصيف...">
+    </div>
+    <div class="field">
       <label>التاريخ الميلادي</label>
       <input type="date" id="newSlotDate">
     </div>
@@ -474,12 +478,6 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <button class="btn btn-ghost btn-sm" id="adjMinus">− يوم</button>
       <span style="font-size:11.5px;color:var(--muted);">تعديل هجري</span>
       <button class="btn btn-ghost btn-sm" id="adjPlus">+ يوم</button>
-    </div>
-    <div class="field">
-      <label>موقع الاجتماع</label>
-      <select id="newSlotLocation">
-        <option value="">— بدون موقع —</option>
-      </select>
     </div>
     <div class="field">
       <label>الميزانية (ريال) — اختياري</label>
@@ -1166,11 +1164,11 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const date=document.getElementById('newSlotDate').value;
   if(!date){toast('اختر تاريخ','error');return;}
   if(D.slots.find(s=>s.date===date)){toast('هذا التاريخ موجود من قبل','error');return;}
+  const title=document.getElementById('newSlotTitle').value.trim()||null;
   const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
   const notes=document.getElementById('newSlotBudgetNotes').value.trim();
-  const locationId=document.getElementById('newSlotLocation')?.value||null;
-  await sb.from('slots').insert({date,hijri_offset:0,budget:budget||null,budget_notes:notes||null,location_id:locationId||null});
-  await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',toGreg(date),null);
+  await sb.from('slots').insert({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null});
+  await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',`${title?title+' — ':''}${toGreg(date)}`,null);
   closeModal('newSlotModal');await loadAll();render();toast('تمت إضافة الطلعة ✅');
 };
 
@@ -1297,6 +1295,7 @@ function renderHome(){
 
     h+=`<div class="hero">
       <div class="hero-label">الموعد القادم</div>
+      ${next.title?`<div style="font-family:var(--fd);font-size:18px;color:var(--amber);margin-bottom:4px;">${esc(next.title)}</div>`:''}
       <div class="hero-date-greg">${esc(greg)}</div>
       <div class="hero-date-hijri">${esc(hijri)}</div>
       <div class="hero-meta">
@@ -1525,6 +1524,7 @@ function openCalSlotModal(slot){
   let h=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
       <div>
+        ${slot.title?`<div style="font-family:var(--fd);font-size:16px;color:var(--amber);margin-bottom:4px;">${esc(slot.title)}</div>`:''}
         <div style="font-family:var(--fd);font-size:20px;">${esc(toGreg(slot.date))}</div>
         <div style="font-size:12px;color:var(--amber);font-family:var(--fm);margin-top:3px;">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
         ${!isPast?`<div style="display:flex;align-items:center;gap:4px;margin-top:6px;">
