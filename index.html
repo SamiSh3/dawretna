@@ -1994,32 +1994,18 @@ let _moreSubTab='memories';
 /* ── Settings ── */
 function renderSettings(){
   let h='';
-  h+=`<div class="card"><div class="h2">🏕️ اسم الدورية</div>
-  <div class="field" style="margin-top:10px;"><label>الاسم</label><input type="text" id="sN" value="${esc(D.chalet.name)}"></div>
-  <button class="btn btn-primary btn-block" onclick="A.saveChaletName()">حفظ الاسم</button></div>
 
-  <div class="card"><div class="h2">📍 مواقع الاجتماع</div>
-  <p style="font-size:12px;color:var(--muted);margin:4px 0 12px;">أضف مواقع الشاليه أو أي موقع اجتماع تستخدمونه.</p>
-  ${D.locations.map(loc=>`<div class="rem-row">
-    <div style="flex:1;">
-      <div style="font-size:13px;font-weight:700;">${esc(loc.name)} ${loc.is_default?'<span class="badge-you">افتراضي</span>':''}</div>
-      ${loc.address?`<div style="font-size:11px;color:var(--muted);">${esc(loc.address)}</div>`:''}
+  // موقع الشاليه الثابت (للخريطة)
+  if(myProfile?.is_admin){
+    h+=`<div class="card"><div class="h2">📍 موقع الشاليه</div>
+    <p class="hint" style="margin-top:4px;">رابط الموقع يظهر في الواجهة الرئيسية لكل الأعضاء.</p>
+    <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="sM" value="${esc(D.chalet.map_url||'')}" placeholder="https://maps.app.goo.gl/..."></div>
+    <div class="row">
+      <div class="field"><label>Latitude</label><input type="number" id="sLat" step="any" value="${D.chalet.lat||''}" placeholder="24.7136"></div>
+      <div class="field"><label>Longitude</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
     </div>
-    <div style="display:flex;gap:4px;">
-      ${!loc.is_default&&myProfile?.is_admin?`<button class="btn btn-ghost btn-xs" onclick="A.setDefaultLoc('${loc.id}')">افتراضي</button>`:''}
-      ${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.deleteLoc('${loc.id}')">حذف</button>`:''}
-    </div>
-  </div>`).join('')}
-  ${myProfile?.is_admin?`<hr class="sep">
-  <div class="h2" style="font-size:14px;margin-bottom:10px;">➕ إضافة موقع</div>
-  <div class="field"><label>الاسم</label><input type="text" id="locName" placeholder="اسم الموقع"></div>
-  <div class="field"><label>العنوان</label><input type="text" id="locAddr" placeholder="العنوان"></div>
-  <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="locMap" placeholder="https://maps.google.com/..."></div>
-  <div class="row">
-    <div class="field"><label>Latitude</label><input type="number" id="locLat" step="any" placeholder="24.7136"></div>
-    <div class="field"><label>Longitude</label><input type="number" id="locLng" step="any" placeholder="46.6753"></div>
-  </div>
-  <button class="btn btn-primary btn-block" onclick="A.addLocation()">إضافة موقع</button>`:''}</div>
+    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>`;
+  }
 
   ${myProfile?.is_admin?`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
   <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`:''}\``;
@@ -2127,7 +2113,12 @@ window.A={
   createPoll(){const q=document.getElementById('pollQ')?.value.trim();const opts=[...document.querySelectorAll('.pi')].map(i=>i.value.trim()).filter(Boolean);createPoll(q,opts);},
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
-  saveChalet(){saveChalet(document.getElementById('sN')?.value.trim(),document.getElementById('sA')?.value.trim(),document.getElementById('sM')?.value.trim(),parseFloat(document.getElementById('sLat')?.value)||null,parseFloat(document.getElementById('sLng')?.value)||null);},
+  async saveLocation(){
+    const mapUrl=document.getElementById('sM')?.value.trim();
+    const lat=parseFloat(document.getElementById('sLat')?.value)||null;
+    const lng=parseFloat(document.getElementById('sLng')?.value)||null;
+    await saveChalet(D.chalet.name||'دوريتنا','',mapUrl||'',lat,lng);
+  },
 
   removeSlot,
   addMember(){const n=document.getElementById('nM')?.value.trim();addMember(n);if(document.getElementById('nM'))document.getElementById('nM').value='';},
