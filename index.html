@@ -489,6 +489,20 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <span style="font-size:11.5px;color:var(--muted);">تعديل هجري</span>
       <button class="btn btn-ghost btn-sm" id="adjPlus">+ يوم</button>
     </div>
+
+    <details class="dg" open style="margin-bottom:12px;">
+      <summary>📍 موقع الاجتماع</summary>
+      <div style="margin-top:10px;">
+        <div class="field"><label>اسم الموقع</label><input type="text" id="locNameInp" placeholder="مثال: شاليه النخيل"></div>
+        <div class="field"><label>العنوان</label><input type="text" id="locAddrInp" placeholder="الرياض - حي النرجس"></div>
+        <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="locMapInp" placeholder="https://maps.app.goo.gl/..."></div>
+        <div class="row">
+          <div class="field"><label>Latitude</label><input type="number" id="locLatInp" step="any" placeholder="24.7136"></div>
+          <div class="field"><label>Longitude</label><input type="number" id="locLngInp" step="any" placeholder="46.6753"></div>
+        </div>
+      </div>
+    </details>
+
     <div class="field">
       <label>الميزانية (ريال) — اختياري</label>
       <input type="number" id="newSlotBudget" placeholder="مثال: 1500" min="0">
@@ -1167,15 +1181,15 @@ function openNewSlot(){
   if(inp) inp.value=suggested;
   const sugEl=document.getElementById('newSlotSuggest');
   if(sugEl) sugEl.textContent=`المقترح: أقرب أول ثلاثاء في شهر هجري — ${toGreg(suggested)}`;
+  document.getElementById('newSlotTitle').value='';
   document.getElementById('newSlotBudget').value='';
   document.getElementById('newSlotBudgetNotes').value='';
-  // تحديث قائمة المواقع
-  const sel=document.getElementById('newSlotLocation');
-  if(sel){
-    const def=D.locations.find(l=>l.is_default);
-    sel.innerHTML=`<option value="">— بدون موقع —</option>`+
-      D.locations.map(l=>`<option value="${l.id}" ${l.is_default?'selected':''}>${esc(l.name)}</option>`).join('');
-  }
+  // ملء موقع الاجتماع بالقيم الافتراضية من إعدادات الشاليه
+  document.getElementById('locNameInp').value=D.chalet.name&&D.chalet.name!=='دوريتنا'?D.chalet.name:'';
+  document.getElementById('locAddrInp').value=D.chalet.address||'';
+  document.getElementById('locMapInp').value=D.chalet.map_url||'';
+  document.getElementById('locLatInp').value=D.chalet.lat||'';
+  document.getElementById('locLngInp').value=D.chalet.lng||'';
   updateNewSlotHijri();
   openModal('newSlotModal');
 }
@@ -1199,7 +1213,15 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const title=document.getElementById('newSlotTitle').value.trim()||null;
   const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
   const notes=document.getElementById('newSlotBudgetNotes').value.trim();
-  await sb.from('slots').insert({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null});
+  const locName=document.getElementById('locNameInp').value.trim()||null;
+  const locAddr=document.getElementById('locAddrInp').value.trim()||null;
+  const locMap=document.getElementById('locMapInp').value.trim()||null;
+  const locLat=parseFloat(document.getElementById('locLatInp').value)||null;
+  const locLng=parseFloat(document.getElementById('locLngInp').value)||null;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
+  await fetch(SB_URL+'/rest/v1/slots',{method:'POST',headers:{...H,'Prefer':'return=minimal'},
+    body:JSON.stringify({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null,
+      location_name:locName,location_address:locAddr,location_map_url:locMap,location_lat:locLat,location_lng:locLng})});
   await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',`${title?title+' — ':''}${toGreg(date)}`,null);
   closeModal('newSlotModal');await loadAll();render();toast('تمت إضافة الطلعة ✅');
 };
@@ -1370,14 +1392,20 @@ function renderHome(){
 
     // map
     // موقع الطلعة (من location المرتبط أو الافتراضي)
-    if(D.chalet.lat&&D.chalet.lng){
+    // الخريطة: استخدم موقع الطلعة أو موقع الشاليه الافتراضي
+    const lat=next.location_lat||D.chalet.lat;
+    const lng=next.location_lng||D.chalet.lng;
+    const mapUrl=next.location_map_url||D.chalet.map_url;
+    const locName=next.location_name||D.chalet.name;
+    if(lat&&lng){
       h+=`<div class="map-embed">
-        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${D.chalet.lng-.008},${D.chalet.lat-.008},${D.chalet.lng+.008},${D.chalet.lat+.008}&layer=mapnik&marker=${D.chalet.lat},${D.chalet.lng}" loading="lazy"></iframe>
+        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${lng-.008},${lat-.008},${lng+.008},${lat+.008}&layer=mapnik&marker=${lat},${lng}" loading="lazy"></iframe>
       </div>`;
     }
-    if(D.chalet.map_url||D.chalet.lat){
-      const murl=D.chalet.map_url||(D.chalet.lat?`https://maps.google.com/?q=${D.chalet.lat},${D.chalet.lng}`:'');
-      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 فتح في خرائط جوجل</a>`;
+    if(mapUrl||lat){
+      const murl=mapUrl||(lat?`https://maps.google.com/?q=${lat},${lng}`:'');
+      h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">📍 ${locName?esc(locName)+' — ':''}فتح في خرائط جوجل</a>`;
+    }
     }
     h+=`</div>`;
   } else {
