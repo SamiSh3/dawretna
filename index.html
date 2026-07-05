@@ -767,32 +767,38 @@ function updateAvatar(){
   }
 }
 async function loadAll(){
-  const[c,t,s,rv,sw,rm,sp,pt,mm,po,vt,py,st,ap]=await Promise.all([
-    sb.from('chalet').select('*').limit(1),
-    sb.from('team_members').select('*').order('created_at'),
-    sb.from('slots').select('*').order('date'),
-    sb.from('rsvps').select('*'),
-    sb.from('swap_requests').select('*').eq('status','pending'),
-    sb.from('reminders').select('*'),
-    sb.from('special_trips').select('*').order('date'),
-    sb.from('special_trip_participants').select('*'),
-    sb.from('memories').select('*').order('created_at',{ascending:false}),
-    sb.from('polls').select('*').order('created_at',{ascending:false}),
-    sb.from('poll_votes').select('*'),
-    sb.from('budget_payments').select('*'),
-    sb.from('app_settings').select('*'),
-    sb.from('annual_payments').select('*'),
-  ]);
-  D.chalet=c.data?.[0]||{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null};
-  D.team=t.data||[];D.slots=s.data||[];D.rsvps=rv.data||[];D.swaps=sw.data||[];
-  D.reminders=rm.data||[];D.specials=sp.data||[];D.parts=pt.data||[];
-  D.memories=mm.data||[];D.polls=po.data||[];D.votes=vt.data||[];
-  D.payments=py.data||[];D.annualPayments=ap.data||[];
-  D.settings={};(st.data||[]).forEach(r=>D.settings[r.key]=r.value);
+  // كل query بمعالجة خطأ مستقلة
+  const q=async(fn)=>{try{const r=await fn();return r.data||[];}catch(e){return[];}};
+  const [team,slots,rsvps,swaps,reminders,specials,parts,
+         memories,polls,votes,payments,annualPay,settings,chalet]=
+    await Promise.all([
+      q(()=>sb.from('team_members').select('*').order('created_at')),
+      q(()=>sb.from('slots').select('*').order('date')),
+      q(()=>sb.from('rsvps').select('*')),
+      q(()=>sb.from('swap_requests').select('*').eq('status','pending')),
+      q(()=>sb.from('reminders').select('*')),
+      q(()=>sb.from('special_trips').select('*').order('date')),
+      q(()=>sb.from('special_trip_participants').select('*')),
+      q(()=>sb.from('memories').select('*').order('created_at',{ascending:false})),
+      q(()=>sb.from('polls').select('*').order('created_at',{ascending:false})),
+      q(()=>sb.from('poll_votes').select('*')),
+      q(()=>sb.from('budget_payments').select('*')),
+      q(()=>sb.from('annual_payments').select('*')),
+      q(()=>sb.from('app_settings').select('*')),
+      q(()=>sb.from('chalet').select('*').limit(1)),
+    ]);
+  if(chalet[0]) D.chalet=chalet[0];
+  D.team=team; D.slots=slots; D.rsvps=rsvps; D.swaps=swaps;
+  D.reminders=reminders; D.specials=specials; D.parts=parts;
+  D.memories=memories; D.polls=polls; D.votes=votes;
+  D.payments=payments; D.annualPayments=annualPay;
+  D.settings={}; settings.forEach(r=>D.settings[r.key]=r.value);
   if(session){
-    const nt=await sb.from('notifications').select('*')
-      .eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50);
-    D.notifications=nt.data||[];
+    try{
+      const nt=await sb.from('notifications').select('*')
+        .eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(50);
+      D.notifications=nt.data||[];
+    }catch(e){D.notifications=[];}
   }
   updateNotifBadge();
 }
