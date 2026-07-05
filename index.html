@@ -1995,7 +1995,7 @@ let _moreSubTab='memories';
 function renderSettings(){
   let h='';
 
-  // موقع الشاليه الثابت (للخريطة)
+  // موقع الشاليه (للمشرفين فقط)
   if(myProfile?.is_admin){
     h+=`<div class="card"><div class="h2">📍 موقع الشاليه</div>
     <p class="hint" style="margin-top:4px;">رابط الموقع يظهر في الواجهة الرئيسية لكل الأعضاء.</p>
@@ -2004,18 +2004,15 @@ function renderSettings(){
       <div class="field"><label>Latitude</label><input type="number" id="sLat" step="any" value="${D.chalet.lat||''}" placeholder="24.7136"></div>
       <div class="field"><label>Longitude</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>`;
+    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>
+    <div class="card"><div class="h2">🗓️ إضافة طلعة</div>
+    <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`;
   }
-
-  ${myProfile?.is_admin?`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
-  <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`:''}\``;
   if(D.slots.length){
     h+=`<div class="card"><div class="h2" style="font-size:15px;">الطلعات (${D.slots.length})</div>`;
     D.slots.forEach(s=>{
-      const loc=s.location;
-      h+=`<div class="rem-row"><div><span style="font-size:12px;">${esc(toGreg(s.date))}</span><br>
-      <span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>
-      ${loc?` · 📍${esc(loc.name)}`:''}${s.host_name?' · '+esc(s.host_name):' · متاح'}</div>
+      h+=`<div class="rem-row"><div><span style="font-size:12px;">${s.title?`<b style="color:var(--amber)">${esc(s.title)}</b> · `:''}${esc(toGreg(s.date))}</span><br>
+      <span style="font-size:10.5px;color:var(--amber);">${esc(toHijri(s.date,s.hijri_offset||0))}</span>${s.host_name?' · '+esc(s.host_name):' · متاح'}</div>
       ${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.removeSlot('${s.id}')">حذف</button>`:''}</div>`;
     });
     h+=`</div>`;
