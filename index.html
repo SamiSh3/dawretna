@@ -1962,30 +1962,28 @@ function renderBudget(){
   const budgetYear=D.chalet.budget_year||todayYear();
 
   // دالة مساعدة لرسم صف عضو
-  function memberRow(m,slot,pays,share){
-    const p=pays.find(q=>q.member_name===m.name);
-    const hasPaid=p?.paid||false;
-    const sn=esc(m.name).replace(/'/g,"&#39;");
+    function memberRow(m,slot,pays,share){
+    const p=pays.find(function(q){return q.member_name===m.name;});
+    const hasPaid=!!(p&&p.paid);
+    const sn=m.name.replace(/'/g,"&#39;");
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
     const amt=Number(share).toLocaleString('ar')+' ﷼';
-    let btn='';
-    if(myProfile?.is_admin){
-      btn='<button class="btn '+(hasPaid?'btn-ghost':'btn-sage')+' btn-xs" onclick="A.togglePay(''+slot.id+'',''+sn+'')">'+
-        (hasPaid?'إلغاء':'✓ دفع')+'</button>';
+    let btn;
+    if(myProfile&&myProfile.is_admin){
+      btn='<button class="btn '+(hasPaid?'btn-ghost':'btn-sage')+' btn-xs" '+
+          'onclick="A.togglePay(\'' + slot.id + '\',\'' + sn + '\')">' +
+          (hasPaid?'إلغاء':'✓ دفع')+'</button>';
     } else {
       btn='<span class="'+(hasPaid?'paid-badge':'unpaid-badge')+'">'+(hasPaid?'دفع':'لم يدفع')+'</span>';
     }
-    const clr=hasPaid?'var(--sage)':'var(--muted)';
-    const icon=hasPaid?'✅':'⏳';
     return '<div class="member-payment-row">'+
       '<div class="payment-av">'+m.name[0]+'</div>'+
       '<div class="payment-info">'+
         '<div class="payment-name">'+esc(m.name)+me+'</div>'+
-        '<div class="payment-amount" style="color:'+clr+';">'+icon+' '+amt+'</div>'+
+        '<div class="payment-amount" style="color:'+(hasPaid?'var(--sage)':'var(--muted)')+';">'+(hasPaid?'✅ ':'⏳ ')+amt+'</div>'+
       '</div>'+btn+'</div>';
   }
-
-  // دالة مساعدة لرسم صف عضو سنوي
+    // دالة مساعدة لرسم صف عضو سنوي
   function annualRow(m,yearPays,memberShare,budgetYear){
     const paid=!!(yearPays.find(p=>p.member_name===m.name&&p.paid));
     const sn=esc(m.name).replace(/'/g,"&#39;");
