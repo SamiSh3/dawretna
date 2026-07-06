@@ -2057,22 +2057,26 @@ function renderBudget(){
     h+=`<div class="h2" style="font-size:15px;margin-bottom:8px;">📆 الميزانية السنوية ${budgetYear}</div>
 
     <div class="card" style="background:linear-gradient(135deg,var(--bg-el),var(--bg-card));margin-bottom:12px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-        <div style="text-align:center;background:var(--sage-s);border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:var(--sage);">${collected.toLocaleString('ar')}</div>
-          <div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:10px;">
+        <div style="text-align:center;background:var(--bg-soft);border-radius:var(--rsm);padding:8px;">
+          <div style="font-family:var(--fd);font-size:15px;color:var(--text);">${Number(annualBudget).toLocaleString('ar')}</div>
+          <div style="font-size:9px;color:var(--muted);">الميزانية السنوية</div>
         </div>
-        <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${annualSpent.toLocaleString('ar')}</div>
-          <div style="font-size:10px;color:var(--muted);">صُرف على الطلعات ﷼</div>
+        <div style="text-align:center;background:var(--sage-s);border-radius:var(--rsm);padding:8px;">
+          <div style="font-family:var(--fd);font-size:15px;color:var(--sage);">${collected.toLocaleString('ar')}</div>
+          <div style="font-size:9px;color:var(--muted);">تم تحصيله</div>
         </div>
-        <div style="text-align:center;background:${balance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:${balance>=0?'var(--amber)':'var(--danger)'};">${balance.toLocaleString('ar')}</div>
-          <div style="font-size:10px;color:var(--muted);">الرصيد المتبقي ﷼</div>
+        <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:8px;">
+          <div style="font-family:var(--fd);font-size:15px;color:var(--danger);">${annualSpent.toLocaleString('ar')}</div>
+          <div style="font-size:9px;color:var(--muted);">صُرف على الطلعات</div>
+        </div>
+        <div style="text-align:center;background:${(annualBudget-annualSpent)>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:8px;">
+          <div style="font-family:var(--fd);font-size:15px;color:${(annualBudget-annualSpent)>=0?'var(--amber)':'var(--danger)'};">${(annualBudget-annualSpent).toLocaleString('ar')}</div>
+          <div style="font-size:9px;color:var(--muted);">الرصيد المتبقي</div>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--muted);">الميزانية السنوية الكاملة: ${Number(annualBudget).toLocaleString('ar')} ﷼ · نصيب الفرد: ${memberShare.toLocaleString('ar')} ﷼</div>
-    </div>
+      <div style="font-size:11px;color:var(--muted);">نصيب الفرد: <b style="color:var(--amber);">${memberShare.toLocaleString('ar')} ﷼</b></div>
+    </div>`
 
     <div class="h2" style="font-size:14px;margin-bottom:8px;">👥 الاشتراك السنوي — من دفع؟</div>
     <div class="budget-slot">
