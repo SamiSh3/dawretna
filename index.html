@@ -1843,7 +1843,15 @@ function openCalSlotModal(slot){
       <input type="url" id="slotLocMap_${slot.id}" value="${esc(slot.location_map_url||D.chalet.map_url||'')}" placeholder="رابط خرائط جوجل" style="background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;">
       <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocation('${slot.id}')">💾 حفظ الموقع</button>
     </div>
-    <button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="closeModal('calSlotModal');A.openBudget('${slot.id}')">💰 تعديل الميزانية</button>
+    <hr class="sep" style="margin:10px 0;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">💰 تكلفة الطلعة</div>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input type="number" id="slotBudgetInp_${slot.id}" value="${slot.budget||''}" placeholder="التكلفة الكلية (﷼)" style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:13px;outline:none;" min="0">
+      <button class="btn btn-primary btn-sm" onclick="A.saveSlotBudget('${slot.id}')">حفظ</button>
+    </div>
+    <input type="text" id="slotBudgetNotes_${slot.id}" value="${esc(slot.budget_notes||'')}" placeholder="ملاحظات التكلفة (اختياري)" style="width:100%;box-sizing:border-box;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;margin-bottom:4px;">
+    ${slot.budget?`<div style="font-size:11px;color:var(--muted);">نصيب الفرد: <b style="color:var(--amber);">${Math.round(slot.budget/(D.team.length||1)).toLocaleString('ar')} ﷼</b></div>`:''}
+
     `:`${myProfile?.is_admin?`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;" onclick="closeModal('calSlotModal');A.openBudget('${slot.id}')">💰 تعديل الميزانية</button>`:''}`}
   `;
   document.getElementById('calSlotBox').innerHTML=h;
@@ -2508,7 +2516,21 @@ window.A={
       body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
     await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
   },
-  async saveSlotTitle(slotId){
+  async saveSlotBudget(slotId){
+    const amt=parseFloat(document.getElementById('slotBudgetInp_'+slotId)?.value)||null;
+    const notes=document.getElementById('slotBudgetNotes_'+slotId)?.value.trim()||null;
+    const slot=D.slots.find(s=>s.id===slotId);
+    await patchRow('slots',slotId,{budget:amt,budget_notes:notes});
+    if(slot){slot.budget=amt;slot.budget_notes=notes;}
+    const s=D.slots.find(x=>x.id===slotId);
+    if(s) openCalSlotModal(s);
+    if(amt){
+      const perPerson=D.team.length?Math.round(amt/D.team.length):0;
+      await notifyAll('general',`تم تحديد تكلفة طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amt).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
+    }
+    loadAll().catch(()=>{});
+    toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
+  },
     const inp=document.getElementById('slotTitleInp_'+slotId);
     if(!inp)return;
     const title=inp.value.trim()||null;
