@@ -1006,24 +1006,37 @@ async function deleteRow(table,id){
 
 async function bookSlot(id){
   const mn=myName();
-  await patchRow('slots',id,{host_name:mn});
+  // تحديث فوري محلي
   const slot=D.slots.find(s=>s.id===id);
+  if(slot) slot.host_name=mn;
+  closeModal('calSlotModal');
+  render();
+  // أعد فتح الـ modal بالبيانات المحدثة
+  const updated=D.slots.find(s=>s.id===id);
+  if(updated) openCalSlotModal(updated);
+  // حفظ في DB في الخلفية
+  await patchRow('slots',id,{host_name:mn});
   await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,slot?toGregShort(slot.date):'',id);
-  await loadAll();render();toast('تم الحجز 🏕️');
+  loadAll().catch(()=>{});
+  toast('تم الحجز 🏕️');
 }
+
 async function cancelBookSlot(id){
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
   if(!myProfile?.is_admin&&slot.host_name!==myName()){toast('ليس لك صلاحية','error');return;}
   if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
-  await patchRow('slots',id,{host_name:null});
-  await notifyAll('general',`${esc(myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
-  await loadAll();
-  closeModal('calSlotModal'); // أغلق الـ modal
+  // تحديث فوري محلي
+  const oldHost=slot.host_name;
+  slot.host_name=null;
+  closeModal('calSlotModal');
   render();
   // أعد فتح الـ modal بالبيانات المحدثة
-  const updated=D.slots.find(s=>s.id===id);
-  if(updated) openCalSlotModal(updated);
+  openCalSlotModal(slot);
+  // حفظ في DB في الخلفية
+  await patchRow('slots',id,{host_name:null});
+  await notifyAll('general',`${esc(oldHost||myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
+  loadAll().catch(()=>{});
   toast('تم إلغاء الحجز');
 }
 async function setRsvp(slotId,status){
