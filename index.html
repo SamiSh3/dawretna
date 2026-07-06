@@ -935,28 +935,52 @@ function timeAgo(iso){
 
 /* ════════════════ NOTIFICATIONS ════════════════ */
 async function notify(name,type,title,body,slotId){
-  if(!name)return;
-  const{data:p}=await sb.from('profiles').select('id').eq('name',name).maybeSingle();
-  if(!p)return;
-  try{await sb.from('notifications').insert({user_id:p.id,type,title,body,related_slot_id:slotId||null});}catch(e){}
+  if(!name||!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
+  try{
+    // ابحث عن الـ user_id بالاسم
+    const r=await fetch(SB_URL+'/rest/v1/profiles?name=eq.'+encodeURIComponent(name)+'&select=id&limit=1',{headers:H});
+    const profiles=r.ok?await r.json():[];
+    if(!profiles[0])return;
+    // أرسل التنبيه
+    await fetch(SB_URL+'/rest/v1/notifications',{
+      method:'POST',
+      headers:{...H,'Prefer':'return=minimal'},
+      body:JSON.stringify({user_id:profiles[0].id,type,title,body,related_slot_id:slotId||null})
+    });
+  }catch(e){}
 }
 async function notifyAll(type,title,body,slotId){
+  // أرسل لكل الأعضاء بما فيهم المستخدم الحالي لأن الكل يحتاج يعرف
   for(const m of D.team){
-    if(m.name!==myName())await notify(m.name,type,title,body,slotId);
+    await notify(m.name,type,title,body,slotId);
   }
 }
 async function notifyAdmins(type,title,body){
-  const{data:admins}=await sb.from('profiles').select('name').eq('is_admin',true);
-  for(const a of(admins||[])){
-    if(a.name!==myName())await notify(a.name,type,title,body,null);
-  }
+  if(!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/profiles?is_admin=eq.true&select=name',{headers:H});
+    const admins=r.ok?await r.json():[];
+    for(const a of admins){
+      await notify(a.name,type,title,body,null);
+    }
+  }catch(e){}
 }
 async function markAllRead(){
-  await sb.from('notifications').update({read:true}).eq('user_id',session.user.id).eq('read',false);
-  await loadAll();render();
+  if(!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+  await fetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id+'&read=eq.false',{
+    method:'PATCH',headers:H,body:JSON.stringify({read:true})
+  });
+  D.notifications.forEach(n=>n.read=true);
+  updateNotifBadge();
+  openNotifPopup();
 }
 async function deleteNotif(id){
-  await sb.from('notifications').delete().eq('id',id);
+  if(!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+  await fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'DELETE',headers:H});
   D.notifications=D.notifications.filter(n=>n.id!==id);
   updateNotifBadge();render();
 }
@@ -1030,7 +1054,7 @@ async function cancelBookSlot(id){
   // أعد فتح الـ modal بالبيانات المحدثة
   openCalSlotModal(slot);
   await patchRow('slots',id,{host_name:null});
-  await notifyAll('general',`${esc(oldHost||myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
+  await notifyAll('general',`${esc(oldHost||myName())} ألغى حجز طلعة 📅`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
   toast('تم إلغاء الحجز');
 }
