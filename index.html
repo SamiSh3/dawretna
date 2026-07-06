@@ -1980,7 +1980,7 @@ function renderBudget(){
     let btn='';
     if(myProfile?.is_admin){
       if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}','${sn}')">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
-      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey},${hasPaid})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
     }
     return `<div class="member-payment-row">
       <div class="payment-av">${m.name[0]}</div>
@@ -2527,7 +2527,8 @@ window.A={
     loadAll().catch(()=>{});
   },
   async setBudgetType(type){
-    if(D.chalet.id) await sb.from('chalet').update({budget_type:type}).eq('id',D.chalet.id);
+    await patchRow('chalet',D.chalet.id,{budget_type:type});
+    D.chalet.budget_type=type;renderBudget();
     else await sb.from('chalet').insert({name:D.chalet.name||'دوريتنا',budget_type:type});
     await loadAll();renderBudget();
   },
@@ -2535,11 +2536,17 @@ window.A={
     const year=parseInt(document.getElementById('budgetYearSel')?.value)||todayYear();
     const amt=parseFloat(document.getElementById('annualBudgetAmt')?.value)||null;
     if(!amt){toast('أدخل المبلغ','error');return;}
-    if(D.chalet.id) await sb.from('chalet').update({annual_budget:amt,budget_year:year}).eq('id',D.chalet.id);
-    else await sb.from('chalet').insert({name:'دوريتنا',annual_budget:amt,budget_year:year});
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    if(D.chalet.id){
+      await fetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({annual_budget:amt,budget_year:year})});
+    } else {
+      await fetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',annual_budget:amt,budget_year:year})});
+    }
+    D.chalet.annual_budget=amt; D.chalet.budget_year=year;
     const perPerson=D.team.length?Math.round(amt/D.team.length):0;
     await notifyAll('general',`تم تحديد الميزانية السنوية ${year} 💰`,`المبلغ الكلي: ${Number(amt).toLocaleString('ar')} ﷼ — نصيب الفرد: ${perPerson.toLocaleString('ar')} ﷼`);
-    await loadAll();renderBudget();toast('تم حفظ الميزانية السنوية 💰');
+    renderBudget();toast('تم حفظ الميزانية السنوية 💰');
+    loadAll().catch(()=>{});
   },
   async saveChaletName(){
     const name=document.getElementById('sN')?.value.trim();
