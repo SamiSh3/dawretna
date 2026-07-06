@@ -1006,17 +1006,14 @@ async function deleteRow(table,id){
 
 async function bookSlot(id){
   const mn=myName();
-  // تحديث فوري محلي
   const slot=D.slots.find(s=>s.id===id);
-  if(slot) slot.host_name=mn;
-  closeModal('calSlotModal');
-  render();
-  // أعد فتح الـ modal بالبيانات المحدثة
-  const updated=D.slots.find(s=>s.id===id);
-  if(updated) openCalSlotModal(updated);
-  // حفظ في DB في الخلفية
+  if(!slot)return;
+  // تحديث فوري محلي
+  slot.host_name=mn;
+  render(); // يحدث التقويم والرئيسية فوراً
+  // حفظ في DB
   await patchRow('slots',id,{host_name:mn});
-  await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,slot?toGregShort(slot.date):'',id);
+  await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
   toast('تم الحجز 🏕️');
 }
@@ -1026,14 +1023,12 @@ async function cancelBookSlot(id){
   if(!slot)return;
   if(!myProfile?.is_admin&&slot.host_name!==myName()){toast('ليس لك صلاحية','error');return;}
   if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
-  // تحديث فوري محلي
   const oldHost=slot.host_name;
+  // تحديث فوري محلي
   slot.host_name=null;
-  closeModal('calSlotModal');
   render();
   // أعد فتح الـ modal بالبيانات المحدثة
   openCalSlotModal(slot);
-  // حفظ في DB في الخلفية
   await patchRow('slots',id,{host_name:null});
   await notifyAll('general',`${esc(oldHost||myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
@@ -2237,7 +2232,12 @@ window.A={
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
   async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
-  async bookCal(id){await bookSlot(id);},
+  async bookCal(id){
+    await bookSlot(id);
+    // أعد فتح الـ modal بالبيانات المحدثة
+    const updated=D.slots.find(s=>s.id===id);
+    if(updated) openCalSlotModal(updated);
+  },
   cancelBook:(id)=>cancelBookSlot(id),
   resolveSwap:(id,a)=>resolveSwap(id,a),
   async cancelSwap(swapId){
