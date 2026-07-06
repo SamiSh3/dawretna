@@ -1057,7 +1057,7 @@ async function adjustHijri(id,delta){
   await loadAll();render();
 }
 
-const REM_DEFS={week_host:'تذكير أسبوع — المضيف',three_host:'تذكير 3 أيام — المضيف',three_team:'تذكير 3 أيام — الفريق',day_host:'تذكير اليوم — صاحب',day_team:'تذكير اليوم — الفريق'};
+const REM_DEFS={week_host:'تذكير أسبوع — المضيف',three_host:'تذكير 3 أيام — المضيف',three_team:'تذكير 3 أيام — الفريق',day_host:'تذكير اليوم — المضيف',day_team:'تذكير اليوم — الفريق'};
 function remText(type,slot){
   const d=toGreg(slot.date),cn=D.chalet.name,h=slot.host_name||'';
   switch(type){
