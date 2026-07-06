@@ -2236,20 +2236,16 @@ function renderSettings(){
     h+=`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
     <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>
     <div class="card"><div class="h2">⚙️ إعدادات الحجز</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;">
-      <div>
-        <div style="font-size:13px;font-weight:700;">السماح بأكثر من حجز في السنة الهجرية</div>
-        <div style="font-size:11px;color:var(--muted);">إذا مفعّل يقدر العضو يحجز أكثر من طلعة في نفس السنة</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;">أكثر من حجز في السنة الهجرية</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">إذا مفعّل يقدر العضو يحجز أكثر من طلعة في نفس السنة</div>
       </div>
-      <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;margin-right:8px;">
-        <input type="checkbox" id="allowMultiChk" onchange="A.toggleMultiBooking(this.checked)"
-          ${D.settings.allow_multi_booking==='true'?'checked':''} style="opacity:0;width:0;height:0;">
-        <span style="position:absolute;cursor:pointer;inset:0;background:${D.settings.allow_multi_booking==='true'?'var(--sage)':'var(--bg-soft)'};
-          border-radius:999px;transition:.3s;border:1px solid var(--border);">
-          <span style="position:absolute;height:18px;width:18px;left:${D.settings.allow_multi_booking==='true'?'22px':'3px'};
-            bottom:2px;background:white;border-radius:50%;transition:.3s;"></span>
-        </span>
-      </label>
+      <button class="btn ${D.settings.allow_multi_booking==='true'?'btn-sage':'btn-ghost'} btn-sm"
+        style="flex-shrink:0;min-width:80px;"
+        onclick="A.toggleMultiBooking(${D.settings.allow_multi_booking!=='true'})">
+        ${D.settings.allow_multi_booking==='true'?'✅ مفعّل':'⭕ معطّل'}
+      </button>
     </div></div>`;
   }
   if(D.slots.length){
@@ -2376,6 +2372,7 @@ window.A={
     await fetch(SB_URL+'/rest/v1/app_settings',{method:'POST',headers:H,
       body:JSON.stringify({key:'allow_multi_booking',value:val?'true':'false'})});
     D.settings.allow_multi_booking=val?'true':'false';
+    renderSettings(); // أعد رسم الإعدادات لتحديث الزر
     toast(val?'تم السماح بتعدد الحجز ✅':'تم تقييد الحجز لمرة واحدة في السنة');
   },
   async saveLocation(){
