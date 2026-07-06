@@ -2056,11 +2056,11 @@ function renderBudget(){
           <div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div>
         </div>
         <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpentSlots.toLocaleString('ar')}</div>
+          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${annualSpent.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">صُرف على الطلعات ﷼</div>
         </div>
-        <div style="text-align:center;background:${slotBalance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:${slotBalance>=0?'var(--amber)':'var(--danger)'};">${slotBalance.toLocaleString('ar')}</div>
+        <div style="text-align:center;background:${balance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:${balance>=0?'var(--amber)':'var(--danger)'};">${balance.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">الرصيد المتبقي ﷼</div>
         </div>
       </div>
