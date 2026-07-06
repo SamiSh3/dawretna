@@ -2378,6 +2378,7 @@ window.A={
     D.settings.allow_multi_booking=val?'true':'false';
     toast(val?'تم السماح بتعدد الحجز ✅':'تم تقييد الحجز لمرة واحدة في السنة');
   },
+  async saveLocation(){
     const name=document.getElementById('sN')?.value.trim()||'دوريتنا';
     const address=document.getElementById('sA')?.value.trim()||'';
     const mapUrl=document.getElementById('sM')?.value.trim()||'';
