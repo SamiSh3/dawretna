@@ -2044,8 +2044,8 @@ function renderBudget(){
 
     // حساب ما تم خصمه من الميزانية السنوية (طلعات منتهية)
     const yearSlots=D.slots.filter(s=>s.budget&&daysUntil(s.date)<0);
-    const totalSpent=yearSlots.reduce((a,s)=>a+(s.budget||0),0);
-    const balance=collected-totalSpent;
+    const annualSpent=yearSlots.reduce((a,s)=>a+(s.budget||0),0);
+    const balance=collected-annualSpent;
 
     h+=`<div class="h2" style="font-size:15px;margin-bottom:8px;">📆 الميزانية السنوية ${budgetYear}</div>
 
@@ -2056,11 +2056,11 @@ function renderBudget(){
           <div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div>
         </div>
         <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpent.toLocaleString('ar')}</div>
+          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpentSlots.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">صُرف على الطلعات ﷼</div>
         </div>
-        <div style="text-align:center;background:${balance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:${balance>=0?'var(--amber)':'var(--danger)'};">${balance.toLocaleString('ar')}</div>
+        <div style="text-align:center;background:${slotBalance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:${slotBalance>=0?'var(--amber)':'var(--danger)'};">${slotBalance.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">الرصيد المتبقي ﷼</div>
         </div>
       </div>
@@ -2099,6 +2099,7 @@ function renderBudget(){
     </div>`).join('')}`:''}
     `;
     document.getElementById('content').innerHTML=h;return; // الوضع السنوي لا يحتاج قسم الطلعات
+  } // نهاية if(budgetType==='annual')
 
   // ── تفاصيل الطلعات (per_slot فقط) ──
   const allSlots=D.slots.filter(s=>s.budget).sort((a,b)=>a.date.localeCompare(b.date));
@@ -2106,14 +2107,14 @@ function renderBudget(){
   const upcomingSlots=allSlots.filter(s=>daysUntil(s.date)>=0);
 
   // ملخص الصندوق
-  let totalCollected=0,totalSpent=0;
+  let totalCollected=0,totalSpentSlots=0;
   allSlots.forEach(s=>{
     const pays=D.payments.filter(p=>p.slot_id===s.id&&p.paid);
     const share=s.budget?Math.round(s.budget/mn):0;
     totalCollected+=pays.length*share;
-    if(daysUntil(s.date)<0) totalSpent+=s.budget||0;
+    if(daysUntil(s.date)<0) totalSpentSlots+=s.budget||0;
   });
-  const balance=totalCollected-totalSpent;
+  const slotBalance=totalCollected-totalSpentSlots;
 
   if(allSlots.length){
     h+=`<div class="card" style="background:linear-gradient(135deg,var(--bg-el),var(--bg-card));margin-top:4px;">
@@ -2124,11 +2125,11 @@ function renderBudget(){
           <div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div>
         </div>
         <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpent.toLocaleString('ar')}</div>
+          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpentSlots.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">تم إنفاقه ﷼</div>
         </div>
-        <div style="text-align:center;background:${balance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
-          <div style="font-family:var(--fd);font-size:18px;color:${balance>=0?'var(--amber)':'var(--danger)'};">${balance.toLocaleString('ar')}</div>
+        <div style="text-align:center;background:${slotBalance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:${slotBalance>=0?'var(--amber)':'var(--danger)'};">${slotBalance.toLocaleString('ar')}</div>
           <div style="font-size:10px;color:var(--muted);">الرصيد ﷼</div>
         </div>
       </div>
