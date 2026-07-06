@@ -1953,16 +1953,12 @@ async function togglePayment(slotId,memberName){
   renderBudget();
 
   try{
-    if(existing){
-      await fetch(SB_URL+'/rest/v1/budget_payments?id=eq.'+existing.id,{
-        method:'PATCH',headers:apiHeaders(),body:JSON.stringify({paid:newPaid,updated_by:myName()})
-      });
-    } else {
-      await fetch(SB_URL+'/rest/v1/budget_payments',{
-        method:'POST',headers:{...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'},
-        body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:true,amount:share,updated_by:myName()})
-      });
-    }
+    const H2={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    // استخدم slot_id,member_name للفلترة (لا نعتمد على id)
+    await fetch(SB_URL+'/rest/v1/budget_payments',{
+      method:'POST',headers:H2,
+      body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
+    });
     if(newPaid){
       await notify(memberName,'general','تم تسجيل دفعتك ✅',
         `طلعة ${toGregShort(slot?.date||'')}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
