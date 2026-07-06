@@ -1941,18 +1941,34 @@ let _tripsSubTab='special';
 /* ── More (memories + settings shortcuts) ── */
 /* ── Budget ── */
 async function togglePayment(slotId,memberName){
+  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'};
   const existing=D.payments.find(p=>p.slot_id===slotId&&p.member_name===memberName);
   const slot=D.slots.find(s=>s.id===slotId);
   const share=slot?.budget&&D.team.length?Math.round(slot.budget/D.team.length):null;
-  if(existing){
-    await sb.from('budget_payments').update({paid:!existing.paid,updated_by:myName()}).eq('id',existing.id);
-  } else {
-    await sb.from('budget_payments').upsert({slot_id:slotId,member_name:memberName,paid:true,amount:share,updated_by:myName()},{onConflict:'slot_id,member_name'});
-  }
-  if(!existing||!existing.paid){
-    await notify(memberName,'general','تم تسجيل دفعتك ✅',`طلعة ${toGregShort(slot?.date||'')}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
-  }
-  await loadAll();renderBudget();
+  const newPaid=!(existing?.paid);
+
+  // Optimistic update
+  if(existing) existing.paid=newPaid;
+  else D.payments.push({slot_id:slotId,member_name:memberName,paid:true,amount:share});
+  renderBudget();
+
+  try{
+    if(existing){
+      await fetch(SB_URL+'/rest/v1/budget_payments?id=eq.'+existing.id,{
+        method:'PATCH',headers:apiHeaders(),body:JSON.stringify({paid:newPaid,updated_by:myName()})
+      });
+    } else {
+      await fetch(SB_URL+'/rest/v1/budget_payments',{
+        method:'POST',headers:{...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'},
+        body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:true,amount:share,updated_by:myName()})
+      });
+    }
+    if(newPaid){
+      await notify(memberName,'general','تم تسجيل دفعتك ✅',
+        `طلعة ${toGregShort(slot?.date||'')}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+    }
+  }catch(e){console.error('togglePay:',e);}
+  loadAll().catch(()=>{});
 }
 
 function renderBudget(){
@@ -2369,6 +2385,7 @@ function openEditUser(uid,name,phone,email){
 
 /* ════════════════ GLOBAL ACTIONS ════════════════ */
 window.A={
+  togglePay:(slotId,name)=>togglePayment(slotId,name),
   book:bookSlot,rsvp:setRsvp,resolveSwap,adjHijri:adjustHijri,
   openSwap:openSwapModal,openNewSlot,
   logRem,sendCustom,openBudget:openBudgetModal,
@@ -2462,13 +2479,22 @@ window.A={
     render();
     toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
   },
-  async toggleAnnualPay(year,name,currentPaid){
-    await sb.from('annual_payments').upsert(
-      {year,member_name:name,paid:!currentPaid,updated_by:myName()},
-      {onConflict:'year,member_name'}
-    );
-    if(!currentPaid) await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
-    await loadAll();renderBudget();
+  async toggleAnnualPay(name,year,currentPaid){
+    const newPaid=!currentPaid;
+    // Optimistic update
+    const existing=D.annualPayments.find(p=>p.member_name===name&&p.year===year);
+    if(existing) existing.paid=newPaid;
+    else D.annualPayments.push({member_name:name,year,paid:true});
+    renderBudget();
+    try{
+      const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+      await fetch(SB_URL+'/rest/v1/annual_payments',{
+        method:'POST',headers:H,
+        body:JSON.stringify({year,member_name:name,paid:newPaid,updated_by:myName()})
+      });
+      if(newPaid) await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
+    }catch(e){console.error('toggleAnnualPay:',e);}
+    loadAll().catch(()=>{});
   },
   async setBudgetType(type){
     if(D.chalet.id) await sb.from('chalet').update({budget_type:type}).eq('id',D.chalet.id);
