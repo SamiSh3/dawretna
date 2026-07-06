@@ -498,6 +498,12 @@ details.dg[open] summary::before{transform:rotate(90deg);}
     <details class="dg" open style="margin-bottom:12px;">
       <summary>📍 موقع الاجتماع</summary>
       <div style="margin-top:10px;">
+        <div class="field">
+          <label>📍 موقع الطلعة</label>
+          <select id="locSel" onchange="A.fillLocFromSel(this.value)" style="background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;width:100%;">
+            <option value="">— اختر موقع أو أدخل يدوياً —</option>
+          </select>
+        </div>
         <div class="field"><label>اسم الموقع</label><input type="text" id="locNameInp" placeholder="مثال: شاليه النخيل"></div>
         <div class="field"><label>العنوان</label><input type="text" id="locAddrInp" placeholder="الرياض - حي النرجس"></div>
         <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="locMapInp" placeholder="https://maps.app.goo.gl/..."></div>
@@ -827,6 +833,7 @@ async function loadAll(){
     D.polls=d.polls||[]; D.votes=d.votes||[];
     D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
     D.settings={}; (d.settings||[]).forEach(s=>D.settings[s.key]=s.value);
+    D.locations=d.locations||[];
   }
 
   // باقي البيانات بالتوازي مع timeout
@@ -1208,8 +1215,21 @@ function openNewSlot(){
   document.getElementById('newSlotBudget').value='';
   document.getElementById('newSlotBudgetNotes').value='';
   // ملء موقع الاجتماع بالقيم الافتراضية من إعدادات الشاليه
+  // ملء dropdown المواقع
+  const locSel=document.getElementById('locSel');
+  if(locSel){
+    locSel.innerHTML='<option value="">— اختر موقع أو أدخل يدوياً —</option>';
+    D.locations.forEach(l=>{
+      const opt=document.createElement('option');
+      opt.value=l.id;
+      opt.textContent=l.name+(l.address?' · '+l.address:'')+(l.is_default?' ★':'');
+      locSel.appendChild(opt);
+    });
+    // اختر الافتراضي تلقائياً
+    const def=D.locations.find(l=>l.is_default);
+    if(def){locSel.value=def.id;A.fillLocFromSel(def.id);}
+  }
   document.getElementById('locNameInp').value=D.chalet.name&&D.chalet.name!=='دوريتنا'?D.chalet.name:'';
-  document.getElementById('locAddrInp').value=D.chalet.address||'';
   document.getElementById('locAddrInp').value=D.chalet.address||'';
   document.getElementById('locMapInp').value=D.chalet.map_url||'';
   document.getElementById('locLatInp').value=D.chalet.lat||'';
@@ -2095,6 +2115,28 @@ function renderSettings(){
       <div class="field"><label>Longitude</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
     </div>
     <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>
+    h+=`<div class="card"><div class="h2">📍 مواقع الاجتماع</div>
+    <p class="hint" style="margin-top:4px;">تظهر كقائمة عند إنشاء طلعة جديدة. ★ = الافتراضي.</p>
+    ${D.locations.map(l=>`<div class="rem-row">
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;">${l.is_default?'⭐ ':''}${esc(l.name)}</div>
+        ${l.address?`<div style="font-size:11px;color:var(--muted);">${esc(l.address)}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;">
+        ${!l.is_default?`<button class="btn btn-ghost btn-xs" onclick="A.setDefaultLoc('${l.id}')">★</button>`:''}
+        <button class="btn btn-danger btn-xs" onclick="A.deleteLoc('${l.id}')">حذف</button>
+      </div>
+    </div>`).join('')}
+    <hr class="sep">
+    <div class="h2" style="font-size:14px;margin-bottom:8px;">➕ إضافة موقع</div>
+    <div class="field"><label>الاسم</label><input type="text" id="locName" placeholder="مثال: شاليه النخيل"></div>
+    <div class="field"><label>العنوان</label><input type="text" id="locAddr" placeholder="الرياض - حي النرجس"></div>
+    <div class="field"><label>رابط خرائط</label><input type="url" id="locMap" placeholder="https://maps.app.goo.gl/..."></div>
+    <div class="row">
+      <div class="field"><label>Lat</label><input type="number" id="locLat" step="any" placeholder="24.71"></div>
+      <div class="field"><label>Lng</label><input type="number" id="locLng" step="any" placeholder="46.67"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="A.addLocation()">إضافة موقع</button></div>
     <div class="card"><div class="h2">🗓️ إضافة طلعة</div>
     <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>`;
   }
@@ -2280,7 +2322,15 @@ window.A={
     else await sb.from('chalet').insert({name});
     await loadAll();render();toast('تم حفظ الاسم ✅');
   },
+  fillLocFromSel(locId){
+    const loc=D.locations.find(l=>l.id===locId);
+    if(!loc)return;
+    document.getElementById('locNameInp').value=loc.name||'';
+    document.getElementById('locAddrInp').value=loc.address||'';
+    document.getElementById('locMapInp').value=loc.map_url||'';
+  },
   async addLocation(){
+    if(!myProfile?.is_admin){toast('مشرفون فقط','error');return;}
     const name=document.getElementById('locName')?.value.trim();
     const addr=document.getElementById('locAddr')?.value.trim();
     const mapUrl=document.getElementById('locMap')?.value.trim();
@@ -2288,17 +2338,20 @@ window.A={
     const lng=parseFloat(document.getElementById('locLng')?.value)||null;
     if(!name){toast('أدخل اسم الموقع','error');return;}
     const isFirst=!D.locations.length;
-    await sb.from('locations').insert({name,address:addr||null,map_url:mapUrl||null,lat,lng,is_default:isFirst});
-    await loadAll();renderSettings();toast('تمت إضافة الموقع ✅');
+    await postRow('locations',{name,address:addr||null,map_url:mapUrl||null,lat,lng,is_default:false});
+    await loadAll();renderSettings();toast('تم إضافة الموقع ✅');
   },
   async deleteLoc(id){
-    await sb.from('locations').delete().eq('id',id);
-    await loadAll();renderSettings();
+    if(!myProfile?.is_admin)return;
+    if(!confirm('حذف هذا الموقع؟'))return;
+    await fetch(SB_URL+'/rest/v1/locations?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+    await loadAll();renderSettings();toast('تم الحذف');
   },
   async setDefaultLoc(id){
-    await sb.from('locations').update({is_default:false});
-    await sb.from('locations').update({is_default:true}).eq('id',id);
-    await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ✅');
+    if(!myProfile?.is_admin)return;
+    await fetch(SB_URL+'/rest/v1/locations',{method:'PATCH',headers:apiHeaders(),body:JSON.stringify({is_default:false})});
+    await patchRow('locations',id,{is_default:true});
+    await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ⭐');
   },
   async saveInlineBudget(){
     const slotId=document.getElementById('budgetSlotSel')?.value;
