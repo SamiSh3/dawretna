@@ -1059,14 +1059,32 @@ async function cancelBookSlot(id){
   toast('تم إلغاء الحجز');
 }
 async function setRsvp(slotId,status){
-  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-  await fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
-    body:JSON.stringify({slot_id:slotId,member_name:myName(),status})});
-  const slot=D.slots.find(s=>s.id===slotId);
-  if(slot?.host_name&&slot.host_name!==myName()){
-    await notify(slot.host_name,'rsvp',`${esc(myName())} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,toGregShort(slot.date),slotId);
+  const mn=myName();
+  // تحديث فوري محلي (لا انتظار)
+  const existing=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
+  if(existing){
+    existing.status=status;
+  } else {
+    D.rsvps.push({slot_id:slotId,member_name:mn,status});
   }
-  await loadAll();render();toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+  render();
+  toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+
+  // حفظ في DB في الخلفية
+  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+  try{
+    await fetch(SB_URL+'/rest/v1/rsvps',{
+      method:'POST',headers:H,
+      body:JSON.stringify({slot_id:slotId,member_name:mn,status})
+    });
+    const slot=D.slots.find(s=>s.id===slotId);
+    if(slot?.host_name&&slot.host_name!==mn){
+      await notify(slot.host_name,'rsvp',
+        `${esc(mn)} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,
+        toGregShort(slot.date),slotId);
+    }
+  }catch(e){console.error('rsvp error:',e);}
+  loadAll().catch(()=>{});
 }
 async function resolveSwap(swapId,accept){
   const sw=D.swaps.find(s=>s.id===swapId);if(!sw)return;
