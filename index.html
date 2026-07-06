@@ -500,13 +500,10 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <div style="margin-top:10px;">
         <div class="field">
           <label>📍 موقع الطلعة</label>
-          <select id="locSel" onchange="A.fillLocFromSel(this.value)" style="background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;width:100%;">
-            <option value="">— اختر موقع أو أدخل يدوياً —</option>
+          <select id="locSel" style="background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;width:100%;">
+            <option value="">— بدون موقع محدد —</option>
           </select>
         </div>
-        <div class="field"><label>اسم الموقع</label><input type="text" id="locNameInp" placeholder="مثال: شاليه النخيل"></div>
-        <div class="field"><label>العنوان</label><input type="text" id="locAddrInp" placeholder="الرياض - حي النرجس"></div>
-        <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="locMapInp" placeholder="https://maps.app.goo.gl/..."></div>
         <div class="row">
           <div class="field"><label>Latitude</label><input type="number" id="locLatInp" step="any" placeholder="24.7136"></div>
           <div class="field"><label>Longitude</label><input type="number" id="locLngInp" step="any" placeholder="46.6753"></div>
@@ -1224,21 +1221,17 @@ function openNewSlot(){
   // ملء dropdown المواقع
   const locSel=document.getElementById('locSel');
   if(locSel){
-    locSel.innerHTML='<option value="">— اختر موقع أو أدخل يدوياً —</option>';
+    locSel.innerHTML='<option value="">— بدون موقع محدد —</option>';
     D.locations.forEach(l=>{
       const opt=document.createElement('option');
       opt.value=l.id;
-      opt.textContent=l.name+(l.address?' · '+l.address:'')+(l.is_default?' ★':'');
+      opt.textContent=l.name+(l.address?' — '+l.address:'')+(l.is_default?' ⭐':'');
       locSel.appendChild(opt);
     });
-    // اختر الافتراضي تلقائياً
     const def=D.locations.find(l=>l.is_default);
-    if(def){locSel.value=def.id;A.fillLocFromSel(def.id);}
+    if(def) locSel.value=def.id;
   }
-  document.getElementById('locNameInp').value=D.chalet.name&&D.chalet.name!=='دوريتنا'?D.chalet.name:'';
-  document.getElementById('locAddrInp').value=D.chalet.address||'';
-  document.getElementById('locMapInp').value=D.chalet.map_url||'';
-  document.getElementById('locLatInp').value=D.chalet.lat||'';
+    document.getElementById('locLatInp').value=D.chalet.lat||'';
   document.getElementById('locLngInp').value=D.chalet.lng||'';
   updateNewSlotHijri();
   openModal('newSlotModal');
@@ -1263,15 +1256,13 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const title=document.getElementById('newSlotTitle').value.trim()||null;
   const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
   const notes=document.getElementById('newSlotBudgetNotes').value.trim();
-  const locName=document.getElementById('locNameInp').value.trim()||null;
-  const locAddr=document.getElementById('locAddrInp').value.trim()||null;
-  const locMap=document.getElementById('locMapInp').value.trim()||null;
-  const locLat=parseFloat(document.getElementById('locLatInp').value)||null;
-  const locLng=parseFloat(document.getElementById('locLngInp').value)||null;
+  const locId=document.getElementById('locSel')?.value||null;
+  const loc=locId?D.locations.find(l=>l.id===locId):null;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
   await fetch(SB_URL+'/rest/v1/slots',{method:'POST',headers:{...H,'Prefer':'return=minimal'},
     body:JSON.stringify({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null,
-      location_name:locName,location_address:locAddr,location_map_url:locMap,location_lat:locLat,location_lng:locLng})});
+      location_name:loc?.name||null,location_address:loc?.address||null,
+      location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null})});
   await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',`${title?title+' — ':''}${toGreg(date)}`,null);
   closeModal('newSlotModal');await loadAll();render();toast('تمت إضافة الطلعة ✅');
 };
@@ -2116,16 +2107,6 @@ function renderSettings(){
 
   // موقع الشاليه (للمشرفين فقط)
   if(myProfile?.is_admin){
-    h+=`<div class="card"><div class="h2">📍 موقع الشاليه الافتراضي</div>
-    <p class="hint" style="margin-top:4px;">هذه القيم تظهر تلقائياً عند إنشاء طلعة جديدة ويمكن تعديلها لكل طلعة.</p>
-    <div class="field"><label>اسم الموقع</label><input type="text" id="sN" value="${esc(D.chalet.name&&D.chalet.name!=='دوريتنا'?D.chalet.name:D.chalet.location_name||'')}" placeholder="مثال: شاليه الكوخ الخشبي"></div>
-    <div class="field"><label>العنوان</label><input type="text" id="sA" value="${esc(D.chalet.address||'')}" placeholder="الرياض - حي النرجس..."></div>
-    <div class="field"><label>رابط خرائط جوجل</label><input type="url" id="sM" value="${esc(D.chalet.map_url||'')}" placeholder="https://maps.app.goo.gl/..."></div>
-    <div class="row">
-      <div class="field"><label>Latitude</label><input type="number" id="sLat" step="any" value="${D.chalet.lat||''}" placeholder="24.7136"></div>
-      <div class="field"><label>Longitude</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
-    </div>
-    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>`;
     h+=`<div class="card"><div class="h2">📍 مواقع الاجتماع</div>
     <p class="hint" style="margin-top:4px;">تظهر كقائمة عند إنشاء طلعة جديدة. ★ = الافتراضي.</p>
     ${D.locations.map(l=>`<div class="rem-row">
@@ -2337,9 +2318,7 @@ window.A={
     const loc=D.locations.find(l=>l.id===locId);
     if(!loc)return;
     document.getElementById('locNameInp').value=loc.name||'';
-    document.getElementById('locAddrInp').value=loc.address||'';
-    document.getElementById('locMapInp').value=loc.map_url||'';
-  },
+          },
   async addLocation(){
     if(!myProfile?.is_admin){toast('مشرفون فقط','error');return;}
     const name=document.getElementById('locName')?.value.trim();
