@@ -1552,8 +1552,8 @@ function renderCalendar(){
     <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">◀</button>
   </div>
   <div style="display:flex;gap:10px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
-    <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>متاحة</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>محجوزة</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>محجوزة</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>متاحة</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage-s);border:1px solid var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;opacity:.6;"></span>منتهية</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber-s);border:1px solid var(--amber);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>اليوم</span>
   </div>
@@ -1590,8 +1590,8 @@ function renderCalendar(){
       let cls='day-cell';
       if(slot){
         if(isPast) cls+=' past-event';
-        else if(slot.host_name) cls+=' booked-event'; // محجوزة → أخضر
-        else cls+=' has-event'; // متاحة → برتقالي
+        else if(slot.host_name) cls+=' has-event';   // محجوزة → برتقالي
+        else cls+=' booked-event';                   // متاحة → أخضر
       } else if(isTod) cls+=' today';
 
       const hijDay=slot?getEventHijriDay(slot):getHijriDay(iso);
