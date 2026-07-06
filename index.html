@@ -1407,10 +1407,15 @@ function renderHome(){
       ${next.title?`<div style="font-family:var(--fd);font-size:18px;color:var(--amber);margin-bottom:4px;">${esc(next.title)}</div>`:''}
       <div class="hero-date-greg">${esc(greg)}</div>
       <div class="hero-date-hijri">${esc(hijri)}</div>
+      <div style="margin:10px 0 6px;padding:8px 12px;background:var(--bg-soft);border-radius:var(--rsm);border:1px solid var(--bsoft);">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">🙍 المضيف</div>
+        <div style="font-size:15px;font-weight:700;color:${next.host_name?'var(--amber)':'var(--muted)'};">
+          ${next.host_name?esc(next.host_name):'لم يُحجز بعد'}
+        </div>
+      </div>
       <div class="hero-meta">
-        ${next.host_name?`<span class="hero-host">🙍 ${esc(next.host_name)}</span>`:'<span class="hero-host muted">لم يُحجز بعد</span>'}
         <span class="hero-countdown ${du>7?'far':''}">${du===0?'اليوم! 🔥':'بعد '+du+' يوم'}</span>
-        ${next.budget?`<span class="hero-budget">💰 ${next.budget.toLocaleString('ar')} ﷼يال</span>`:''}
+        ${next.budget?`<span class="hero-budget">💰 ${next.budget.toLocaleString('ar')} ﷼</span>`:''}
       </div>
       <div class="attendees">${chips||''}</div>
       ${chips?`<div class="muted" style="font-size:11px;margin-bottom:10px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`:''}
