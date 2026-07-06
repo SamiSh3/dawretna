@@ -1958,26 +1958,98 @@ async function togglePayment(slotId,memberName){
 function renderBudget(){
   const mn=D.team.length||1;
   const budgetType=D.chalet.budget_type||'per_slot';
+  const annualBudget=D.chalet.annual_budget||0;
+  const budgetYear=D.chalet.budget_year||todayYear();
 
-  // ── حساب الأرقام الكلية ──
+  let h='';
+
+  // ── نوع الميزانية للمشرف ──
+  if(myProfile?.is_admin){
+    h+=`<div class="card">
+      <div class="h2" style="font-size:15px;">⚙️ نوع الميزانية</div>
+      <div style="display:flex;gap:8px;margin:10px 0;">
+        <button class="btn ${budgetType==='per_slot'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('per_slot')">📅 لكل طلعة</button>
+        <button class="btn ${budgetType==='annual'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('annual')">📆 سنوي</button>
+      </div>
+      ${budgetType==='annual'?`
+      <hr class="sep">
+      <div class="h2" style="font-size:14px;">الاشتراك السنوي</div>
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label>السنة</label>
+          <select id="budgetYearSel">
+            ${[2025,2026,2027,2028].map(y=>`<option value="${y}" ${y===budgetYear?'selected':''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>الاشتراك السنوي (﷼)</label>
+          <input type="number" id="annualBudgetAmt" value="${annualBudget||''}" placeholder="مثال: 3600" min="0">
+        </div>
+      </div>
+      <div class="note" style="margin-bottom:8px;">
+        نصيب كل عضو: <b style="color:var(--amber)">${D.team.length?Math.round((annualBudget||0)/D.team.length).toLocaleString('ar'):0} ﷼</b> للسنة
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget()">حفظ</button>`:`
+      <hr class="sep">
+      <div class="h2" style="font-size:14px;">تحديد تكلفة طلعة</div>
+      <div class="field" style="margin-top:8px;"><label>الطلعة</label>
+        <select id="budgetSlotSel">
+          ${D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date))
+            .map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))}${s.title?' — '+esc(s.title):''}${s.budget?' ('+Number(s.budget).toLocaleString('ar')+' ﷼)':''}</option>`).join('')}
+        </select>
+      </div>
+      <div class="row">
+        <div class="field"><label>التكلفة الكلية (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
+        <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ التكلفة</button>`}
+    </div>`;
+
+  // ── اشتراك سنوي ──
+  if(budgetType==='annual'&&annualBudget){
+    const memberShare=D.team.length?Math.round(annualBudget/D.team.length):0;
+    const yearPays=D.annualPayments.filter(p=>p.year===budgetYear);
+    const paidM=D.team.filter(m=>yearPays.find(p=>p.member_name===m.name&&p.paid));
+    const unpaidM=D.team.filter(m=>!yearPays.find(p=>p.member_name===m.name&&p.paid));
+    const collected=paidM.length*memberShare;
+    const pct=annualBudget?Math.min(100,Math.round(collected/annualBudget*100)):0;
+    h+=`<div class="budget-slot"><div class="budget-slot-header">
+      <div><div class="budget-slot-date">اشتراك ${budgetYear}</div>
+      <div style="font-size:11px;color:var(--muted);">دفعة واحدة للسنة</div></div>
+      <div style="text-align:left;"><div class="budget-total">${Number(annualBudget).toLocaleString('ar')} ﷼</div><div class="budget-total-lbl">إجمالي الاشتراك</div></div>
+    </div>
+    <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+    <div class="budget-summary">
+      <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage)">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+      <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger)">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+      <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber)">${memberShare.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+    </div>
+    <div>${[...paidM,...unpaidM].map(m=>{
+      const paid=!!yearPays.find(p=>p.member_name===m.name&&p.paid);
+      const safeName=esc(m.name).replace(/'/g,"&#39;");
+      return `<div class="member-payment-row">
+        <div class="payment-av">${m.name[0]}</div>
+        <div class="payment-info">
+          <div class="payment-name">${esc(m.name)}${m.name===myName()?' <span class="badge-you">أنت</span>':''}</div>
+          <div class="payment-amount" style="color:${paid?'var(--sage)':'var(--muted)'};">${paid?'✅':'⏳'} ${memberShare.toLocaleString('ar')} ﷼</div>
+        </div>
+        ${myProfile?.is_admin?`<button class="btn ${paid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay(${budgetYear},'${safeName}',${paid})">${paid?'إلغاء':'✓ دفع'}</button>`:`<span class="${paid?'paid-badge':'unpaid-badge'}">${paid?'دفع':'لم يدفع'}</span>`}
+      </div>`;
+    }).join('')}</div></div>`;
+    document.getElementById('content').innerHTML=h;return;
+  }
+
+  // ── حسابات per_slot ──
   const allSlots=D.slots.filter(s=>s.budget).sort((a,b)=>a.date.localeCompare(b.date));
   const pastSlots=allSlots.filter(s=>daysUntil(s.date)<0);
   const upcomingSlots=allSlots.filter(s=>daysUntil(s.date)>=0);
-
-  // إجمالي ما تم تحصيله (دفعات مؤكدة)
-  let totalCollected=0,totalSpent=0,totalExpected=0;
+  let totalCollected=0,totalSpent=0;
   allSlots.forEach(s=>{
     const pays=D.payments.filter(p=>p.slot_id===s.id&&p.paid);
     const share=s.budget?Math.round(s.budget/mn):0;
     totalCollected+=pays.length*share;
-    if(daysUntil(s.date)<0) totalSpent+=s.budget||0; // طلعات منتهية = استهلاك فعلي
-    totalExpected+=s.budget||0;
+    if(daysUntil(s.date)<0) totalSpent+=s.budget||0;
   });
   const balance=totalCollected-totalSpent;
 
-  let h='';
-
-  // ── ملخص الصندوق ──
   h+=`<div class="card" style="background:linear-gradient(135deg,var(--bg-el),var(--bg-card));">
     <div class="h2" style="font-size:15px;margin-bottom:12px;">💰 صندوق المجموعة</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">
