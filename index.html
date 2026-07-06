@@ -116,9 +116,14 @@ button,input,textarea,select{font-family:inherit;}
 .day-cell.has-event .day-hij{color:rgba(255,255,255,.9);font-size:10px;}
 .day-cell.has-event:hover{filter:brightness(1.1);}
 /* طلعة منتهية */
-.day-cell.past-event{background:var(--sage-s);cursor:pointer;border-radius:10px;border:1px solid rgba(143,185,150,.4);}
-.day-cell.past-event .day-greg{color:var(--sage);font-weight:700;}
-.day-cell.past-event .day-hij{color:var(--sage);}
+/* طلعة محجوزة (مستقبلية) */
+.day-cell.booked-event{
+  background:var(--sage);cursor:pointer;border-radius:10px;
+  box-shadow:0 2px 8px rgba(120,170,130,.4);
+}
+.day-cell.booked-event .day-greg{color:#fff;font-size:14px;font-weight:800;}
+.day-cell.booked-event .day-hij{color:rgba(255,255,255,.9);font-size:10px;}
+.day-cell.booked-event:hover{filter:brightness(1.1);}
 .event-popup{background:var(--bg-el);border:1px solid var(--border);border-radius:var(--rmd);padding:12px;margin-top:10px;}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-el);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:40;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;width:100%;max-width:520px;}
@@ -1546,9 +1551,10 @@ function renderCalendar(){
     </div>
     <button class="btn btn-ghost btn-sm" onclick="A.calPrev()">◀</button>
   </div>
-  <div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
-    <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>طلعة قادمة</span>
-    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;opacity:.6;"></span>طلعة منتهية</span>
+  <div style="display:flex;gap:10px;font-size:11px;color:var(--muted);margin-bottom:14px;flex-wrap:wrap;">
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>متاحة</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>محجوزة</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage-s);border:1px solid var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;opacity:.6;"></span>منتهية</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber-s);border:1px solid var(--amber);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>اليوم</span>
   </div>
   <div class="months-grid">`;
@@ -1582,17 +1588,24 @@ function renderCalendar(){
       const isTod=iso===today;
 
       let cls='day-cell';
-      if(slot)    cls+=isPast?' past-event':' has-event';
-      else if(isTod) cls+=' today';
+      if(slot){
+        if(isPast) cls+=' past-event';
+        else if(slot.host_name) cls+=' booked-event'; // محجوزة → أخضر
+        else cls+=' has-event'; // متاحة → برتقالي
+      } else if(isTod) cls+=' today';
 
-      // الرقم الهجري — إذا حدث استخدم الهجري المعدّل
       const hijDay=slot?getEventHijriDay(slot):getHijriDay(iso);
-
       const onclick=slot?`onclick="A.calClick('${iso}')"` :'';
+      const tipTitle=slot
+        ? (slot.host_name
+            ? `${esc(toGreg(slot.date))} · ${esc(slot.host_name)} 🏕️`
+            : `${esc(toGreg(slot.date))} · متاح للحجز`)
+        : '';
 
-      h+=`<div class="${cls}" ${onclick} title="${slot?esc(toGreg(slot.date))+' — '+esc(toHijri(slot.date,slot.hijri_offset||0)):''}">
+      h+=`<div class="${cls}" ${onclick} title="${tipTitle}">
         <span class="day-greg">${day}</span>
         <span class="day-hij">${hijDay}</span>
+        ${slot?.host_name&&!isPast?`<span style="font-size:6px;line-height:1;display:block;margin-top:1px;color:rgba(255,255,255,.85);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;font-weight:700;">${esc(slot.host_name.split(' ')[0])}</span>`:''}
       </div>`;
     }
     h+=`</div></div>`;
