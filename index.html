@@ -2010,9 +2010,11 @@ function renderBudget(){
   // ── نوع الميزانية للمشرف ──
   if(myProfile?.is_admin){
     const upSlots=D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
+    var bt1='<button class="btn '+(budgetType==='per_slot'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType(\'per_slot\')">📅 لكل طلعة</button>';
+    var bt2='<button class="btn '+(budgetType==='annual'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType(\'annual\')">📆 سنوي</button>';
     h+='<div class="card"><div class="h2" style="font-size:15px;">⚙️ نوع الميزانية</div>'+
-      '<div style="display:flex;gap:8px;margin:10px 0;">'+
-        '<button class="btn '+(budgetType==='per_slot'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType('per_slot')">📅 لكل طلعة</button>'+
+      '<div style="display:flex;gap:8px;margin:10px 0;">'+bt1+bt2+
+        '<button class="btn '+(budgetType==='per_slot'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick='A.setBudgetType("per_slot")'>📅 لكل طلعة</button>'+
         '<button class="btn '+(budgetType==='annual'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType('annual')">📆 سنوي</button>'+
       '</div>';
     if(budgetType==='annual'){
