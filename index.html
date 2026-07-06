@@ -1021,7 +1021,13 @@ async function cancelBookSlot(id){
   if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
   await patchRow('slots',id,{host_name:null});
   await notifyAll('general',`${esc(myName())} أفرج عن طلعة 📅`,toGregShort(slot.date),id);
-  await loadAll();render();toast('تم إلغاء الحجز');
+  await loadAll();
+  closeModal('calSlotModal'); // أغلق الـ modal
+  render();
+  // أعد فتح الـ modal بالبيانات المحدثة
+  const updated=D.slots.find(s=>s.id===id);
+  if(updated) openCalSlotModal(updated);
+  toast('تم إلغاء الحجز');
 }
 async function setRsvp(slotId,status){
   const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
