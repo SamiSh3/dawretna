@@ -2368,12 +2368,12 @@ window.A={
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
   async toggleMultiBooking(val){
+    D.settings.allow_multi_booking=val?'true':'false'; // تحديث فوري
+    renderSettings(); // حدّث الزر فوراً
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     await fetch(SB_URL+'/rest/v1/app_settings',{method:'POST',headers:H,
       body:JSON.stringify({key:'allow_multi_booking',value:val?'true':'false'})});
-    D.settings.allow_multi_booking=val?'true':'false';
-    renderSettings(); // أعد رسم الإعدادات لتحديث الزر
-    toast(val?'تم السماح بتعدد الحجز ✅':'تم تقييد الحجز لمرة واحدة في السنة');
+    toast(val?'✅ مُفعَّل: يمكن حجز أكثر من طلعة في السنة':'⭕ مُعطَّل: حجز واحد فقط في السنة');
   },
   async saveLocation(){
     const name=document.getElementById('sN')?.value.trim()||'دوريتنا';
