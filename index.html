@@ -2114,7 +2114,7 @@ function renderSettings(){
       <div class="field"><label>Latitude</label><input type="number" id="sLat" step="any" value="${D.chalet.lat||''}" placeholder="24.7136"></div>
       <div class="field"><label>Longitude</label><input type="number" id="sLng" step="any" value="${D.chalet.lng||''}" placeholder="46.6753"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>
+    <button class="btn btn-primary btn-block" onclick="A.saveLocation()">حفظ الموقع</button></div>`;
     h+=`<div class="card"><div class="h2">📍 مواقع الاجتماع</div>
     <p class="hint" style="margin-top:4px;">تظهر كقائمة عند إنشاء طلعة جديدة. ★ = الافتراضي.</p>
     ${D.locations.map(l=>`<div class="rem-row">
