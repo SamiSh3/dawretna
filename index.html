@@ -1941,27 +1941,34 @@ let _tripsSubTab='special';
 /* ── More (memories + settings shortcuts) ── */
 /* ── Budget ── */
 async function togglePayment(slotId,memberName){
-  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'};
   const existing=D.payments.find(p=>p.slot_id===slotId&&p.member_name===memberName);
   const slot=D.slots.find(s=>s.id===slotId);
   const share=slot?.budget&&D.team.length?Math.round(slot.budget/D.team.length):null;
   const newPaid=!(existing?.paid);
 
-  // Optimistic update
+  // Optimistic update فوري
   if(existing) existing.paid=newPaid;
-  else D.payments.push({slot_id:slotId,member_name:memberName,paid:true,amount:share});
+  else D.payments.push({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share});
   renderBudget();
+  toast(newPaid?'✅ تم تسجيل الدفع':'↩️ تم إلغاء الدفع');
 
   try{
-    const H2={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    // استخدم slot_id,member_name للفلترة (لا نعتمد على id)
-    await fetch(SB_URL+'/rest/v1/budget_payments',{
-      method:'POST',headers:H2,
-      body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
-    });
-    if(newPaid){
+    const H={...apiHeaders(),'Prefer':'return=minimal'};
+    if(existing){
+      // حدّث السجل الموجود
+      await fetch(SB_URL+'/rest/v1/budget_payments?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{
+        method:'PATCH',headers:H,body:JSON.stringify({paid:newPaid,amount:share,updated_by:myName()})
+      });
+    } else {
+      // أنشئ سجل جديد
+      await fetch(SB_URL+'/rest/v1/budget_payments',{
+        method:'POST',headers:{...H,'Prefer':'return=minimal'},
+        body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
+      });
+    }
+    if(newPaid&&slot){
       await notify(memberName,'general','تم تسجيل دفعتك ✅',
-        `طلعة ${toGregShort(slot?.date||'')}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+        `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
     }
   }catch(e){console.error('togglePay:',e);}
   loadAll().catch(()=>{});
@@ -2511,17 +2518,23 @@ window.A={
   },
   async toggleAnnualPay(name,year,currentPaid){
     const newPaid=!currentPaid;
-    // Optimistic update
     const existing=D.annualPayments.find(p=>p.member_name===name&&p.year===year);
+    // Optimistic update
     if(existing) existing.paid=newPaid;
-    else D.annualPayments.push({member_name:name,year,paid:true});
+    else D.annualPayments.push({member_name:name,year,paid:newPaid});
     renderBudget();
+    toast(newPaid?'✅ تم تسجيل الاشتراك':'↩️ تم إلغاء الاشتراك');
     try{
-      const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-      await fetch(SB_URL+'/rest/v1/annual_payments',{
-        method:'POST',headers:H,
-        body:JSON.stringify({year,member_name:name,paid:newPaid,updated_by:myName()})
-      });
+      const H={...apiHeaders(),'Prefer':'return=minimal'};
+      if(existing){
+        await fetch(SB_URL+'/rest/v1/annual_payments?year=eq.'+year+'&member_name=eq.'+encodeURIComponent(name),{
+          method:'PATCH',headers:H,body:JSON.stringify({paid:newPaid,updated_by:myName()})
+        });
+      } else {
+        await fetch(SB_URL+'/rest/v1/annual_payments',{
+          method:'POST',headers:H,body:JSON.stringify({year,member_name:name,paid:newPaid,updated_by:myName()})
+        });
+      }
       if(newPaid) await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
     }catch(e){console.error('toggleAnnualPay:',e);}
     loadAll().catch(()=>{});
