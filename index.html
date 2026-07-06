@@ -2527,10 +2527,15 @@ window.A={
     loadAll().catch(()=>{});
   },
   async setBudgetType(type){
-    await patchRow('chalet',D.chalet.id,{budget_type:type});
-    D.chalet.budget_type=type;renderBudget();
-    else await sb.from('chalet').insert({name:D.chalet.name||'دوريتنا',budget_type:type});
-    await loadAll();renderBudget();
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    if(D.chalet.id){
+      await fetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({budget_type:type})});
+    } else {
+      await fetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',budget_type:type})});
+    }
+    D.chalet.budget_type=type;
+    renderBudget();
+    loadAll().catch(()=>{});
   },
   async saveAnnualBudget(){
     const year=parseInt(document.getElementById('budgetYearSel')?.value)||todayYear();
