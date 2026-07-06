@@ -1984,26 +1984,27 @@ function renderBudget(){
       '</div>'+btn+'</div>';
   }
     // دالة مساعدة لرسم صف عضو سنوي
-  function annualRow(m,yearPays,memberShare,budgetYear){
-    const paid=!!(yearPays.find(p=>p.member_name===m.name&&p.paid));
-    const sn=esc(m.name).replace(/'/g,"&#39;");
+    function annualRow(m,yearPays,memberShare,budgetYear){
+    const paid=!!(yearPays.find(function(p){return p.member_name===m.name&&p.paid;}));
+    const sn=m.name.replace(/'/g,"&#39;");
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
     const amt=Number(memberShare).toLocaleString('ar')+' ﷼';
-    let btn='';
-    if(myProfile?.is_admin){
-      btn='<button class="btn '+(paid?'btn-ghost':'btn-sage')+' btn-xs" onclick="A.toggleAnnualPay('+budgetYear+',''+sn+'','+paid+')">'+(paid?'إلغاء':'✓ دفع')+'</button>';
+    let btn;
+    if(myProfile&&myProfile.is_admin){
+      btn='<button class="btn '+(paid?'btn-ghost':'btn-sage')+' btn-xs" '+
+          'onclick="A.toggleAnnualPay('+budgetYear+',\'' + sn + '\',' + paid + ')">' +
+          (paid?'إلغاء':'✓ دفع')+'</button>';
     } else {
       btn='<span class="'+(paid?'paid-badge':'unpaid-badge')+'">'+(paid?'دفع':'لم يدفع')+'</span>';
     }
-    const clr=paid?'var(--sage)':'var(--muted)';
     return '<div class="member-payment-row">'+
       '<div class="payment-av">'+m.name[0]+'</div>'+
       '<div class="payment-info">'+
         '<div class="payment-name">'+esc(m.name)+me+'</div>'+
-        '<div class="payment-amount" style="color:'+clr+';">'+(paid?'✅ ':'⏳ ')+amt+'</div>'+
+        '<div class="payment-amount" style="color:'+(paid?'var(--sage)':'var(--muted)')+';">'+(paid?'✅ ':'⏳ ')+amt+'</div>'+
       '</div>'+btn+'</div>';
   }
-
+  
   let h='';
 
   // ── نوع الميزانية للمشرف ──
