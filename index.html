@@ -2531,6 +2531,7 @@ window.A={
     loadAll().catch(()=>{});
     toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
   },
+  async saveSlotTitle(slotId){
     const inp=document.getElementById('slotTitleInp_'+slotId);
     if(!inp)return;
     const title=inp.value.trim()||null;
