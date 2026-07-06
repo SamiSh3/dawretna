@@ -1522,27 +1522,35 @@ function renderHome(){
 
   // قائمة كل الطلعات القادمة مع RSVP
   const allSlots=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date));
-  if(allSlots.length>1){
+  if(allSlots.length){
     h+=`<div class="h2" style="font-size:15px;margin-bottom:10px;">📅 جميع المواعيد القادمة</div>`;
     allSlots.forEach(s=>{
       const myRv=D.rsvps.find(r=>r.slot_id===s.id&&r.member_name===myName());
       const du=daysUntil(s.date);
-      h+=`<div class="card" style="margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+      const isNext=s.id===next?.id;
+      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
           <div>
+            ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">القادم</div>`:''}
             ${s.title?`<div style="font-size:13px;font-weight:700;color:var(--amber);">${esc(s.title)}</div>`:''}
             <div style="font-size:15px;font-weight:700;">${esc(toGregShort(s.date))}</div>
             <div style="font-size:11px;color:var(--amber);font-family:var(--fm);">${esc(toHijri(s.date,s.hijri_offset||0))}</div>
           </div>
           <div style="text-align:left;">
-            <div style="font-size:11px;color:var(--muted);">المضيف</div>
+            <div style="font-size:10px;color:var(--muted);">المضيف</div>
             <div style="font-size:13px;font-weight:700;color:${s.host_name?'var(--amber)':'var(--muted)'};">${s.host_name?esc(s.host_name):'متاح'}</div>
             <div style="font-size:10px;color:var(--muted);margin-top:2px;">بعد ${du} يوم</div>
           </div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvp('${s.id}','yes')">✅ سأحضر</button>
-          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvp('${s.id}','no')">🙅 أعتذر</button>
+          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block"
+            onclick="A.rsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
+            ${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}
+          </button>
+          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block"
+            onclick="A.rsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
+            ${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}
+          </button>
           ${!s.host_name?`<button class="btn btn-primary btn-sm" onclick="A.book('${s.id}')">🙋 أحجز</button>`:''}
         </div>
       </div>`;
