@@ -1033,14 +1033,19 @@ async function bookSlot(id){
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
   // فحص تعدد الحجز في السنة الهجرية نفسها
-  const allowMulti=D.settings.allow_multi_booking==='true';
-  if(!allowMulti&&!myProfile?.is_admin){
-    const slotHijriYear=new Date(slot.date+'T00:00:00').toLocaleDateString(UMQ,{year:'numeric'}).replace(/\D/g,'');
-    const alreadyBooked=D.slots.find(s=>
-      s.id!==id&&s.host_name===mn&&daysUntil(s.date)>=0&&
-      new Date(s.date+'T00:00:00').toLocaleDateString(UMQ,{year:'numeric'}).replace(/\D/g,'')===slotHijriYear
-    );
-    if(alreadyBooked){toast('لديك حجز بالفعل هذه السنة الهجرية','error');return;}
+  const allowMulti=D.settings?.allow_multi_booking==='true';
+  if(!allowMulti){
+    // استخدم UMQ_EN للحصول على أرقام لاتينية
+    const slotHijriYear=new Date(slot.date+'T00:00:00').toLocaleDateString(UMQ_EN,{year:'numeric'}).trim();
+    const alreadyBooked=D.slots.find(s=>{
+      if(s.id===id||s.host_name!==mn||daysUntil(s.date)<0)return false;
+      const otherYear=new Date(s.date+'T00:00:00').toLocaleDateString(UMQ_EN,{year:'numeric'}).trim();
+      return otherYear===slotHijriYear;
+    });
+    if(alreadyBooked){
+      toast(`لديك حجز بالفعل هذه السنة الهجرية (${slotHijriYear} هـ)`,'error');
+      return;
+    }
   }
   // تحديث فوري محلي
   slot.host_name=mn;
