@@ -2237,7 +2237,7 @@ window.A={
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
   async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
-  async bookCal(id){await bookSlot(id);closeModal('calSlotModal');},
+  async bookCal(id){await bookSlot(id);},
   cancelBook:(id)=>cancelBookSlot(id),
   resolveSwap:(id,a)=>resolveSwap(id,a),
   async cancelSwap(swapId){
