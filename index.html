@@ -1961,119 +1961,106 @@ function renderBudget(){
   const annualBudget=D.chalet.annual_budget||0;
   const budgetYear=D.chalet.budget_year||todayYear();
 
-  // دالة مساعدة لرسم صف عضو
-    function memberRow(m,slot,pays,share){
-    const p=pays.find(function(q){return q.member_name===m.name;});
-    const hasPaid=!!(p&&p.paid);
+  function rowHtml(m,hasPaid,share,slotId,yearKey){
     const sn=m.name.replace(/'/g,"&#39;");
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
     const amt=Number(share).toLocaleString('ar')+' ﷼';
-    let btn;
-    if(myProfile&&myProfile.is_admin){
-      btn='<button class="btn '+(hasPaid?'btn-ghost':'btn-sage')+' btn-xs" '+
-          'onclick="A.togglePay(\'' + slot.id + '\',\'' + sn + '\')">' +
-          (hasPaid?'إلغاء':'✓ دفع')+'</button>';
-    } else {
-      btn='<span class="'+(hasPaid?'paid-badge':'unpaid-badge')+'">'+(hasPaid?'دفع':'لم يدفع')+'</span>';
+    let btn='';
+    if(myProfile?.is_admin){
+      if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}','${sn}')">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
     }
-    return '<div class="member-payment-row">'+
-      '<div class="payment-av">'+m.name[0]+'</div>'+
-      '<div class="payment-info">'+
-        '<div class="payment-name">'+esc(m.name)+me+'</div>'+
-        '<div class="payment-amount" style="color:'+(hasPaid?'var(--sage)':'var(--muted)')+';">'+(hasPaid?'✅ ':'⏳ ')+amt+'</div>'+
-      '</div>'+btn+'</div>';
+    return `<div class="member-payment-row">
+      <div class="payment-av">${m.name[0]}</div>
+      <div class="payment-info">
+        <div class="payment-name">${esc(m.name)}${me}</div>
+        <div class="payment-amount" style="color:${hasPaid?'var(--sage)':'var(--muted)'};">${hasPaid?'✅ ':'⏳ '}${amt}</div>
+      </div>${btn}</div>`;
   }
-    // دالة مساعدة لرسم صف عضو سنوي
-    function annualRow(m,yearPays,memberShare,budgetYear){
-    const paid=!!(yearPays.find(function(p){return p.member_name===m.name&&p.paid;}));
-    const sn=m.name.replace(/'/g,"&#39;");
-    const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
-    const amt=Number(memberShare).toLocaleString('ar')+' ﷼';
-    let btn;
-    if(myProfile&&myProfile.is_admin){
-      btn='<button class="btn '+(paid?'btn-ghost':'btn-sage')+' btn-xs" '+
-          'onclick="A.toggleAnnualPay('+budgetYear+',\'' + sn + '\',' + paid + ')">' +
-          (paid?'إلغاء':'✓ دفع')+'</button>';
-    } else {
-      btn='<span class="'+(paid?'paid-badge':'unpaid-badge')+'">'+(paid?'دفع':'لم يدفع')+'</span>';
-    }
-    return '<div class="member-payment-row">'+
-      '<div class="payment-av">'+m.name[0]+'</div>'+
-      '<div class="payment-info">'+
-        '<div class="payment-name">'+esc(m.name)+me+'</div>'+
-        '<div class="payment-amount" style="color:'+(paid?'var(--sage)':'var(--muted)')+';">'+(paid?'✅ ':'⏳ ')+amt+'</div>'+
-      '</div>'+btn+'</div>';
-  }
-  
+
   let h='';
 
-  // ── نوع الميزانية للمشرف ──
+  // ── إعدادات للمشرف ──
   if(myProfile?.is_admin){
     const upSlots=D.slots.filter(s=>daysUntil(s.date)>=-30).sort((a,b)=>a.date.localeCompare(b.date));
-    var bt1='<button class="btn '+(budgetType==='per_slot'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType(\'per_slot\')">📅 لكل طلعة</button>';
-    var bt2='<button class="btn '+(budgetType==='annual'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType(\'annual\')">📆 سنوي</button>';
-    h+='<div class="card"><div class="h2" style="font-size:15px;">⚙️ نوع الميزانية</div>'+
-      '<div style="display:flex;gap:8px;margin:10px 0;">'+bt1+bt2+
-        '<button class="btn '+(budgetType==='per_slot'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick='A.setBudgetType("per_slot")'>📅 لكل طلعة</button>'+
-        '<button class="btn '+(budgetType==='annual'?'btn-primary':'btn-ghost')+' btn-sm btn-block" onclick="A.setBudgetType('annual')">📆 سنوي</button>'+
-      '</div>';
-    if(budgetType==='annual'){
-      h+='<hr class="sep"><div class="h2" style="font-size:14px;">الاشتراك السنوي</div>'+
-        '<div class="row" style="margin-top:8px;">'+
-          '<div class="field"><label>السنة</label><select id="budgetYearSel">'+
-            [2025,2026,2027,2028].map(y=>'<option value="'+y+'"'+(y===budgetYear?' selected':'')+'>'+y+'</option>').join('')+
-          '</select></div>'+
-          '<div class="field"><label>الاشتراك السنوي (﷼)</label>'+
-            '<input type="number" id="annualBudgetAmt" value="'+(annualBudget||'')+'" placeholder="مثال: 3600" min="0">'+
-          '</div>'+
-        '</div>'+
-        '<div class="note" style="margin-bottom:8px;">نصيب كل عضو: <b style="color:var(--amber);">'+
-          (D.team.length?Math.round((annualBudget||0)/D.team.length).toLocaleString('ar'):'0')+' ﷼</b></div>'+
-        '<button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget()">حفظ</button>';
-    } else {
-      h+='<hr class="sep"><div class="h2" style="font-size:14px;">تحديد تكلفة طلعة</div>'+
-        '<div class="field" style="margin-top:8px;"><label>الطلعة</label><select id="budgetSlotSel">'+
-          upSlots.map(s=>'<option value="'+s.id+'">'+esc(toGregShort(s.date))+(s.title?' — '+esc(s.title):'')+(s.budget?' ('+Number(s.budget).toLocaleString('ar')+' ﷼)':'')+'</option>').join('')+
-        '</select></div>'+
-        '<div class="row">'+
-          '<div class="field"><label>التكلفة الكلية (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>'+
-          '<div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>'+
-        '</div>'+
-        '<button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ التكلفة</button>';
-    }
-    h+='</div>';
+    h+=`<div class="card"><div class="h2" style="font-size:15px;">⚙️ إعدادات الميزانية</div>
+    <div style="display:flex;gap:8px;margin:10px 0;">
+      <button class="btn ${budgetType==='per_slot'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('per_slot')">📅 لكل طلعة</button>
+      <button class="btn ${budgetType==='annual'?'btn-primary':'btn-ghost'} btn-sm btn-block" onclick="A.setBudgetType('annual')">📆 اشتراك سنوي</button>
+    </div>
+
+    ${budgetType==='annual'?`
+    <hr class="sep">
+    <div class="h2" style="font-size:14px;margin-bottom:8px;">الاشتراك السنوي</div>
+    <div class="row">
+      <div class="field"><label>السنة الميلادية</label>
+        <select id="budgetYearSel">
+          ${[2025,2026,2027,2028].map(y=>`<option value="${y}"${y===budgetYear?' selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>المبلغ السنوي (﷼)</label>
+        <input type="number" id="annualBudgetAmt" value="${annualBudget||''}" placeholder="مثال: 3600" min="0">
+      </div>
+    </div>
+    <div class="note" style="margin-bottom:8px;">نصيب كل عضو: <b style="color:var(--amber);">${D.team.length&&annualBudget?Math.round(annualBudget/D.team.length).toLocaleString('ar'):0} ﷼</b></div>
+    <button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget()">حفظ الاشتراك</button>`:''}
+
+    ${budgetType==='per_slot'?`
+    <hr class="sep">
+    <div class="h2" style="font-size:14px;margin-bottom:8px;">تحديد تكلفة طلعة</div>
+    <div class="field"><label>الطلعة</label>
+      <select id="budgetSlotSel">
+        ${upSlots.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))}${s.title?' — '+esc(s.title):''}${s.budget?' ('+Number(s.budget).toLocaleString('ar')+' ﷼)':''}</option>`).join('')}
+      </select>
+    </div>
+    <div class="row">
+      <div class="field"><label>التكلفة الكلية (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
+      <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ التكلفة</button>`:''}
+    </div>`;
   }
 
-  // ── اشتراك سنوي ──
+  // ── قسم الاشتراك السنوي ──
   if(budgetType==='annual'&&annualBudget){
-    const memberShare=D.team.length?Math.round(annualBudget/D.team.length):0;
+    const memberShare=mn?Math.round(annualBudget/mn):0;
     const yearPays=D.annualPayments.filter(p=>p.year===budgetYear);
     const paidM=D.team.filter(m=>yearPays.find(p=>p.member_name===m.name&&p.paid));
     const unpaidM=D.team.filter(m=>!yearPays.find(p=>p.member_name===m.name&&p.paid));
     const collected=paidM.length*memberShare;
     const pct=annualBudget?Math.min(100,Math.round(collected/annualBudget*100)):0;
-    h+='<div class="budget-slot">'+
-      '<div class="budget-slot-header">'+
-        '<div><div class="budget-slot-date">اشتراك '+budgetYear+'</div>'+
-        '<div style="font-size:11px;color:var(--muted);">دفعة واحدة للسنة</div></div>'+
-        '<div style="text-align:left;"><div class="budget-total">'+Number(annualBudget).toLocaleString('ar')+' ﷼</div>'+
-        '<div class="budget-total-lbl">إجمالي الاشتراك</div></div>'+
-      '</div>'+
-      '<div class="budget-progress"><div class="budget-progress-bar" style="width:'+pct+'%"></div></div>'+
-      '<div class="budget-summary">'+
-        '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">'+paidM.length+'</div><div class="budget-stat-lbl">دفعوا</div></div>'+
-        '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger);">'+unpaidM.length+'</div><div class="budget-stat-lbl">لم يدفعوا</div></div>'+
-        '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">'+memberShare.toLocaleString('ar')+'</div><div class="budget-stat-lbl">نصيب الفرد</div></div>'+
-      '</div>'+
-      '<div>'+[...paidM,...unpaidM].map(m=>annualRow(m,yearPays,memberShare,budgetYear)).join('')+'</div>'+
-    '</div>';
-    document.getElementById('content').innerHTML=h;return;
+    h+=`<div class="h2" style="font-size:14px;margin-bottom:8px;">📆 اشتراك ${budgetYear}</div>
+    <div class="budget-slot">
+      <div class="budget-slot-header">
+        <div>
+          <div class="budget-slot-date">اشتراك سنوي ${budgetYear}</div>
+          <div style="font-size:11px;color:var(--muted);">دفعة واحدة في السنة</div>
+        </div>
+        <div style="text-align:left;">
+          <div class="budget-total">${Number(annualBudget).toLocaleString('ar')} ﷼</div>
+          <div class="budget-total-lbl">إجمالي الاشتراك</div>
+        </div>
+      </div>
+      <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--muted);margin:-4px 0 10px;text-align:left;">${pct}% — ${collected.toLocaleString('ar')} من ${Number(annualBudget).toLocaleString('ar')} ﷼</div>
+      <div class="budget-summary">
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">${paidM.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger);">${unpaidM.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+        <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">${memberShare.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+      </div>
+      <div>${D.team.map(m=>{
+        const hasPaid=!!yearPays.find(p=>p.member_name===m.name&&p.paid);
+        return rowHtml(m,hasPaid,memberShare,null,budgetYear);
+      }).join('')}</div>
+    </div>`;
   }
 
-  // ── per_slot: حساب الصندوق ──
+  // ── تفاصيل الطلعات ──
   const allSlots=D.slots.filter(s=>s.budget).sort((a,b)=>a.date.localeCompare(b.date));
   const pastSlots=allSlots.filter(s=>daysUntil(s.date)<0);
   const upcomingSlots=allSlots.filter(s=>daysUntil(s.date)>=0);
+
+  // ملخص الصندوق
   let totalCollected=0,totalSpent=0;
   allSlots.forEach(s=>{
     const pays=D.payments.filter(p=>p.slot_id===s.id&&p.paid);
@@ -2083,98 +2070,101 @@ function renderBudget(){
   });
   const balance=totalCollected-totalSpent;
 
-  if(!allSlots.length){
-    h+='<div class="empty"><span class="ei">💰</span>'+(myProfile?.is_admin?'حدد تكلفة طلعة من الأعلى.':'انتظر المشرف ليضيف التكاليف.')+'</div>';
-    document.getElementById('content').innerHTML=h;return;
-  }
+  if(allSlots.length){
+    h+=`<div class="card" style="background:linear-gradient(135deg,var(--bg-el),var(--bg-card));margin-top:4px;">
+      <div class="h2" style="font-size:15px;margin-bottom:12px;">💰 صندوق تكاليف الطلعات</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="text-align:center;background:var(--sage-s);border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:var(--sage);">${totalCollected.toLocaleString('ar')}</div>
+          <div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div>
+        </div>
+        <div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:var(--danger);">${totalSpent.toLocaleString('ar')}</div>
+          <div style="font-size:10px;color:var(--muted);">تم إنفاقه ﷼</div>
+        </div>
+        <div style="text-align:center;background:${balance>=0?'var(--amber-s)':'var(--danger-s)'};border-radius:var(--rsm);padding:10px;">
+          <div style="font-family:var(--fd);font-size:18px;color:${balance>=0?'var(--amber)':'var(--danger)'};">${balance.toLocaleString('ar')}</div>
+          <div style="font-size:10px;color:var(--muted);">الرصيد ﷼</div>
+        </div>
+      </div>
+    </div>`;
 
-  // ملخص الصندوق
-  h+='<div class="card" style="background:linear-gradient(135deg,var(--bg-el),var(--bg-card));">'+
-    '<div class="h2" style="font-size:15px;margin-bottom:12px;">💰 صندوق المجموعة</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">'+
-      '<div style="text-align:center;background:var(--sage-s);border-radius:var(--rsm);padding:10px;">'+
-        '<div style="font-family:var(--fd);font-size:18px;color:var(--sage);">'+totalCollected.toLocaleString('ar')+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">تم تحصيله ﷼</div></div>'+
-      '<div style="text-align:center;background:var(--danger-s);border-radius:var(--rsm);padding:10px;">'+
-        '<div style="font-family:var(--fd);font-size:18px;color:var(--danger);">'+totalSpent.toLocaleString('ar')+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">تم إنفاقه ﷼</div></div>'+
-      '<div style="text-align:center;background:'+(balance>=0?'var(--amber-s)':'var(--danger-s)')+';border-radius:var(--rsm);padding:10px;">'+
-        '<div style="font-family:var(--fd);font-size:18px;color:'+(balance>=0?'var(--amber)':'var(--danger)')+';">'+balance.toLocaleString('ar')+'</div>'+
-        '<div style="font-size:10px;color:var(--muted);">الرصيد ﷼</div></div>'+
-    '</div>'+
-    (upcomingSlots.length?'<div style="font-size:11px;color:var(--muted);">الطلعات القادمة: '+upcomingSlots.reduce((a,s)=>a+(s.budget||0),0).toLocaleString('ar')+' ﷼</div>':'')+
-  '</div>';
+    if(pastSlots.length){
+      h+=`<div class="h2" style="font-size:14px;margin-bottom:8px;">📋 طلعات منتهية</div>`;
+      pastSlots.forEach(slot=>{
+        const pays=D.payments.filter(p=>p.slot_id===slot.id);
+        const share=Math.round(slot.budget/mn);
+        const paid=D.team.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
+        const unpaid=D.team.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
+        const collected=paid.length*share;
+        const deficit=slot.budget-collected;
+        h+=`<div class="budget-slot" style="opacity:.9;">
+          <div class="budget-slot-header">
+            <div>
+              ${slot.title?`<div style="font-size:12px;color:var(--amber);font-weight:700;">${esc(slot.title)}</div>`:''}
+              <div class="budget-slot-date">${esc(toGregShort(slot.date))}</div>
+              <div class="budget-slot-hijri">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
+              ${slot.host_name?`<div style="font-size:11px;color:var(--muted);">المضيف: ${esc(slot.host_name)}</div>`:''}
+            </div>
+            <div style="text-align:left;">
+              <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ﷼</div>
+              <div class="budget-total-lbl">تكلفة الطلعة</div>
+              ${deficit>0?`<div style="font-size:10px;color:var(--danger);">عجز ${deficit.toLocaleString('ar')} ﷼</div>`:`<div style="font-size:10px;color:var(--sage);">✅ مكتفٍ</div>`}
+            </div>
+          </div>
+          <div class="budget-summary" style="margin:8px 0;">
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">${paid.length}</div><div class="budget-stat-lbl">دفعوا</div></div>
+            <div class="budget-stat"><div class="budget-stat-num" style="color:${unpaid.length?'var(--danger)':'var(--sage)'};">${unpaid.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">${share.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">${collected.toLocaleString('ar')}</div><div class="budget-stat-lbl">حُصِّل ﷼</div></div>
+          </div>
+          ${slot.budget_notes?`<div class="note" style="margin-bottom:8px;">📝 ${esc(slot.budget_notes)}</div>`:''}
+          <div>${D.team.map(m=>{
+            const hasPaid=!!pays.find(p=>p.member_name===m.name&&p.paid);
+            return rowHtml(m,hasPaid,share,slot.id,null);
+          }).join('')}</div>
+        </div>`;
+      });
+    }
 
-  // طلعات منتهية
-  if(pastSlots.length){
-    h+='<div class="h2" style="font-size:14px;margin-bottom:8px;">📋 طلعات منتهية</div>';
-    pastSlots.forEach(function(slot){
-      const pays=D.payments.filter(p=>p.slot_id===slot.id);
-      const share=Math.round(slot.budget/mn);
-      const paidM=D.team.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
-      const unpaidM=D.team.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
-      const collected=paidM.length*share;
-      const deficit=slot.budget-collected;
-      h+='<div class="budget-slot" style="opacity:.85;">'+
-        '<div class="budget-slot-header">'+
-          '<div>'+(slot.title?'<div style="font-size:12px;color:var(--amber);font-weight:700;">'+esc(slot.title)+'</div>':'')+
-            '<div class="budget-slot-date">'+esc(toGregShort(slot.date))+'</div>'+
-            '<div class="budget-slot-hijri">'+esc(toHijri(slot.date,slot.hijri_offset||0))+'</div>'+
-            (slot.host_name?'<div style="font-size:11px;color:var(--muted);">المضيف: '+esc(slot.host_name)+'</div>':'')+
-          '</div>'+
-          '<div style="text-align:left;">'+
-            '<div class="budget-total">'+Number(slot.budget).toLocaleString('ar')+' ﷼</div>'+
-            '<div class="budget-total-lbl">تكلفة الطلعة</div>'+
-            (deficit>0?'<div style="font-size:10px;color:var(--danger);margin-top:2px;">عجز: '+deficit.toLocaleString('ar')+' ﷼</div>':'<div style="font-size:10px;color:var(--sage);margin-top:2px;">✅ مكتفٍ</div>')+
-          '</div>'+
-        '</div>'+
-        '<div class="budget-summary">'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">'+paidM.length+'</div><div class="budget-stat-lbl">دفعوا</div></div>'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger);">'+unpaidM.length+'</div><div class="budget-stat-lbl">لم يدفعوا</div></div>'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">'+share.toLocaleString('ar')+'</div><div class="budget-stat-lbl">نصيب الفرد</div></div>'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">'+collected.toLocaleString('ar')+'</div><div class="budget-stat-lbl">تم تحصيله</div></div>'+
-        '</div>'+
-        (slot.budget_notes?'<div class="note" style="margin-bottom:8px;">📝 '+esc(slot.budget_notes)+'</div>':'')+
-        '<div>'+D.team.map(function(m){return memberRow(m,slot,pays,share);}).join('')+'</div>'+
-      '</div>';
-    });
-  }
-
-  // طلعات قادمة
-  if(upcomingSlots.length){
-    h+='<div class="h2" style="font-size:14px;margin-bottom:8px;margin-top:16px;">🔮 طلعات قادمة</div>';
-    upcomingSlots.forEach(function(slot){
-      const pays=D.payments.filter(p=>p.slot_id===slot.id);
-      const share=Math.round(slot.budget/mn);
-      const paidM=D.team.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
-      const unpaidM=D.team.filter(m=>!pays.find(p=>p.member_name===m.name&&p.paid));
-      const collected=paidM.length*share;
-      const pct=slot.budget?Math.min(100,Math.round(collected/slot.budget*100)):0;
-      h+='<div class="budget-slot">'+
-        '<div class="budget-slot-header">'+
-          '<div>'+(slot.title?'<div style="font-size:12px;color:var(--amber);font-weight:700;">'+esc(slot.title)+'</div>':'')+
-            '<div class="budget-slot-date">'+esc(toGregShort(slot.date))+'</div>'+
-            '<div class="budget-slot-hijri">'+esc(toHijri(slot.date,slot.hijri_offset||0))+'</div>'+
-            (slot.host_name?'<div style="font-size:11px;color:var(--muted);">المضيف: '+esc(slot.host_name)+'</div>':'')+
-          '</div>'+
-          '<div style="text-align:left;">'+
-            '<div class="budget-total">'+Number(slot.budget).toLocaleString('ar')+' ﷼</div>'+
-            '<div class="budget-total-lbl">التكلفة المتوقعة</div>'+
-          '</div>'+
-        '</div>'+
-        '<div class="budget-progress"><div class="budget-progress-bar" style="width:'+pct+'%"></div></div>'+
-        '<div style="font-size:11px;color:var(--muted);margin:-4px 0 10px;text-align:left;">'+pct+'% — '+collected.toLocaleString('ar')+' من '+Number(slot.budget).toLocaleString('ar')+' ﷼</div>'+
-        '<div class="budget-summary">'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">'+paidM.length+'</div><div class="budget-stat-lbl">دفعوا مسبقاً</div></div>'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger);">'+unpaidM.length+'</div><div class="budget-stat-lbl">لم يدفعوا</div></div>'+
-          '<div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">'+share.toLocaleString('ar')+'</div><div class="budget-stat-lbl">نصيب الفرد</div></div>'+
-        '</div>'+
-        (slot.budget_notes?'<div class="note" style="margin-bottom:8px;">📝 '+esc(slot.budget_notes)+'</div>':'')+
-        '<div>'+D.team.map(function(m){return memberRow(m,slot,pays,share);}).join('')+'</div>'+
-        (unpaidM.length&&myProfile?.is_admin?
-          '<a class="map-btn" style="margin-top:8px;" href="'+esc(waLink('يا شباب 👋\nتذكير بدفع تكلفة طلعة '+toGregShort(slot.date)+' 💰\nالنصيب: '+share.toLocaleString('ar')+' ﷼\n'+unpaidM.map(m=>m.name).join('، ')+'\nجزاكم الله خير 🙏'))+'" target="_blank" rel="noopener">📤 تذكير واتساب</a>':'')+
-      '</div>';
-    });
+    if(upcomingSlots.length){
+      h+=`<div class="h2" style="font-size:14px;margin-bottom:8px;margin-top:16px;">🔮 طلعات قادمة</div>`;
+      upcomingSlots.forEach(slot=>{
+        const pays=D.payments.filter(p=>p.slot_id===slot.id);
+        const share=Math.round(slot.budget/mn);
+        const paid=D.team.filter(m=>pays.find(p=>p.member_name===m.name&&p.paid));
+        const collected=paid.length*share;
+        const pct=slot.budget?Math.min(100,Math.round(collected/slot.budget*100)):0;
+        h+=`<div class="budget-slot">
+          <div class="budget-slot-header">
+            <div>
+              ${slot.title?`<div style="font-size:12px;color:var(--amber);font-weight:700;">${esc(slot.title)}</div>`:''}
+              <div class="budget-slot-date">${esc(toGregShort(slot.date))}</div>
+              <div class="budget-slot-hijri">${esc(toHijri(slot.date,slot.hijri_offset||0))}</div>
+              ${slot.host_name?`<div style="font-size:11px;color:var(--muted);">المضيف: ${esc(slot.host_name)}</div>`:''}
+            </div>
+            <div style="text-align:left;">
+              <div class="budget-total">${Number(slot.budget).toLocaleString('ar')} ﷼</div>
+              <div class="budget-total-lbl">التكلفة المتوقعة</div>
+            </div>
+          </div>
+          <div class="budget-progress"><div class="budget-progress-bar" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--muted);margin:-4px 0 10px;text-align:left;">${pct}% — ${collected.toLocaleString('ar')} من ${Number(slot.budget).toLocaleString('ar')} ﷼</div>
+          <div class="budget-summary">
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--sage);">${paid.length}</div><div class="budget-stat-lbl">دفعوا مسبقاً</div></div>
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--danger);">${D.team.length-paid.length}</div><div class="budget-stat-lbl">لم يدفعوا</div></div>
+            <div class="budget-stat"><div class="budget-stat-num" style="color:var(--amber);">${share.toLocaleString('ar')}</div><div class="budget-stat-lbl">نصيب الفرد</div></div>
+          </div>
+          ${slot.budget_notes?`<div class="note" style="margin-bottom:8px;">📝 ${esc(slot.budget_notes)}</div>`:''}
+          <div>${D.team.map(m=>{
+            const hasPaid=!!pays.find(p=>p.member_name===m.name&&p.paid);
+            return rowHtml(m,hasPaid,share,slot.id,null);
+          }).join('')}</div>
+        </div>`;
+      });
+    }
+  } else if(budgetType==='per_slot'){
+    h+=`<div class="empty"><span class="ei">💰</span>${myProfile?.is_admin?'حدد تكلفة طلعة من الأعلى.':'انتظر المشرف ليضيف التكاليف.'}</div>`;
   }
 
   document.getElementById('content').innerHTML=h;
