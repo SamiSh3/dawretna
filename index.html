@@ -1354,34 +1354,49 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
 document.getElementById('swapCancelBtn').onclick=()=>closeModal('swapModal');
 document.getElementById('swapConfirmBtn').onclick=async()=>{
   const fromId=document.getElementById('swapSel').value;
-  if(!fromId||!_swapToSlotId){toast('اختر يومك أولاً','error');return;}
+  if(!fromId||!_swapToSlotId){alert('خطأ: لا يوجد موعد محدد');return;}
   const btn=document.getElementById('swapConfirmBtn');
   btn.disabled=true;btn.textContent='يتم الإرسال...';
   try{
-    const H={...apiHeaders(),'Prefer':'return=minimal'};
-    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
-      method:'POST',headers:H,
-      body:JSON.stringify({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'})
+    const tok=session?.access_token||SB_KEY;
+    const body=JSON.stringify({
+      from_slot_id:fromId,
+      to_slot_id:_swapToSlotId,
+      requester_name:myName(),
+      status:'pending'
     });
-    if(!r.ok){const e=await r.text();throw new Error(e);}
+    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+tok,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body
+    });
+    const txt=await r.text();
+    if(!r.ok){alert('فشل الإرسال ('+r.status+'):\n'+txt);btn.disabled=false;btn.textContent='📤 إرسال الطلب';return;}
 
-    // Optimistic update
-    D.swaps.push({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending',id:'tmp_'+Date.now()});
+    // إضافة الطلب محلياً
+    const tmpId='tmp_'+Date.now();
+    D.swaps.push({id:tmpId,from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'});
     render();
+    closeModal('swapModal');
+    toast('✅ تم إرسال طلب التبديل — بانتظار موافقة العضو');
 
+    // إرسال تنبيه
     const toSlot=D.slots.find(s=>s.id===_swapToSlotId);
     const fromSlot=D.slots.find(s=>s.id===fromId);
     if(toSlot?.host_name){
       await notify(toSlot.host_name,'swap_request',
-        `🔁 ${esc(myName())} طلب تبديل موعد`,
-        `يريد يومك ${toGregShort(toSlot.date)} مقابل يومه ${fromSlot?toGregShort(fromSlot.date):''}`,
+        `🔁 ${esc(myName())} يريد تبديل موعدك`,
+        `يعطيك ${toGregShort(fromSlot?.date||'')} مقابل ${toGregShort(toSlot.date)}`,
         toSlot.id);
     }
-    closeModal('swapModal');
-    toast('✅ تم إرسال طلب التبديل — بانتظار موافقة '+esc(toSlot?.host_name||'العضو'));
     loadAll().catch(()=>{});
   }catch(e){
-    toast('حدث خطأ: '+e.message,'error');
+    alert('خطأ غير متوقع: '+e.message);
     btn.disabled=false;btn.textContent='📤 إرسال الطلب';
   }
 };
