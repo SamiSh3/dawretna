@@ -2121,7 +2121,10 @@ function renderNotifications(){
   const icons={week_reminder:'⏰',three_day_reminder:'⏰',day_reminder:'🔥',swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
   let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
     <span class="h2">التنبيهات</span>
-    ${D.notifications.some(n=>!n.read)?`<button class="btn btn-ghost btn-xs" onclick="A.markAllRead()">قراءة الكل</button>`:''}
+    <div style="display:flex;gap:6px;">
+      ${D.notifications.some(n=>!n.read)?`<button class="btn btn-ghost btn-xs" onclick="A.markAllRead()">قراءة الكل</button>`:''}
+      ${D.notifications.length?`<button class="btn btn-ghost btn-xs" style="color:var(--danger);" onclick="A.clearAllNotifs()">حذف الكل</button>`:''}
+    </div>
   </div>`;
   if(!D.notifications.length){h+=`<div class="empty"><span class="ei">🔔</span>لا يوجد تنبيهات.</div>`;document.getElementById('content').innerHTML=h;return;}
   h+=`<div class="card" style="padding:8px 16px;">`;
@@ -2135,14 +2138,14 @@ function renderNotifications(){
     } else {
       navAction=`A.markRead('${n.id}');`;
     }
-    h+=`<div class="notif-item ${n.read?'read':'unread'}" onclick="${navAction}" style="cursor:pointer;">
-      <span class="notif-icon">${icons[n.type]||'🔔'}</span>
-      <div class="notif-content">
+    h+=`<div class="notif-item ${n.read?'read':'unread'}" style="cursor:pointer;">
+      <span class="notif-icon" onclick="${navAction}" style="cursor:pointer;">${icons[n.type]||'🔔'}</span>
+      <div class="notif-content" onclick="${navAction}" style="cursor:pointer;flex:1;">
         <div class="notif-title">${esc(n.title)}</div>
         ${n.body?`<div class="notif-body">${esc(n.body)}</div>`:''}
-        <div class="notif-time">${timeAgo(n.created_at)}</div>
-        ${slotId?`<div style="font-size:10px;color:var(--amber);margin-top:3px;">اضغط للانتقال ◀</div>`:''}
+        <div class="notif-time">${timeAgo(n.created_at)}${slotId?' · اضغط للانتقال ◀':''}</div>
       </div>
+      <button onclick="A.deleteNotif('${n.id}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;" title="حذف">✕</button>
       <div class="notif-dot"></div>
     </div>`;
   });
@@ -2706,6 +2709,12 @@ window.A={
   openSwap:openSwapModal,openNewSlot,
   logRem,sendCustom,openBudget:openBudgetModal,
   markAllRead,markRead,deleteNotif,
+  async clearAllNotifs(){
+    if(!confirm('حذف كل التنبيهات؟'))return;
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+    await fetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id,{method:'DELETE',headers:H});
+    D.notifications=[];updateNotifBadge();renderNotifications();toast('تم حذف كل التنبيهات');
+  },
   calPrev(){calYear--;selectedDate=null;renderCalendar();},
   calNext(){calYear++;selectedDate=null;renderCalendar();},
   goToday(){
