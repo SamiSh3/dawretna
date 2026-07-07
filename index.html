@@ -1176,19 +1176,21 @@ async function resolveSwap(swapId,accept){
     const fs=D.slots.find(s=>s.id===sw.from_slot_id);
     const ts=D.slots.find(s=>s.id===sw.to_slot_id);
     if(!fs||!ts){toast('خطأ: لم يتم العثور على الطلعات','error');return;}
+    // احفظ القيم الأصلية قبل أي تعديل
+    const fsOrigHost=fs.host_name;
+    const tsOrigHost=ts.host_name;
     // تبديل فوري محلي
-    const tmpHost=fs.host_name;
-    fs.host_name=ts.host_name||null;
-    ts.host_name=tmpHost||null;
+    fs.host_name=tsOrigHost||null;
+    ts.host_name=fsOrigHost||null;
     D.swaps=D.swaps.filter(s=>s.id!==swapId);
     render();
-    // حفظ في DB
-    await patchRow('slots',fs.id,{host_name:ts.host_name||null});
-    await patchRow('slots',ts.id,{host_name:fs.host_name||null});
+    // حفظ في DB باستخدام القيم الأصلية
+    await patchRow('slots',fs.id,{host_name:tsOrigHost||null});
+    await patchRow('slots',ts.id,{host_name:fsOrigHost||null});
     await patchRow('swap_requests',swapId,{status:'accepted'});
-    await notify(sw.requester_name,'swap_accepted','طلب التبديل قُبل ✅',
+    await notify(fsOrigHost||'','swap_accepted','طلب التبديل قُبل ✅',
       `تم تبديل ${toGregShort(fs.date)} مع ${toGregShort(ts.date)}`,sw.from_slot_id);
-    toast('✅ تم التبديل');
+    toast('✅ تم التبديل بنجاح');
   } else {
     D.swaps=D.swaps.filter(s=>s.id!==swapId);
     render();
