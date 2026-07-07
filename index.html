@@ -663,6 +663,8 @@ async function afterLogin(){
   _dataLoaded=true;
   render(); // يظهر البيانات الحقيقية
   checkAutoReminders().catch(()=>{});
+  // فحص تنبيهات جديدة كل 30 ثانية
+  setInterval(pollNotifications,30000);
 }
 
 
@@ -855,6 +857,60 @@ function updateNotifBadge(){
   const b1=document.getElementById('notifBadge'),b2=document.getElementById('navBadge');
   if(b1){b1.style.display=unread?'flex':'none';b1.textContent=unread>9?'9+':unread;}
   if(b2){b2.style.display=unread?'flex':'none';b2.textContent=unread>9?'9+':unread;}
+}
+
+// Popup بارز للتنبيهات المهمة
+function showNotifPopup(notif){
+  // أزل أي popup قديم
+  document.querySelectorAll('.notif-live-popup').forEach(p=>p.remove());
+  const popup=document.createElement('div');
+  popup.className='notif-live-popup';
+  popup.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);width:90vw;max-width:360px;background:var(--bg-card);border:2px solid var(--amber);border-radius:16px;padding:16px;z-index:99999;box-shadow:0 12px 40px rgba(0,0,0,.5);';
+  const icon={'swap_request':'🔁','swap_accepted':'✅','swap_rejected':'❌','slot_booked':'🏕️','general':'💬'}[notif.type]||'🔔';
+  popup.innerHTML=`
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;">
+      <span style="font-size:22px;">${icon}</span>
+      <div>
+        <div style="font-size:14px;font-weight:800;margin-bottom:3px;">${notif.title||''}</div>
+        <div style="font-size:12px;color:var(--muted);">${notif.body||''}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      ${notif.related_slot_id?`<button id="npGoBtn" style="flex:1;padding:9px;background:var(--amber);color:#1a1a1a;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;">📅 اذهب للطلعة</button>`:''}
+      <button id="npCloseBtn" style="padding:9px 14px;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:10px;font-size:13px;cursor:pointer;">✕ إغلاق</button>
+    </div>`;
+  document.body.appendChild(popup);
+
+  popup.querySelector('#npCloseBtn').onclick=()=>popup.remove();
+  const goBtn=popup.querySelector('#npGoBtn');
+  if(goBtn) goBtn.onclick=()=>{
+    popup.remove();
+    setTab('calendar');
+    setTimeout(()=>{
+      const slot=D.slots.find(s=>s.id===notif.related_slot_id);
+      if(slot) openCalSlotModal(slot);
+    },400);
+  };
+  setTimeout(()=>popup.remove&&popup.remove(),10000);
+}
+
+// فحص تنبيهات جديدة كل 30 ثانية
+async function pollNotifications(){
+  if(!session)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&read=eq.false&order=created_at.desc&limit=10',{headers:H});
+    if(!r.ok)return;
+    const fresh=await r.json();
+    const newOnes=fresh.filter(n=>!D.notifications.find(o=>o.id===n.id));
+    newOnes.forEach(n=>{D.notifications.unshift(n);});
+    if(newOnes.length){
+      updateNotifBadge();
+      // أظهر popup للأنواع المهمة
+      const important=newOnes.filter(n=>['swap_request','swap_accepted','swap_rejected'].includes(n.type));
+      if(important.length) showNotifPopup(important[0]);
+    }
+  }catch(e){}
 }
 
 /* ════════════════ UTILS ════════════════ */
