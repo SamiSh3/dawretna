@@ -1354,15 +1354,36 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
 document.getElementById('swapCancelBtn').onclick=()=>closeModal('swapModal');
 document.getElementById('swapConfirmBtn').onclick=async()=>{
   const fromId=document.getElementById('swapSel').value;
-  if(!fromId||!_swapToSlotId)return;
-  await postRow('swap_requests',{from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'});
-  const toSlot=D.slots.find(s=>s.id===_swapToSlotId);
-  const fromSlot=D.slots.find(s=>s.id===fromId);
-  if(toSlot?.host_name){
-    await notify(toSlot.host_name,'swap_request',`${esc(myName())} طلب تبديل 🔁`,
-      `يريد يومك ${toGregShort(toSlot.date)} مقابل يومه ${fromSlot?toGregShort(fromSlot.date):''}`,toSlot.id);
+  if(!fromId||!_swapToSlotId){toast('اختر يومك أولاً','error');return;}
+  const btn=document.getElementById('swapConfirmBtn');
+  btn.disabled=true;btn.textContent='يتم الإرسال...';
+  try{
+    const H={...apiHeaders(),'Prefer':'return=minimal'};
+    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+      method:'POST',headers:H,
+      body:JSON.stringify({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending'})
+    });
+    if(!r.ok){const e=await r.text();throw new Error(e);}
+
+    // Optimistic update
+    D.swaps.push({from_slot_id:fromId,to_slot_id:_swapToSlotId,requester_name:myName(),status:'pending',id:'tmp_'+Date.now()});
+    render();
+
+    const toSlot=D.slots.find(s=>s.id===_swapToSlotId);
+    const fromSlot=D.slots.find(s=>s.id===fromId);
+    if(toSlot?.host_name){
+      await notify(toSlot.host_name,'swap_request',
+        `🔁 ${esc(myName())} طلب تبديل موعد`,
+        `يريد يومك ${toGregShort(toSlot.date)} مقابل يومه ${fromSlot?toGregShort(fromSlot.date):''}`,
+        toSlot.id);
+    }
+    closeModal('swapModal');
+    toast('✅ تم إرسال طلب التبديل — بانتظار موافقة '+esc(toSlot?.host_name||'العضو'));
+    loadAll().catch(()=>{});
+  }catch(e){
+    toast('حدث خطأ: '+e.message,'error');
+    btn.disabled=false;btn.textContent='📤 إرسال الطلب';
   }
-  closeModal('swapModal');await loadAll();render();toast('تم إرسال طلب التبديل بنجاح ✅ — الرجاء الانتظار حتى تتم الموافقة');
 };
 
 function openSwapModal(toSlotId){
