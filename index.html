@@ -878,6 +878,13 @@ function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
 function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
 window.openModal=openModal;
 window.closeModal=closeModal;
+// تصدير مباشر لجميع الدوال التي تُستدعى من onclick
+window.bookSlot=bookSlot;
+window.cancelBookSlot=cancelBookSlot;
+window.setRsvp=setRsvp;
+window.resolveSwap=resolveSwap;
+window.openSwapModal=openSwapModal;
+window.togglePayment=togglePayment;
 
 // إغلاق أي modal بالضغط على الخلفية
 document.addEventListener('click',function(e){
@@ -1549,25 +1556,25 @@ function renderHome(){
       <div class="attendees">${chips||''}</div>
       ${chips?`<div class="muted" style="font-size:11px;margin-bottom:10px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`:''}
       <div class="rsvp-row">
-        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvp('${next.id}','yes')">✅ سأحضر</button>
-        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvp('${next.id}','no')">🙅 أعتذر</button>
+        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','yes')">✅ سأحضر</button>
+        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','no')">🙅 أعتذر</button>
       </div>`;
 
-    if(!next.host_name){h+=`<button class="btn btn-primary btn-block btn-sm" style="margin-top:6px;" onclick="A.book('${next.id}')">🙋 احجز هذا الموعد</button>`;}
+    if(!next.host_name){h+=`<button class="btn btn-primary btn-block btn-sm" style="margin-top:6px;" onclick="bookSlot('${next.id}')">🙋 احجز هذا الموعد</button>`;}
     
     if(myProfile?.is_admin){
       h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${next.id}')">💰 ${next.budget?'تعديل الميزانية':'إضافة ميزانية'}</button>`;
     }
     if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw){
-      h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openSwap('${next.id}')">🔁 طلب تبديل</button>`;
+      h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="openSwapModal('${next.id}')">🔁 طلب تبديل</button>`;
     }
     if(inSw){
       const from=D.slots.find(s=>s.id===inSw.from_slot_id);
       const fromInfo=from?' مقابل ('+esc(toGregShort(from.date))+')':'';
       h+=`<div class="note" style="margin-top:8px;">🔁 <b>${esc(inSw.requester_name)}</b> يريد يومك${fromInfo}
         <div style="display:flex;gap:6px;margin-top:7px;">
-          <button class="btn btn-sage btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',true)">✅ أوافق</button>
-          <button class="btn btn-danger btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',false)">❌ أرفض</button>
+          <button class="btn btn-sage btn-sm btn-block" onclick="resolveSwap('${inSw.id}',true)">✅ أوافق</button>
+          <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false)">❌ أرفض</button>
         </div></div>`;
     }
     if(outSw)h+=`<div class="note" style="margin-top:8px;">⏳ بانتظار رد ${esc(next.host_name||'')} على التبديل.</div>`;
@@ -1628,15 +1635,15 @@ function renderHome(){
           ${s.host_name===myName()?
             `<div style="font-size:12px;color:var(--sage);font-weight:700;padding:6px 0;">🏠 أنت المضيف — حضورك مؤكد</div>` :
             `<button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block"
-              onclick="A.rsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
+              onclick="setRsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
               ${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}
             </button>
             <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block"
-              onclick="A.rsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
+              onclick="setRsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
               ${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}
             </button>`
           }
-          ${!s.host_name?`<button class="btn btn-primary btn-sm" onclick="A.book('${s.id}')">🙋 أحجز</button>`:''}
+          ${!s.host_name?`<button class="btn btn-primary btn-sm" onclick="bookSlot('${s.id}')">🙋 أحجز</button>`:''}
         </div>
       </div>`;
     });
@@ -1880,24 +1887,24 @@ function openCalSlotModal(slot){
       slot.host_name===myName()?
       `<div class="note" style="color:var(--sage);text-align:center;margin-bottom:10px;border-color:var(--sage);">🏠 أنت المضيف — حضورك مؤكد</div>`:
       `<div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','yes')">✅ سأحضر</button>
-        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
+        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${slot.id}','yes')">✅ سأحضر</button>
+        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${slot.id}','no')">🙅 أعتذر</button>
       </div>`
     ):''}
 
     <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
-    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="A.cancelBook('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
+    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
     ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`
-    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');A.openSwap('${slot.id}')">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
+    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');openSwapModal('${slot.id}')">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
     ${inSw?`<div class="note" style="margin-bottom:10px;border-color:var(--amber);">
       🔁 <b>${esc(inSw.requester_name)}</b> يريد تبديل موعده معك
       ${D.slots.find(s=>s.id===inSw.from_slot_id)?`<div style="font-size:11px;color:var(--muted);margin:3px 0;">يعطيك: ${toGregShort(D.slots.find(s=>s.id===inSw.from_slot_id).date)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:7px;">
-        <button class="btn btn-sage btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',true);closeModal('calSlotModal')">✅ أوافق</button>
-        <button class="btn btn-danger btn-sm btn-block" onclick="A.resolveSwap('${inSw.id}',false);closeModal('calSlotModal')">❌ أرفض</button>
+        <button class="btn btn-sage btn-sm btn-block" onclick="resolveSwap('${inSw.id}',true);closeModal('calSlotModal')">✅ أوافق</button>
+        <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false);closeModal('calSlotModal')">❌ أرفض</button>
       </div></div>`:''}
     ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد <b>${esc(D.slots.find(s=>s.id===outSw.to_slot_id)?.host_name||'')}</b> على طلب التبديل.
       <button class="btn btn-danger btn-xs" style="margin-top:6px;" onclick="A.cancelSwap('${outSw.id}')">إلغاء الطلب</button></div>`:''}
