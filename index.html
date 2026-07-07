@@ -466,11 +466,17 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 
 <div class="modal-overlay hidden" id="swapModal">
   <div class="modal-box">
-    <h2>🔁 طلب تبديل</h2>
+    <h2>🔁 طلب تبديل الموعد</h2>
+    <div class="note" style="margin-bottom:12px;font-size:12px;">
+      ستُرسل طلباً للعضو، وعند موافقته يتم التبديل تلقائياً.
+    </div>
     <p class="sub" id="swapDesc"></p>
-    <div class="field"><label>اختر يومك الذي ستعطيه</label><select id="swapSel"></select></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-primary btn-block" id="swapConfirmBtn">إرسال الطلب</button>
+    <div class="field" style="margin-top:10px;">
+      <label>يومك الذي ستعطيه مقابله</label>
+      <select id="swapSel" style="background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;width:100%;"></select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary btn-block" id="swapConfirmBtn">📤 إرسال الطلب</button>
       <button class="btn btn-ghost" id="swapCancelBtn">إلغاء</button>
     </div>
   </div>
@@ -1362,10 +1368,18 @@ document.getElementById('swapConfirmBtn').onclick=async()=>{
 function openSwapModal(toSlotId){
   const ts=D.slots.find(s=>s.id===toSlotId);if(!ts)return;
   _swapToSlotId=toSlotId;
-  document.getElementById('swapDesc').textContent=`تريد يوم ${toGreg(ts.date)} (${esc(ts.host_name||'')}) — اختر يومك الذي ستعطيه مقابله:`;
+
   const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0&&!D.swaps.find(sw=>sw.from_slot_id===s.id));
-  if(!mine.length){toast('ما عندك أيام متاحة للتبديل','error');return;}
-  document.getElementById('swapSel').innerHTML=mine.map(s=>`<option value="${s.id}">${toGreg(s.date)}</option>`).join('');
+
+  if(!mine.length){
+    toast('لا يمكن طلب تبديل — لا يوجد لك موعد محجوز لتعطيه مقابل هذا الموعد','error');
+    return;
+  }
+
+  document.getElementById('swapDesc').textContent=
+    `طلب تبديل يوم ${toGregShort(ts.date)} (${ts.host_name||''}) — اختر يومك الذي ستعطيه مقابله:`;
+  document.getElementById('swapSel').innerHTML=
+    mine.map(s=>`<option value="${s.id}">${esc(toGregShort(s.date))}</option>`).join('');
   openModal('swapModal');
 }
 
