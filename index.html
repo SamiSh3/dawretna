@@ -1898,17 +1898,37 @@ function openCalSlotModal(slot){
     ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
-    ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`
-    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" data-swap-open="${slot.id}">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
-    ${inSw?`<div class="note" style="margin-bottom:10px;border-color:var(--amber);">
-      🔁 <b>${esc(inSw.requester_name)}</b> يريد تبديل موعده معك
-      ${D.slots.find(s=>s.id===inSw.from_slot_id)?`<div style="font-size:11px;color:var(--muted);margin:3px 0;">يعطيك: ${toGregShort(D.slots.find(s=>s.id===inSw.from_slot_id).date)}</div>`:''}
-      <div style="display:flex;gap:6px;margin-top:7px;">
-        <button class="btn btn-sage btn-sm btn-block" data-swap-resolve="${inSw.id}" data-accept="true">✅ أوافق</button>
-        <button class="btn btn-danger btn-sm btn-block" data-swap-resolve="${inSw.id}" data-accept="false">❌ أرفض</button>
-      </div></div>`:''}
-    ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد <b>${esc(D.slots.find(s=>s.id===outSw.to_slot_id)?.host_name||'')}</b> على طلب التبديل.
-      <button class="btn btn-danger btn-xs" style="margin-top:6px;" data-swap-cancel="${outSw.id}">إلغاء الطلب</button></div>`:''}
+    ${(()=>{
+      let swapHtml='';
+      if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw){
+        const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
+        if(mine.length){
+          swapHtml+=`<hr class="sep">
+          <div style="font-size:12px;color:var(--amber);font-weight:700;margin-bottom:6px;">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">اختر يومك الذي ستعطيه مقابل هذا الموعد:</div>
+          <select id="inlineSwapSel" style="width:100%;padding:8px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);margin-bottom:8px;">
+            ${mine.map(s=>`<option value="${s.id}">${toGregShort(s.date)}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm btn-block" id="inlineSwapBtn" data-to="${slot.id}">📤 إرسال طلب التبديل</button>`;
+        }
+      }
+      if(inSw){
+        const fromSlot=D.slots.find(s=>s.id===inSw.from_slot_id);
+        swapHtml+=`<hr class="sep">
+        <div class="note" style="border-color:var(--amber);">
+          🔁 <b>${esc(inSw.requester_name)}</b> يريد تبديل موعده معك
+          ${fromSlot?`<div style="font-size:12px;margin:4px 0;">يعطيك: <b>${toGregShort(fromSlot.date)}</b></div>`:''}
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-sage btn-sm btn-block" id="swapAcceptBtn" data-id="${inSw.id}">✅ أوافق</button>
+            <button class="btn btn-danger btn-sm btn-block" id="swapRejectBtn" data-id="${inSw.id}">❌ أرفض</button>
+          </div>
+        </div>`;
+      }
+      if(outSw){
+        swapHtml+=`<hr class="sep"><div class="note">⏳ بانتظار رد على طلب التبديل.</div>`;
+      }
+      return swapHtml;
+    })()}
 
     <!-- تذكيرات -->
     <details class="dg"><summary>🔔 التذكيرات</summary>
@@ -1951,29 +1971,52 @@ function openCalSlotModal(slot){
   document.getElementById('calSlotBox').innerHTML=h;
   openModal('calSlotModal');
 
-  // ربط أزرار التبديل برمجياً لضمان عملها
   const box=document.getElementById('calSlotBox');
-  box.querySelectorAll('[data-swap-open]').forEach(btn=>{
-    btn.addEventListener('click',function(){
-      const sid=this.getAttribute('data-swap-open');
+
+  // زر إرسال طلب التبديل
+  const inlineSwapBtn=box.querySelector('#inlineSwapBtn');
+  if(inlineSwapBtn){
+    inlineSwapBtn.onclick=async function(){
+      const toSlotId=this.getAttribute('data-to');
+      const fromId=box.querySelector('#inlineSwapSel')?.value;
+      if(!fromId||!toSlotId)return;
+      this.disabled=true;this.textContent='يتم الإرسال...';
+      try{
+        const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+          method:'POST',
+          headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'},
+          body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
+        });
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        const toSlot=D.slots.find(s=>s.id===toSlotId);
+        const fromSlot=D.slots.find(s=>s.id===fromId);
+        if(toSlot?.host_name) await notify(toSlot.host_name,'swap_request',
+          `🔁 ${esc(myName())} يريد تبديل موعدك`,
+          `يعطيك ${toGregShort(fromSlot?.date||'')} مقابل ${toGregShort(toSlot.date)}`,toSlotId);
+        closeModal('calSlotModal');
+        toast('✅ تم إرسال طلب التبديل إلى '+esc(toSlot?.host_name||'العضو'));
+        loadAll().catch(()=>{});
+      }catch(e){toast('فشل: '+e.message,'error');this.disabled=false;this.textContent='📤 إرسال طلب التبديل';}
+    };
+  }
+
+  // زر قبول التبديل
+  const acceptBtn=box.querySelector('#swapAcceptBtn');
+  if(acceptBtn){
+    acceptBtn.onclick=async function(){
+      await resolveSwap(this.getAttribute('data-id'),true);
       closeModal('calSlotModal');
-      openSwapModal(sid);
-    });
-  });
-  box.querySelectorAll('[data-swap-resolve]').forEach(btn=>{
-    btn.addEventListener('click',function(){
-      const sid=this.getAttribute('data-swap-resolve');
-      const accept=this.getAttribute('data-accept')==='true';
+    };
+  }
+
+  // زر رفض التبديل
+  const rejectBtn=box.querySelector('#swapRejectBtn');
+  if(rejectBtn){
+    rejectBtn.onclick=async function(){
+      await resolveSwap(this.getAttribute('data-id'),false);
       closeModal('calSlotModal');
-      resolveSwap(sid,accept);
-    });
-  });
-  box.querySelectorAll('[data-swap-cancel]').forEach(btn=>{
-    btn.addEventListener('click',function(){
-      closeModal('calSlotModal');
-      A.cancelSwap(this.getAttribute('data-swap-cancel'));
-    });
-  });
+    };
+  }
 }
 
 /* ── Notifications ── */
