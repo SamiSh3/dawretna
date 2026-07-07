@@ -1585,9 +1585,6 @@ document.getElementById('markAllReadBtn')?.addEventListener('click',async(e)=>{
 document.getElementById('clearAllNotifsBtn')?.addEventListener('click',async(e)=>{
   e.stopPropagation();await A.clearAllNotifs();openNotifPopup();
 });
-  e.stopPropagation();
-  await markAllRead();
-  openNotifPopup();
 document.getElementById('notifBtn').onclick=openNotifPopup;
 
 /* ════════════════ RENDER FUNCTIONS ════════════════ */
