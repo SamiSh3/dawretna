@@ -1551,16 +1551,22 @@ function openNotifPopup(){
   if(!D.notifications.length){
     body.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">🔔 لا يوجد تنبيهات</div>`;
   }else{
-    body.innerHTML=D.notifications.map(n=>`
-      <div class="notif-panel-item ${n.read?'':'unread'}" onclick="A.markRead('${n.id}')">
-        <span style="font-size:20px;flex-shrink:0;">${icons[n.type]||'🔔'}</span>
+    const icons2={week_reminder:'⏰',three_day_reminder:'⏰',day_reminder:'🔥',swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
+    body.innerHTML=D.notifications.map(n=>{
+      const sid=n.related_slot_id;
+      let act=`A.markRead('${n.id}');closeNotifPopup();`;
+      if(sid) act+=`setTab('calendar');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${sid}');if(s)openCalSlotModal(s);},300);`;
+      else if(n.type==='slot_booked'||n.type==='general') act+=`setTab('home');`;
+      return`<div class="notif-panel-item ${n.read?'':'unread'}" onclick="${act}" style="cursor:pointer;">
+        <span style="font-size:20px;flex-shrink:0;">${icons2[n.type]||'🔔'}</span>
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:700;">${esc(n.title)}</div>
           ${n.body?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(n.body)}</div>`:''}
-          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}${sid?' · اضغط للانتقال ◀':''}</div>
         </div>
         ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;margin-top:4px;"></div>`:''}
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
   document.getElementById('notifPopup').classList.add('open');
 }
@@ -2120,12 +2126,22 @@ function renderNotifications(){
   if(!D.notifications.length){h+=`<div class="empty"><span class="ei">🔔</span>لا يوجد تنبيهات.</div>`;document.getElementById('content').innerHTML=h;return;}
   h+=`<div class="card" style="padding:8px 16px;">`;
   D.notifications.forEach(n=>{
-    h+=`<div class="notif-item ${n.read?'read':'unread'}" onclick="A.markRead('${n.id}')">
+    const slotId=n.related_slot_id;
+    let navAction='';
+    if(slotId){
+      navAction=`A.markRead('${n.id}');setTab('calendar');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${slotId}');if(s)openCalSlotModal(s);},300);`;
+    } else if(n.type==='slot_booked'||n.type==='general'){
+      navAction=`A.markRead('${n.id}');setTab('home');`;
+    } else {
+      navAction=`A.markRead('${n.id}');`;
+    }
+    h+=`<div class="notif-item ${n.read?'read':'unread'}" onclick="${navAction}" style="cursor:pointer;">
       <span class="notif-icon">${icons[n.type]||'🔔'}</span>
       <div class="notif-content">
         <div class="notif-title">${esc(n.title)}</div>
         ${n.body?`<div class="notif-body">${esc(n.body)}</div>`:''}
         <div class="notif-time">${timeAgo(n.created_at)}</div>
+        ${slotId?`<div style="font-size:10px;color:var(--amber);margin-top:3px;">اضغط للانتقال ◀</div>`:''}
       </div>
       <div class="notif-dot"></div>
     </div>`;
