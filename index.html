@@ -539,6 +539,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       <span style="font-family:var(--fd);font-size:18px;">التنبيهات</span>
       <div style="display:flex;gap:6px;align-items:center;">
         <button class="btn btn-ghost btn-xs" id="markAllReadBtn">قراءة الكل</button>
+        <button class="btn btn-ghost btn-xs" style="color:var(--danger);" id="clearAllNotifsBtn">حذف الكل</button>
         <button class="icon-btn" onclick="closeNotifPopup()" style="width:28px;height:28px;font-size:13px;">✕</button>
       </div>
     </div>
@@ -1546,6 +1547,8 @@ function openNotifPopup(){
   const icons={week_reminder:'⏰',three_day_reminder:'⏰',day_reminder:'🔥',swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
   const body=document.getElementById('notifPanelBody');
   const markBtn=document.getElementById('markAllReadBtn');
+  const clearBtn=document.getElementById('clearAllNotifsBtn');
+  if(clearBtn) clearBtn.style.display=D.notifications.length?'inline-flex':'none';
   if(markBtn) markBtn.style.display=D.notifications.some(n=>!n.read)?'inline-flex':'none';
   if(!body)return;
   if(!D.notifications.length){
@@ -1557,13 +1560,14 @@ function openNotifPopup(){
       let act=`A.markRead('${n.id}');closeNotifPopup();`;
       if(sid) act+=`setTab('calendar');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${sid}');if(s)openCalSlotModal(s);},300);`;
       else if(n.type==='slot_booked'||n.type==='general') act+=`setTab('home');`;
-      return`<div class="notif-panel-item ${n.read?'':'unread'}" onclick="${act}" style="cursor:pointer;">
-        <span style="font-size:20px;flex-shrink:0;">${icons2[n.type]||'🔔'}</span>
-        <div style="flex:1;min-width:0;">
+      return`<div class="notif-panel-item ${n.read?'':'unread'}" style="cursor:pointer;">
+        <span style="font-size:20px;flex-shrink:0;" onclick="${act}">${icons2[n.type]||'🔔'}</span>
+        <div style="flex:1;min-width:0;" onclick="${act}">
           <div style="font-size:13px;font-weight:700;">${esc(n.title)}</div>
           ${n.body?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(n.body)}</div>`:''}
-          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}${sid?' · اضغط للانتقال ◀':''}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}${sid?' · انتقال ◀':''}</div>
         </div>
+        <button onclick="event.stopPropagation();A.deleteNotif('${n.id}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;">✕</button>
         ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;margin-top:4px;"></div>`:''}
       </div>`;
     }).join('');
@@ -1576,6 +1580,11 @@ function closeNotifPopup(){
 window.closeNotifPopup=closeNotifPopup;
 
 document.getElementById('markAllReadBtn')?.addEventListener('click',async(e)=>{
+  e.stopPropagation();await A.markAllRead();openNotifPopup();
+});
+document.getElementById('clearAllNotifsBtn')?.addEventListener('click',async(e)=>{
+  e.stopPropagation();await A.clearAllNotifs();openNotifPopup();
+});
   e.stopPropagation();
   await markAllRead();
   openNotifPopup();
