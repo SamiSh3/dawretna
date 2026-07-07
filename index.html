@@ -923,7 +923,7 @@ function toGreg(date){
 }
 function toGregShort(date){
   const d=new Date(date+'T00:00:00');
-  try{return d.toLocaleDateString('ar-SA',{day:'numeric',month:'long'});}catch(e){return date;}
+  try{return d.toLocaleDateString('ar-SA',{day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
 }
 
 function timeAgo(iso){
