@@ -1899,16 +1899,16 @@ function openCalSlotModal(slot){
 
     <!-- تبديل -->
     ${myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw?`
-    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" onclick="closeModal('calSlotModal');openSwapModal('${slot.id}')">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
+    <button class="btn btn-ghost btn-sm btn-block" style="margin-bottom:10px;" data-swap-open="${slot.id}">🔁 طلب تبديل الموعد مع ${esc(slot.host_name)}</button>`:''}
     ${inSw?`<div class="note" style="margin-bottom:10px;border-color:var(--amber);">
       🔁 <b>${esc(inSw.requester_name)}</b> يريد تبديل موعده معك
       ${D.slots.find(s=>s.id===inSw.from_slot_id)?`<div style="font-size:11px;color:var(--muted);margin:3px 0;">يعطيك: ${toGregShort(D.slots.find(s=>s.id===inSw.from_slot_id).date)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:7px;">
-        <button class="btn btn-sage btn-sm btn-block" onclick="resolveSwap('${inSw.id}',true);closeModal('calSlotModal')">✅ أوافق</button>
-        <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false);closeModal('calSlotModal')">❌ أرفض</button>
+        <button class="btn btn-sage btn-sm btn-block" data-swap-resolve="${inSw.id}" data-accept="true">✅ أوافق</button>
+        <button class="btn btn-danger btn-sm btn-block" data-swap-resolve="${inSw.id}" data-accept="false">❌ أرفض</button>
       </div></div>`:''}
     ${outSw?`<div class="note" style="margin-bottom:10px;">⏳ بانتظار رد <b>${esc(D.slots.find(s=>s.id===outSw.to_slot_id)?.host_name||'')}</b> على طلب التبديل.
-      <button class="btn btn-danger btn-xs" style="margin-top:6px;" onclick="A.cancelSwap('${outSw.id}')">إلغاء الطلب</button></div>`:''}
+      <button class="btn btn-danger btn-xs" style="margin-top:6px;" data-swap-cancel="${outSw.id}">إلغاء الطلب</button></div>`:''}
 
     <!-- تذكيرات -->
     <details class="dg"><summary>🔔 التذكيرات</summary>
@@ -1950,6 +1950,30 @@ function openCalSlotModal(slot){
   `;
   document.getElementById('calSlotBox').innerHTML=h;
   openModal('calSlotModal');
+
+  // ربط أزرار التبديل برمجياً لضمان عملها
+  const box=document.getElementById('calSlotBox');
+  box.querySelectorAll('[data-swap-open]').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      const sid=this.getAttribute('data-swap-open');
+      closeModal('calSlotModal');
+      openSwapModal(sid);
+    });
+  });
+  box.querySelectorAll('[data-swap-resolve]').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      const sid=this.getAttribute('data-swap-resolve');
+      const accept=this.getAttribute('data-accept')==='true';
+      closeModal('calSlotModal');
+      resolveSwap(sid,accept);
+    });
+  });
+  box.querySelectorAll('[data-swap-cancel]').forEach(btn=>{
+    btn.addEventListener('click',function(){
+      closeModal('calSlotModal');
+      A.cancelSwap(this.getAttribute('data-swap-cancel'));
+    });
+  });
 }
 
 /* ── Notifications ── */
