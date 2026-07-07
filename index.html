@@ -1387,13 +1387,18 @@ document.getElementById('swapConfirmBtn').onclick=async()=>{
 };
 
 function openSwapModal(toSlotId){
-  const ts=D.slots.find(s=>s.id===toSlotId);if(!ts)return;
+  const ts=D.slots.find(s=>s.id===toSlotId);
+  if(!ts){alert('خطأ: لم يتم العثور على الطلعة');return;}
   _swapToSlotId=toSlotId;
 
-  const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0&&!D.swaps.find(sw=>sw.from_slot_id===s.id));
+  const mine=D.slots.filter(s=>
+    s.host_name===myName()&&
+    daysUntil(s.date)>=0&&
+    !D.swaps.find(sw=>sw.from_slot_id===s.id)
+  );
 
   if(!mine.length){
-    toast('لا يمكن طلب تبديل — لا يوجد لك موعد محجوز لتعطيه مقابل هذا الموعد','error');
+    alert('لا يمكن طلب تبديل:\nلا يوجد لك موعد محجوز لتعطيه مقابل هذا الموعد.\n\nاحجز أحد المواعيد المتاحة أولاً.');
     return;
   }
 
