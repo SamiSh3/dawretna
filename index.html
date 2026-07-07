@@ -1362,7 +1362,7 @@ document.getElementById('swapConfirmBtn').onclick=async()=>{
     await notify(toSlot.host_name,'swap_request',`${esc(myName())} طلب تبديل 🔁`,
       `يريد يومك ${toGregShort(toSlot.date)} مقابل يومه ${fromSlot?toGregShort(fromSlot.date):''}`,toSlot.id);
   }
-  closeModal('swapModal');await loadAll();render();toast('طلب التبديل أُرسل ⏳');
+  closeModal('swapModal');await loadAll();render();toast('تم إرسال طلب التبديل بنجاح ✅ — الرجاء الانتظار حتى تتم الموافقة');
 };
 
 function openSwapModal(toSlotId){
