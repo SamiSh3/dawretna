@@ -1953,7 +1953,7 @@ function openCalSlotModal(slot){
 
     <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
-    ${slot.host_name&&!isPast&&(slot.host_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
+    ${slot.host_name&&!isPast&&slot.host_name===myName()?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
     ${(()=>{
