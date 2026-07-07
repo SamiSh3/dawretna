@@ -885,11 +885,15 @@ function showNotifPopup(notif){
   const goBtn=popup.querySelector('#npGoBtn');
   if(goBtn) goBtn.onclick=()=>{
     popup.remove();
-    setTab('calendar');
-    setTimeout(()=>{
-      const slot=D.slots.find(s=>s.id===notif.related_slot_id);
-      if(slot) openCalSlotModal(slot);
-    },400);
+    if(notif.related_slot_id){
+      setTab('calendar');
+      setTimeout(()=>{
+        const slot=D.slots.find(s=>s.id===notif.related_slot_id);
+        if(slot) openCalSlotModal(slot);
+      },400);
+    } else if(notif.type==='general'||notif.type==='slot_booked'){
+      setTab('home');
+    }
   };
   setTimeout(()=>popup.remove&&popup.remove(),10000);
 }
@@ -942,6 +946,25 @@ window.resolveSwap=resolveSwap;
 window.openSwapModal=openSwapModal;
 
 window.togglePayment=togglePayment;
+window.sendHomeSwap=async function(toSlotId){
+  const fromId=document.getElementById('homeSwapSel')?.value;
+  if(!fromId){toast('اختر موعدك','error');return;}
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const toSlot=D.slots.find(s=>s.id===toSlotId);
+    const fromSlot=D.slots.find(s=>s.id===fromId);
+    if(toSlot?.host_name) await notify(toSlot.host_name,'swap_request',
+      `🔁 ${esc(myName())} يريد تبديل موعدك`,
+      `يعطيك ${toGregShort(fromSlot?.date||'')} مقابل ${toGregShort(toSlot.date)}`,toSlotId);
+    toast('✅ تم إرسال طلب التبديل إلى '+esc(toSlot?.host_name||'العضو'));
+    loadAll().then(()=>render()).catch(()=>{});
+  }catch(e){toast('فشل: '+e.message,'error');}
+};
 
 // إغلاق أي modal بالضغط على الخلفية
 document.addEventListener('click',function(e){
@@ -1625,7 +1648,16 @@ function renderHome(){
       h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${next.id}')">💰 ${next.budget?'تعديل الميزانية':'إضافة ميزانية'}</button>`;
     }
     if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw){
-      h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="openSwapModal('${next.id}')">🔁 طلب تبديل</button>`;
+      const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
+      if(mySlots.length){
+        h+=`<div style="margin-top:8px;padding:10px;background:var(--bg-soft);border-radius:var(--rsm);border:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--amber);font-weight:700;margin-bottom:6px;">🔁 طلب تبديل مع ${esc(next.host_name)}</div>
+          <select id="homeSwapSel" style="width:100%;padding:7px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);margin-bottom:6px;font-size:12px;">
+            ${mySlots.map(s=>`<option value="${s.id}">${toGregShort(s.date)}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm btn-block" onclick="sendHomeSwap('${next.id}')">📤 إرسال طلب التبديل</button>
+        </div>`;
+      }
     }
     if(inSw){
       const from=D.slots.find(s=>s.id===inSw.from_slot_id);
@@ -1901,13 +1933,14 @@ function openCalSlotModal(slot){
       .then(r=>r.ok?r.json():[])
       .then(newSwaps=>{
         if(newSwaps.length){
-          // دمج الـ swaps الجديدة مع الموجودة
           newSwaps.forEach(sw=>{
             if(!D.swaps.find(s=>s.id===sw.id)) D.swaps.push(sw);
           });
-          // أعد فتح النافذة بالبيانات المحدثة
-          const fresh=D.swaps.find(s=>s.to_slot_id===slot.id);
-          if(fresh) openCalSlotModal(slot);
+          // أعد رسم المحتوى فقط بدون فتح modal جديد
+          if(document.getElementById('calSlotModal')&&!document.getElementById('calSlotModal').classList.contains('hidden')){
+            const fresh=D.swaps.find(s=>s.to_slot_id===slot.id);
+            if(fresh) renderSwapSection(slot);
+          }
         }
       }).catch(()=>{});
   }
