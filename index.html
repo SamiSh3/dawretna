@@ -1783,8 +1783,8 @@ function renderHome(){
       ${next.host_name===myName()?
         `<div style="font-size:13px;color:var(--sage);font-weight:700;margin-bottom:10px;text-align:center;">🏠 أنت المضيف — حضورك مؤكد</div>`:
         `<div class="rsvp-row" onclick="event.stopPropagation()">
-          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','yes')">✅ سأحضر</button>
-          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','no')">🙅 أعتذر</button>
+          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();A.rsvpCal('${next.id}','yes')">${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}</button>
+          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();A.rsvpCal('${next.id}','no')">${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}</button>
         </div>`
       }`;
 
@@ -2882,7 +2882,24 @@ window.A={
   },
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
-  async rsvpCal(slotId,status){await setRsvp(slotId,status);const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);},
+  rsvpCal(slotId,status){
+    const mn=myName();
+    if(!mn){toast('سجّل دخولك أولاً','error');return;}
+    // تحديث فوري
+    const existing=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
+    if(existing) existing.status=status;
+    else D.rsvps.push({slot_id:slotId,member_name:mn,status});
+    // أعد رسم الـ modal فوراً
+    const s=D.slots.find(x=>x.id===slotId);
+    if(s) openCalSlotModal(s);
+    render();
+    toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+    // حفظ في DB في الخلفية
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
+      body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(e=>console.error('rsvp:',e));
+    loadAll().catch(()=>{});
+  },
   async bookCal(id){
     await bookSlot(id);
     // أعد فتح الـ modal بالبيانات المحدثة
