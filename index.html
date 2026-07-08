@@ -2733,8 +2733,21 @@ let _moreSubTab='memories';
 function renderSettings(){
   let h='';
 
-  // موقع الشاليه (للمشرفين فقط)
-  if(myProfile?.is_admin){
+  // ── قسم الإشعارات والصوت (لكل المستخدمين) ──
+  const notifPerm=typeof Notification!=='undefined'?Notification.permission:'unsupported';
+  h+=`<div class="card">
+    <div class="h2">🔔 الإشعارات والصوت</div>
+    <p class="hint" style="margin-top:4px;margin-bottom:12px;">فعّل إشعارات النظام لتصل إليك التنبيهات بصوت حتى لو التطبيق في الخلفية.</p>
+    ${notifPerm==='granted'?
+      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:18px;">✅</span>
+        <span style="font-size:13px;color:var(--sage);font-weight:700;">الإشعارات مفعّلة</span>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="A.testSound()">🔊 اختبار الصوت</button>`:
+      `<button class="btn btn-primary btn-block" onclick="A.enableNotifs()">🔔 تفعيل الإشعارات والصوت</button>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">اضغط ثم وافق على طلب الإذن</p>`
+    }
+  </div>`;
     h+=`<div class="card"><div class="h2">📍 مواقع الاجتماع</div>
     <p class="hint" style="margin-top:4px;">تظهر كقائمة عند إنشاء طلعة جديدة. ★ = الافتراضي.</p>
     ${D.locations.map(l=>`<div class="rem-row">
@@ -2899,7 +2912,27 @@ window.A={
   createPoll(){const q=document.getElementById('pollQ')?.value.trim();const opts=[...document.querySelectorAll('.pi')].map(i=>i.value.trim()).filter(Boolean);createPoll(q,opts);},
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
-  async toggleMultiBooking(val){
+  async enableNotifs(){
+    // فتح قناة الصوت أولاً (من gesture مباشر)
+    await _unlockAudio();
+    // طلب إذن الإشعارات
+    if(!('Notification' in window)){toast('متصفحك لا يدعم الإشعارات','error');return;}
+    const perm=await Notification.requestPermission();
+    if(perm==='granted'){
+      // اختبار فوري
+      new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات بنجاح ✅',icon:'/favicon.ico'});
+      playNotifSound();
+      toast('✅ تم تفعيل الإشعارات');
+      renderSettings();
+    } else {
+      toast('لم يتم منح الإذن — فعّل من إعدادات المتصفح','error');
+    }
+  },
+  async testSound(){
+    await _unlockAudio();
+    playNotifSound();
+    showNotifPopup({type:'general',title:'اختبار الصوت 🔊',body:'إذا سمعت هذا الصوت فالإشعارات تعمل!',related_slot_id:null});
+  },
     D.settings.allow_multi_booking=val?'true':'false'; // تحديث فوري
     renderSettings(); // حدّث الزر فوراً
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
