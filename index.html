@@ -2425,9 +2425,17 @@ async function togglePayment(slotId,memberName){
         body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
       });
     }
-    if(newPaid&&slot){
-      await notify(memberName,'general','تم تسجيل دفعتك ✅',
-        `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+    if(slot){
+      if(newPaid){
+        // تنبيه للعضو بتسجيل دفعته
+        if(memberName!==myName())
+          await notify(memberName,'general','تم تسجيل دفعتك ✅',
+            `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+        // تنبيه للمشرف إذا كان العضو يدفع لنفسه
+        else
+          await notifyAdmins('general',`${esc(memberName)} دفع حصته 💰`,
+            `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+      }
     }
   }catch(e){console.error('togglePay:',e);}
   loadAll().catch(()=>{});
@@ -3075,7 +3083,12 @@ window.A={
           method:'POST',headers:H,body:JSON.stringify({year,member_name:name,paid:newPaid,updated_by:myName()})
         });
       }
-      if(newPaid) await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
+      if(newPaid){
+        if(name!==myName())
+          await notify(name,'general','تم تسجيل اشتراكك السنوي ✅',`سنة ${year}`);
+        else
+          await notifyAdmins('general',`${esc(name)} دفع اشتراكه السنوي 💰`,`سنة ${year}`);
+      }
     }catch(e){console.error('toggleAnnualPay:',e);}
     loadAll().catch(()=>{});
   },
