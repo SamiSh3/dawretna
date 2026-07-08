@@ -1749,7 +1749,7 @@ function render(){
   if(calIcon) calIcon.textContent=todayDayNum();
   updateNotifBadge();
   if(tab==='home')renderHome();
-  else if(tab==='calendar')renderCalendar();
+  else if(tab==='calendar'){renderCalendar();loadAll().then(()=>renderCalendar()).catch(()=>{});}
   else if(tab==='notifications'){setTab('home');openNotifPopup();}
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
