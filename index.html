@@ -994,6 +994,8 @@ function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
 window.openModal=openModal;
 window.openCalSlotModal=openCalSlotModal;
 window._openSlot=function(id){const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);};
+window.setTab=setTab;
+window.render=render;
 window.closeModal=closeModal;
 // تصدير مباشر لجميع الدوال التي تُستدعى من onclick
 window.bookSlot=bookSlot;
@@ -1136,9 +1138,10 @@ async function deleteNotif(id){
   fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'DELETE',headers:H}).catch(()=>{});
 }
 async function markRead(id){
-  await sb.from('notifications').update({read:true}).eq('id',id);
   const n=D.notifications.find(x=>x.id===id);if(n)n.read=true;
-  updateNotifBadge();render();
+  updateNotifBadge();
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'};
+  fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'PATCH',headers:H,body:JSON.stringify({read:true})}).catch(()=>{});
 }
 
 // تنبيهات تلقائية عند فتح التطبيق
