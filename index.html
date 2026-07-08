@@ -1859,7 +1859,7 @@ function renderHome(){
       const murl=mapUrl||(lat?`https://maps.google.com/?q=${lat},${lng}`:'');
       h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">🗺️ فتح في خرائط جوجل</a>`;
     }
-    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" onclick="A.openSlot('${next.id}')">📋 عرض تفاصيل الطلعة</button>`;
+    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" data-open-slot="${next.id}">📋 عرض تفاصيل الطلعة</button>`;
     h+=`</div>`;
   } else {
     h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.</div>`;
@@ -1873,7 +1873,7 @@ function renderHome(){
       const myRv=D.rsvps.find(r=>r.slot_id===s.id&&r.member_name===myName());
       const du=daysUntil(s.date);
       const isNext=s.id===next?.id;
-      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" onclick="A.openSlot('${s.id}')">
+      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" data-open-slot="${s.id}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
             ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;margin-bottom:3px;">⭐ القادم</div>`:''}
@@ -1928,9 +1928,17 @@ function renderHome(){
     h+=`</div>`;
   }
   document.getElementById('content').innerHTML=h;
-}
 
-/* ── Calendar ── */
+  // ربط الكروت بـ addEventListener لضمان عمل الضغط على أي جهاز
+  document.querySelectorAll('[data-open-slot]').forEach(function(card){
+    card.addEventListener('click',function(e){
+      if(e.target.tagName==='BUTTON')return; // تجاهل ضغط الأزرار
+      const id=this.getAttribute('data-open-slot');
+      const s=D.slots.find(x=>x.id===id);
+      if(s) openCalSlotModal(s);
+    });
+  });
+}
 let calYear=todayYear();
 let selectedDate=null;
 function renderCalendar(){
