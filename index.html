@@ -2935,6 +2935,7 @@ window.A={
     playNotifSound();
     showNotifPopup({type:'general',title:'اختبار الصوت 🔊',body:'إذا سمعت هذا الصوت فالإشعارات تعمل!',related_slot_id:null});
   },
+  async toggleMultiBooking(val){
     D.settings.allow_multi_booking=val?'true':'false'; // تحديث فوري
     renderSettings(); // حدّث الزر فوراً
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
