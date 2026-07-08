@@ -1041,7 +1041,13 @@ function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
 function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
 window.openModal=openModal;
 window.openCalSlotModal=openCalSlotModal;
-window._openSlot=function(id){const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);};
+window._openSlot=function(id){
+  try{
+    const s=D.slots.find(x=>x.id===id);
+    if(s) openCalSlotModal(s);
+    else toast('لم يتم العثور على الطلعة','error');
+  }catch(e){toast('خطأ: '+e.message,'error');}
+};
 window.setTab=setTab;
 window.render=render;
 window.closeModal=closeModal;
@@ -2885,20 +2891,19 @@ window.A={
   rsvpCal(slotId,status){
     const mn=myName();
     if(!mn){toast('سجّل دخولك أولاً','error');return;}
-    // تحديث فوري
+    // تحديث فوري في D.rsvps
     const existing=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
     if(existing) existing.status=status;
     else D.rsvps.push({slot_id:slotId,member_name:mn,status});
-    // أعد رسم الـ modal فوراً
+    // أعد رسم الصفحة والـ modal
+    render();
     const s=D.slots.find(x=>x.id===slotId);
     if(s) openCalSlotModal(s);
-    render();
     toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
-    // حفظ في DB في الخلفية
+    // حفظ في DB فقط - بدون loadAll
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
-      body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(e=>console.error('rsvp:',e));
-    loadAll().catch(()=>{});
+      body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
   },
   async bookCal(id){
     await bookSlot(id);
