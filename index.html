@@ -2241,13 +2241,25 @@ function openCalSlotModal(slot){
       <input type="text" id="slotTitleInp_${slot.id}" value="${esc(slot.title||'')}" placeholder="مثال: شواء الصيف، طلعة الربيع..." style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px 10px;font-size:13px;outline:none;">
       <button class="btn btn-primary btn-sm" onclick="A.saveSlotTitle('${slot.id}')">حفظ</button>
     </div>
+    <hr class="sep" style="margin:10px 0;">
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">📍 موقع الطلعة</div>
-    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">
-      <input type="text" id="slotLocName_${slot.id}" value="${esc(slot.location_name||D.chalet.name&&D.chalet.name!=='دوريتنا'?slot.location_name||D.chalet.name:'')}" placeholder="اسم الموقع" style="background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;">
-      <input type="text" id="slotLocAddr_${slot.id}" value="${esc(slot.location_address||D.chalet.address||'')}" placeholder="العنوان" style="background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;">
-      <input type="url" id="slotLocMap_${slot.id}" value="${esc(slot.location_map_url||D.chalet.map_url||'')}" placeholder="رابط خرائط جوجل" style="background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;">
-      <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocation('${slot.id}')">💾 حفظ الموقع</button>
-    </div>
+    ${myProfile?.is_admin?`
+    <select id="slotLocSel_${slot.id}" style="width:100%;padding:8px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);font-size:12px;margin-bottom:6px;">
+      <option value="">— بدون موقع محدد —</option>
+      ${D.locations.map(l=>`<option value="${l.id}" ${slot.location_name===l.name?'selected':''}>
+        ${esc(l.name)}${l.address?' — '+esc(l.address):''}${l.is_default?' ⭐':''}
+      </option>`).join('')}
+    </select>
+    <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocationFromSel('${slot.id}')">💾 حفظ الموقع</button>
+    `:`
+    ${slot.location_name||slot.location_address?`
+      <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${esc(slot.location_name||'')}</div>
+      ${slot.location_address?`<div style="font-size:12px;color:var(--muted);">${esc(slot.location_address)}</div>`:''}
+    `:D.chalet.name&&D.chalet.name!=='دوريتنا'?`
+      <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${esc(D.chalet.name)}</div>
+      ${D.chalet.address?`<div style="font-size:12px;color:var(--muted);">${esc(D.chalet.address)}</div>`:''}
+    `:`<div style="font-size:12px;color:var(--muted);">لم يتم تحديد الموقع</div>`}
+    `}
     <hr class="sep" style="margin:10px 0;">
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">💰 تكلفة الطلعة</div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
@@ -3046,6 +3058,18 @@ window.A={
     await sb.from('app_settings').upsert({key:'registrations_enabled',value:newVal,updated_by:myName()},{onConflict:'key'});
     await loadAll();renderAdmin();
     toast(newVal==='false'?'🔒 التسجيل مغلق':'✅ التسجيل مفعّل');
+  },
+  async saveSlotLocationFromSel(slotId){
+    const sel=document.getElementById('slotLocSel_'+slotId);
+    if(!sel)return;
+    const locId=sel.value;
+    const loc=locId?D.locations.find(l=>l.id===locId):null;
+    const H={...apiHeaders(),'Prefer':'return=minimal'};
+    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
+      location_name:loc?.name||null,location_address:loc?.address||null,
+      location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
+    })});
+    await loadAll();closeModal('calSlotModal');render();toast('✅ تم حفظ الموقع');
   },
   async saveSlotLocation(slotId){
     const locName=document.getElementById('slotLocName_'+slotId)?.value.trim()||null;
