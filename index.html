@@ -1073,10 +1073,13 @@ async function markAllRead(){
 }
 async function deleteNotif(id){
   if(!session)return;
-  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
-  await fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'DELETE',headers:H});
+  // تحديث فوري محلي
   D.notifications=D.notifications.filter(n=>n.id!==id);
-  updateNotifBadge();render();
+  updateNotifBadge();
+  renderNotifications();
+  // حذف من DB في الخلفية
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+  fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'DELETE',headers:H}).catch(()=>{});
 }
 async function markRead(id){
   await sb.from('notifications').update({read:true}).eq('id',id);
@@ -2150,7 +2153,7 @@ function renderNotifications(){
         ${n.body?`<div class="notif-body">${esc(n.body)}</div>`:''}
         <div class="notif-time">${timeAgo(n.created_at)}${slotId?' · اضغط للانتقال ◀':''}</div>
       </div>
-      <button onclick="A.deleteNotif('${n.id}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;" title="حذف">✕</button>
+      <button onclick="event.stopPropagation();A.deleteNotif('${n.id}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;" title="حذف">✕</button>
       <div class="notif-dot"></div>
     </div>`;
   });
