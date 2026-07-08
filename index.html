@@ -1744,7 +1744,7 @@ function renderHome(){
       const myRv=D.rsvps.find(r=>r.slot_id===s.id&&r.member_name===myName());
       const du=daysUntil(s.date);
       const isNext=s.id===next?.id;
-      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}">
+      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" onclick="openCalSlotModal(D.slots.find(x=>x.id==='${s.id}'))">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
             ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">القادم</div>`:''}
@@ -1758,19 +1758,19 @@ function renderHome(){
             <div style="font-size:10px;color:var(--muted);margin-top:2px;">بعد ${du} يوم</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;" onclick="event.stopPropagation()">
           ${s.host_name===myName()?
             `<div style="font-size:12px;color:var(--sage);font-weight:700;padding:6px 0;">🏠 أنت المضيف — حضورك مؤكد</div>` :
             `<button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block"
-              onclick="setRsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
+              onclick="event.stopPropagation();setRsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
               ${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}
             </button>
             <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block"
-              onclick="setRsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
+              onclick="event.stopPropagation();setRsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
               ${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}
             </button>`
           }
-          ${!s.host_name?`<button class="btn btn-primary btn-sm btn-block" onclick="bookSlot('${s.id}')">🙋 أحجز</button>`:''}
+          ${!s.host_name?`<button class="btn btn-primary btn-sm btn-block" onclick="event.stopPropagation();bookSlot('${s.id}')">🙋 أحجز</button>`:''}
         </div>
       </div>`;
     });
