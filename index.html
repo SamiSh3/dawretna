@@ -1073,11 +1073,9 @@ async function markAllRead(){
 }
 async function deleteNotif(id){
   if(!session)return;
-  // تحديث فوري محلي
   D.notifications=D.notifications.filter(n=>n.id!==id);
   updateNotifBadge();
-  renderNotifications();
-  // حذف من DB في الخلفية
+  openNotifPopup(); // أعد رسم الـ popup
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
   fetch(SB_URL+'/rest/v1/notifications?id=eq.'+id,{method:'DELETE',headers:H}).catch(()=>{});
 }
@@ -1603,7 +1601,7 @@ function render(){
   updateNotifBadge();
   if(tab==='home')renderHome();
   else if(tab==='calendar')renderCalendar();
-  else if(tab==='notifications'){tab='home';renderHome();}
+  else if(tab==='notifications'){setTab('home');openNotifPopup();}
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
   else if(tab==='settings')renderSettings();
@@ -2953,7 +2951,7 @@ document.getElementById('themeBtn')?.addEventListener('click',()=>{
   const cur=localStorage.getItem('dawretna-theme')||'light';
   applyTheme(cur==='dark'?'light':'dark');
 });
-document.getElementById('notifBtn')?.addEventListener('click',()=>setTab('notifications'));
+document.getElementById('notifBtn')?.addEventListener('click',()=>openNotifPopup());
 
 // init
 (async function(){
