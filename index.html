@@ -1869,19 +1869,15 @@ function renderHome(){
             <div style="font-size:10px;color:var(--muted);margin-top:2px;">بعد ${du} يوم</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;" onclick="event.stopPropagation()">
+        <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
           ${s.host_name===myName()?
-            `<div style="font-size:12px;color:var(--sage);font-weight:700;padding:6px 0;">🏠 أنت المضيف — حضورك مؤكد</div>` :
-            `<button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block"
-              onclick="event.stopPropagation();setRsvp('${s.id}','yes')" style="${myRv?.status==='yes'?'font-weight:800;':''}" >
-              ${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}
-            </button>
-            <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block"
-              onclick="event.stopPropagation();setRsvp('${s.id}','no')" style="${myRv?.status==='no'?'font-weight:800;':''}">
-              ${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}
-            </button>`
+            `<div style="font-size:12px;color:var(--sage);font-weight:700;">🏠 أنت المضيف</div>` :
+            myRv?.status==='yes'?`<div style="font-size:12px;color:var(--sage);font-weight:700;">✅ سأحضر</div>`:
+            myRv?.status==='no'?`<div style="font-size:12px;color:var(--danger);font-weight:700;">🙅 اعتذر</div>`:
+            `<div style="font-size:12px;color:var(--muted);">⏳ لم تحدد</div>`
           }
-          ${!s.host_name?`<button class="btn btn-primary btn-sm btn-block" onclick="event.stopPropagation();bookSlot('${s.id}')">🙋 أحجز</button>`:''}
+          ${!s.host_name?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();bookSlot('${s.id}')">🙋 أحجز</button>`:''}
+          <div style="margin-right:auto;font-size:11px;color:var(--muted);">اضغط للتفاصيل ▼</div>
         </div>
       </div>`;
     });
