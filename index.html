@@ -661,7 +661,8 @@ async function afterLogin(){
   render(); // يظهر البيانات الحقيقية
   checkAutoReminders().catch(()=>{});
   // فحص تنبيهات جديدة كل 30 ثانية
-  setInterval(pollNotifications,30000);
+  setInterval(pollNotifications,8000);
+  startRealtimeNotifs();
 }
 
 
@@ -912,11 +913,21 @@ document.addEventListener('touchstart',_initAudio,{once:true,passive:true});
 document.addEventListener('click',_initAudio,{once:true,passive:true});
 
 function playNotifSound(){
+  // اهتزاز على الجوال (يعمل بدون قيود)
+  try{navigator.vibrate&&navigator.vibrate([100,50,100]);}catch(e){}
+  // صوت
   try{
     _initAudio();
     const a=new Audio(_NOTIF_WAV);
     a.volume=1.0;
-    a.play().catch(()=>{});
+    const p=a.play();
+    if(p)p.catch(()=>{
+      // iOS fallback: جرب الصوت الصامت ثم الحقيقي
+      if(_notifAudio){
+        _notifAudio.currentTime=0;
+        _notifAudio.play().catch(()=>{});
+      }
+    });
   }catch(e){}
 }
 
@@ -935,6 +946,29 @@ async function pollNotifications(){
       const important=newOnes.filter(n=>['swap_request','swap_accepted','swap_rejected'].includes(n.type));
       if(important.length) showNotifPopup(important[0]);
     }
+  }catch(e){}
+}
+
+// Realtime: تنبيهات فورية بدون polling
+function startRealtimeNotifs(){
+  if(!session||!window.supabase)return;
+  try{
+    const ch=sb.channel('notifs_'+session.user.id)
+      .on('postgres_changes',{
+        event:'INSERT',schema:'public',table:'notifications',
+        filter:'user_id=eq.'+session.user.id
+      },payload=>{
+        const n=payload.new;
+        if(n&&!D.notifications.find(x=>x.id===n.id)){
+          D.notifications.unshift(n);
+          updateNotifBadge();
+          playNotifSound();
+          if(['swap_request','swap_accepted','swap_rejected','slot_booked'].includes(n.type)){
+            showNotifPopup(n);
+          }
+        }
+      })
+      .subscribe();
   }catch(e){}
 }
 
