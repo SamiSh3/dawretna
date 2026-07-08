@@ -1011,6 +1011,10 @@ async function pollNotifications(){
     if(newOnes.length){
       showOsNotif(newOnes[0]);   // تنبيه نظام التشغيل
       showNotifPopup(newOnes[0]); // popup داخل التطبيق
+      // إذا رُفض أو قُبل التبديل — حدّث D.swaps فوراً
+      if(newOnes.some(n=>['swap_rejected','swap_accepted'].includes(n.type))){
+        loadAll().then(()=>render()).catch(()=>{});
+      }
     }
   }catch(e){}
 }
@@ -1029,7 +1033,10 @@ function startRealtimeNotifs(){
           D.notifications.unshift(n);
           updateNotifBadge();
           showOsNotif(n);   // تنبيه نظام التشغيل
-          showNotifPopup(n); // popup داخل التطبيق
+          showNotifPopup(n);
+          if(['swap_rejected','swap_accepted'].includes(n.type)){
+            loadAll().then(()=>render()).catch(()=>{});
+          }
         }
       })
       .subscribe();
