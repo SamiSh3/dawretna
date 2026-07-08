@@ -2255,18 +2255,22 @@ function openCalSlotModal(slot){
   // زر قبول التبديل
   const acceptBtn=box.querySelector('#swapAcceptBtn');
   if(acceptBtn){
-    acceptBtn.onclick=async function(){
-      await resolveSwap(this.getAttribute('data-id'),true);
+    acceptBtn.onclick=function(){
+      acceptBtn.disabled=true;acceptBtn.textContent='⏳ جاري...';
+      const swapId=this.getAttribute('data-id');
       closeModal('calSlotModal');
+      resolveSwap(swapId,true); // بدون await - فوري
     };
   }
 
   // زر رفض التبديل
   const rejectBtn=box.querySelector('#swapRejectBtn');
   if(rejectBtn){
-    rejectBtn.onclick=async function(){
-      await resolveSwap(this.getAttribute('data-id'),false);
+    rejectBtn.onclick=function(){
+      rejectBtn.disabled=true;rejectBtn.textContent='⏳ جاري...';
+      const swapId=this.getAttribute('data-id');
       closeModal('calSlotModal');
+      resolveSwap(swapId,false); // بدون await - فوري
     };
   }
 }
