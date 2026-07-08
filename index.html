@@ -1306,7 +1306,6 @@ async function setRsvp(slotId,status){
         toGregShort(slot.date),slotId);
     }
   }catch(e){console.error('rsvp error:',e);}
-  loadAll().catch(()=>{});
 }
 async function resolveSwap(swapId,accept){
   const sw=D.swaps.find(s=>s.id===swapId);if(!sw)return;
@@ -1847,7 +1846,7 @@ function renderHome(){
       const murl=mapUrl||(lat?`https://maps.google.com/?q=${lat},${lng}`:'');
       h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">🗺️ فتح في خرائط جوجل</a>`;
     }
-    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" onclick="alert('slot: '+'${next.id}'+'  A exists: '+(typeof window.A))">📋 عرض تفاصيل (اختبار)</button>`;
+    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" onclick="A.openSlot('${next.id}')">📋 عرض تفاصيل الطلعة</button>`;
     h+=`</div>`;
   } else {
     h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.</div>`;
@@ -1861,7 +1860,7 @@ function renderHome(){
       const myRv=D.rsvps.find(r=>r.slot_id===s.id&&r.member_name===myName());
       const du=daysUntil(s.date);
       const isNext=s.id===next?.id;
-      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" onclick="window._openSlot('${s.id}')">
+      h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" onclick="A.openSlot('${s.id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
             ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">القادم</div>`:''}
@@ -2888,22 +2887,19 @@ window.A={
   },
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
+  openSlot(id){const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);else toast('لم يتم العثور على الطلعة','error');},
   rsvpCal(slotId,status){
     const mn=myName();
-    if(!mn){toast('سجّل دخولك أولاً','error');return;}
-    // تحديث فوري في D.rsvps
-    const existing=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
-    if(existing) existing.status=status;
+    if(!mn)return;
+    const ex=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
+    if(ex) ex.status=status;
     else D.rsvps.push({slot_id:slotId,member_name:mn,status});
-    // أعد رسم الصفحة والـ modal
     render();
     const s=D.slots.find(x=>x.id===slotId);
     if(s) openCalSlotModal(s);
     toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
-    // حفظ في DB فقط - بدون loadAll
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
-      body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
+    fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
   },
   async bookCal(id){
     await bookSlot(id);
