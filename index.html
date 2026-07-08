@@ -1882,7 +1882,7 @@ function renderHome(){
             `<div style="font-size:12px;color:var(--muted);">⏳ لم تحدد</div>`
           }
           ${!s.host_name?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();bookSlot('${s.id}')">🙋 أحجز</button>`:''}
-          <div style="margin-right:auto;font-size:11px;color:var(--muted);">اضغط للتفاصيل ▼</div>
+          <div style="margin-right:auto;font-size:11px;color:var(--amber);font-weight:700;cursor:pointer;" onclick="A.openSlot('${s.id}')">📋 التفاصيل ◀</div>
         </div>
       </div>`;
     });
