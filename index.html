@@ -935,16 +935,18 @@ async function pollNotifications(){
   if(!session)return;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
   try{
-    const r=await fetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&read=eq.false&order=created_at.desc&limit=10',{headers:H});
+    const r=await fetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=20',{headers:H});
     if(!r.ok)return;
     const fresh=await r.json();
-    const newOnes=fresh.filter(n=>!D.notifications.find(o=>o.id===n.id));
-    newOnes.forEach(n=>{D.notifications.unshift(n);});
+    // إيجاد التنبيهات الجديدة (غير موجودة في D.notifications)
+    const newOnes=fresh.filter(n=>!n.read&&!D.notifications.find(o=>o.id===n.id));
+    // تحديث القائمة الكاملة
+    D.notifications=fresh;
+    updateNotifBadge();
     if(newOnes.length){
-      updateNotifBadge();
-      playNotifSound(); // صوت تنبيه خفيف
-      const important=newOnes.filter(n=>['swap_request','swap_accepted','swap_rejected'].includes(n.type));
-      if(important.length) showNotifPopup(important[0]);
+      playNotifSound();
+      // أظهر popup لكل الأنواع
+      showNotifPopup(newOnes[0]);
     }
   }catch(e){}
 }
@@ -963,9 +965,7 @@ function startRealtimeNotifs(){
           D.notifications.unshift(n);
           updateNotifBadge();
           playNotifSound();
-          if(['swap_request','swap_accepted','swap_rejected','slot_booked'].includes(n.type)){
-            showNotifPopup(n);
-          }
+          showNotifPopup(n); // أظهر popup لكل الأنواع
         }
       })
       .subscribe();
