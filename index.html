@@ -1715,7 +1715,7 @@ function renderHome(){
     const inSw=myName()&&next.host_name===myName()?D.swaps.find(s=>s.to_slot_id===next.id):null;
     const outSw=myName()?D.swaps.find(s=>s.from_slot_id===next.id&&s.requester_name===myName()):null;
 
-    h+=`<div class="hero">
+    h+=`<div class="hero" onclick="window._openSlot('${next.id}')" style="cursor:pointer;">
       <div class="hero-label">الموعد القادم</div>
       ${next.title?`<div style="font-family:var(--fd);font-size:18px;color:var(--amber);margin-bottom:4px;">${esc(next.title)}</div>`:''}
       <div class="hero-date-greg">${esc(greg)}</div>
@@ -1734,9 +1734,9 @@ function renderHome(){
       ${chips?`<div class="muted" style="font-size:11px;margin-bottom:10px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`:''}
       ${next.host_name===myName()?
         `<div style="font-size:13px;color:var(--sage);font-weight:700;margin-bottom:10px;text-align:center;">🏠 أنت المضيف — حضورك مؤكد</div>`:
-        `<div class="rsvp-row">
-          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','yes')">✅ سأحضر</button>
-          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','no')">🙅 أعتذر</button>
+        `<div class="rsvp-row" onclick="event.stopPropagation()">
+          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','yes')">✅ سأحضر</button>
+          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','no')">🙅 أعتذر</button>
         </div>`
       }`;
 
