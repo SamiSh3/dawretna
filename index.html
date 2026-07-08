@@ -2239,7 +2239,7 @@ function openCalSlotModal(slot){
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">✏️ عنوان الطلعة</div>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input type="text" id="slotTitleInp_${slot.id}" value="${esc(slot.title||'')}" placeholder="مثال: شواء الصيف، طلعة الربيع..." style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px 10px;font-size:13px;outline:none;">
-      <button class="btn btn-primary btn-sm" onclick="A.saveSlotTitle('${slot.id}')">حفظ</button>
+      <button class="btn btn-primary btn-sm" onclick="A.saveSlotTitle('${slot.id}',event.currentTarget)">حفظ</button>
     </div>
     <hr class="sep" style="margin:10px 0;">
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">📍 موقع الطلعة</div>
@@ -2250,7 +2250,7 @@ function openCalSlotModal(slot){
         ${esc(l.name)}${l.address?' — '+esc(l.address):''}${l.is_default?' ⭐':''}
       </option>`).join('')}
     </select>
-    <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocationFromSel('${slot.id}')">💾 حفظ الموقع</button>
+    <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocationFromSel('${slot.id}',event.currentTarget)">💾 حفظ الموقع</button>
     `:`
     ${slot.location_name||slot.location_address?`
       <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${esc(slot.location_name||'')}</div>
@@ -2264,7 +2264,7 @@ function openCalSlotModal(slot){
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">💰 تكلفة الطلعة</div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
       <input type="number" id="slotBudgetInp_${slot.id}" value="${slot.budget||''}" placeholder="التكلفة الكلية (﷼)" style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:13px;outline:none;" min="0">
-      <button class="btn btn-primary btn-sm" onclick="A.saveSlotBudget('${slot.id}')">حفظ</button>
+      <button class="btn btn-primary btn-sm" onclick="A.saveSlotBudget('${slot.id}',event.currentTarget)">حفظ</button>
     </div>
     <input type="text" id="slotBudgetNotes_${slot.id}" value="${esc(slot.budget_notes||'')}" placeholder="ملاحظات التكلفة (اختياري)" style="width:100%;box-sizing:border-box;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;margin-bottom:4px;">
     ${slot.budget?`<div style="font-size:11px;color:var(--muted);">نصيب الفرد: <b style="color:var(--amber);">${Math.round(slot.budget/(D.team.length||1)).toLocaleString('ar')} ﷼</b></div>`:''}
@@ -2533,7 +2533,7 @@ function renderBudget(){
       <div class="field"><label>التكلفة الكلية (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
       <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ التكلفة</button>`:''}
+    <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget(event.currentTarget)">حفظ التكلفة</button>`:''}
     </div>`;
   }
 
@@ -3059,52 +3059,57 @@ window.A={
     await loadAll();renderAdmin();
     toast(newVal==='false'?'🔒 التسجيل مغلق':'✅ التسجيل مفعّل');
   },
-  async saveSlotLocationFromSel(slotId){
-    const sel=document.getElementById('slotLocSel_'+slotId);
-    if(!sel)return;
-    const locId=sel.value;
-    const loc=locId?D.locations.find(l=>l.id===locId):null;
-    const H={...apiHeaders(),'Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
-      location_name:loc?.name||null,location_address:loc?.address||null,
-      location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
-    })});
-    await loadAll();closeModal('calSlotModal');render();toast('✅ تم حفظ الموقع');
+  async saveSlotLocationFromSel(slotId,btn){
+    await withLoading(btn,async()=>{
+      const sel=document.getElementById('slotLocSel_'+slotId);
+      if(!sel)return;
+      const locId=sel.value;
+      const loc=locId?D.locations.find(l=>l.id===locId):null;
+      const H={...apiHeaders(),'Prefer':'return=minimal'};
+      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
+        location_name:loc?.name||null,location_address:loc?.address||null,
+        location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
+      })});
+      await loadAll();closeModal('calSlotModal');render();toast('✅ تم حفظ الموقع');
+    });
   },
-  async saveSlotLocation(slotId){
-    const locName=document.getElementById('slotLocName_'+slotId)?.value.trim()||null;
-    const locAddr=document.getElementById('slotLocAddr_'+slotId)?.value.trim()||null;
-    const locMap=document.getElementById('slotLocMap_'+slotId)?.value.trim()||null;
-    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
-      body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
-    await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
+  async saveSlotLocation(slotId,btn){
+    await withLoading(btn,async()=>{
+      const locName=document.getElementById('slotLocName_'+slotId)?.value.trim()||null;
+      const locAddr=document.getElementById('slotLocAddr_'+slotId)?.value.trim()||null;
+      const locMap=document.getElementById('slotLocMap_'+slotId)?.value.trim()||null;
+      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
+        body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
+      await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
+    });
   },
-  async saveSlotBudget(slotId){
-    const amt=parseFloat(document.getElementById('slotBudgetInp_'+slotId)?.value)||null;
-    const notes=document.getElementById('slotBudgetNotes_'+slotId)?.value.trim()||null;
-    const slot=D.slots.find(s=>s.id===slotId);
-    await patchRow('slots',slotId,{budget:amt,budget_notes:notes});
-    if(slot){slot.budget=amt;slot.budget_notes=notes;}
-    const s=D.slots.find(x=>x.id===slotId);
-    if(s) openCalSlotModal(s);
-    if(amt){
-      const perPerson=D.team.length?Math.round(amt/D.team.length):0;
-      await notifyAll('general',`تم تحديد تكلفة طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amt).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
-    }
-    loadAll().catch(()=>{});
-    toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
+  async saveSlotBudget(slotId,btn){
+    await withLoading(btn,async()=>{
+      const amt=parseFloat(document.getElementById('slotBudgetInp_'+slotId)?.value)||null;
+      const notes=document.getElementById('slotBudgetNotes_'+slotId)?.value.trim()||null;
+      const slot=D.slots.find(s=>s.id===slotId);
+      await patchRow('slots',slotId,{budget:amt,budget_notes:notes});
+      if(slot){slot.budget=amt;slot.budget_notes=notes;}
+      const s=D.slots.find(x=>x.id===slotId);
+      if(s) openCalSlotModal(s);
+      if(amt){
+        const perPerson=D.team.length?Math.round(amt/D.team.length):0;
+        await notifyAll('general',`تم تحديد تكلفة طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amt).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
+      }
+      loadAll().catch(()=>{});
+      toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
+    });
   },
-  async saveSlotTitle(slotId){
-    const inp=document.getElementById('slotTitleInp_'+slotId);
-    if(!inp)return;
-    const title=inp.value.trim()||null;
-    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
-    await loadAll();
-    closeModal('calSlotModal');
-    render();
-    toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
+  async saveSlotTitle(slotId,btn){
+    await withLoading(btn,async()=>{
+      const inp=document.getElementById('slotTitleInp_'+slotId);
+      if(!inp)return;
+      const title=inp.value.trim()||null;
+      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
+      await loadAll();closeModal('calSlotModal');render();toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
+    });
   },
   async toggleAnnualPay(name,year,currentPaid){
     const newPaid=!currentPaid;
