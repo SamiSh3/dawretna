@@ -847,7 +847,16 @@ async function loadAll(){
     session?fetchWithTimeout(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50'):Promise.resolve([]),
   ]);
   D.memories=memories||[]; D.reminders=reminders||[];
-  if(session) D.notifications=notifications||[];
+  if(session){
+    const prev=D.notifications.map(n=>n.id);
+    D.notifications=notifications||[];
+    // أظهر popup لأي تنبيه غير مقروء جديد
+    const unread=D.notifications.filter(n=>!n.read&&!prev.includes(n.id));
+    if(unread.length){
+      playNotifSound();
+      showNotifPopup(unread[0]);
+    }
+  }
   updateNotifBadge();
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
