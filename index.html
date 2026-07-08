@@ -1876,7 +1876,7 @@ function renderHome(){
       h+=`<div class="card" style="margin-bottom:10px;${isNext?'border:2px solid var(--amber);':''}cursor:pointer;" onclick="A.openSlot('${s.id}')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
           <div>
-            ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">القادم</div>`:''}
+            ${isNext?`<div style="font-size:10px;color:var(--amber);font-weight:700;margin-bottom:3px;">⭐ القادم</div>`:''}
             ${s.title?`<div style="font-size:13px;font-weight:700;color:var(--amber);">${esc(s.title)}</div>`:''}
             <div style="font-size:15px;font-weight:700;">${esc(toGregShort(s.date))}</div>
             <div style="font-size:11px;color:var(--amber);font-family:var(--fm);">${esc(toHijri(s.date,s.hijri_offset||0))}</div>
@@ -1887,15 +1887,12 @@ function renderHome(){
             <div style="font-size:10px;color:var(--muted);margin-top:2px;">بعد ${du} يوم</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
-          ${s.host_name===myName()?
-            `<div style="font-size:12px;color:var(--sage);font-weight:700;">🏠 أنت المضيف</div>` :
-            myRv?.status==='yes'?`<div style="font-size:12px;color:var(--sage);font-weight:700;">✅ سأحضر</div>`:
-            myRv?.status==='no'?`<div style="font-size:12px;color:var(--danger);font-weight:700;">🙅 اعتذر</div>`:
-            `<div style="font-size:12px;color:var(--muted);">⏳ لم تحدد</div>`
-          }
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:12px;${s.host_name===myName()?'color:var(--sage);':'color:var(--muted);'}font-weight:700;">
+            ${s.host_name===myName()?'🏠 أنت المضيف':myRv?.status==='yes'?'✅ سأحضر':myRv?.status==='no'?'🙅 اعتذر':'⏳ لم تحدد'}
+          </div>
           ${!s.host_name?`<button class="btn btn-primary btn-xs" onclick="event.stopPropagation();bookSlot('${s.id}')">🙋 أحجز</button>`:''}
-          <div style="margin-right:auto;font-size:11px;color:var(--amber);font-weight:700;cursor:pointer;" onclick="A.openSlot('${s.id}')">📋 التفاصيل ◀</div>
+          <div style="margin-right:auto;font-size:11px;color:var(--amber);font-weight:700;">📋 التفاصيل ←</div>
         </div>
       </div>`;
     });
