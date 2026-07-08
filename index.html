@@ -1059,7 +1059,24 @@ function nowRiyadh(){ return new Date(todayISO()+'T00:00:00'); }
 function daysUntil(d){
   const today = new Date(todayISO()+'T00:00:00');
   return Math.round((new Date(d+'T00:00:00')-today)/86400000);
-}function toast(m,t){const el=document.getElementById('toast');el.textContent=m;el.className=t==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
+}
+// ── Loading helpers ──
+function toast(m,t){const el=document.getElementById('toast');el.textContent=m;el.className=t==='error'?'show error':'show';clearTimeout(toast._t);toast._t=setTimeout(()=>el.className='',2800);}
+
+// تعطيل زر وإظهار spinner أثناء الإرسال
+async function withLoading(btn,fn){
+  if(!btn)return fn();
+  const orig=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin" style="width:14px;height:14px;border-width:2px;display:inline-block;"></span>';
+  try{await fn();}finally{btn.disabled=false;btn.innerHTML=orig;}
+}
+
+// شاشة loading عامة (نادراً)
+function showGlobalLoad(show){
+  const el=document.getElementById('globalLoad');
+  if(el)el.style.display=show?'flex':'none';
+}
 function openModal(id){document.getElementById(id)?.classList.remove('hidden');}
 function closeModal(id){document.getElementById(id)?.classList.add('hidden');}
 window.openModal=openModal;
@@ -1259,7 +1276,7 @@ async function deleteRow(table,id){
   await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
 }
 
-async function bookSlot(id){
+async function bookSlot(id,btn){
   const mn=myName();
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
@@ -1278,27 +1295,28 @@ async function bookSlot(id){
       return;
     }
   }
-  // تحديث فوري محلي
-  slot.host_name=mn;
-  render();
-  await patchRow('slots',id,{host_name:mn});
+  await withLoading(btn,async()=>{
+    slot.host_name=mn;
+    render();
+    await patchRow('slots',id,{host_name:mn});
+  });
   await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
   toast('تم الحجز 🏕️');
 }
 
-async function cancelBookSlot(id){
+async function cancelBookSlot(id,btn){
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
   if(!myProfile?.is_admin&&slot.host_name!==myName()){toast('ليس لك صلاحية','error');return;}
   if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
   const oldHost=slot.host_name;
-  // تحديث فوري محلي
-  slot.host_name=null;
-  render();
-  // أعد فتح الـ modal بالبيانات المحدثة
-  openCalSlotModal(slot);
-  await patchRow('slots',id,{host_name:null});
+  await withLoading(btn,async()=>{
+    slot.host_name=null;
+    render();
+    openCalSlotModal(slot);
+    await patchRow('slots',id,{host_name:null});
+  });
   await notifyAll('general',`${esc(oldHost||myName())} ألغى حجز طلعة 📅`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
   toast('تم إلغاء الحجز');
@@ -2167,8 +2185,8 @@ function openCalSlotModal(slot){
     ):''}
 
     <!-- حجز / إلغاء -->
-    ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}')">🙋 احجز هذا الموعد</button>`:''}
-    ${slot.host_name&&!isPast&&slot.host_name===myName()?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}')">↩️ إلغاء الحجز</button>`:''}
+    ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}',event.currentTarget)">🙋 احجز هذا الموعد</button>`:''}
+    ${slot.host_name&&!isPast&&slot.host_name===myName()?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}',event.currentTarget)">↩️ إلغاء الحجز</button>`:''}
 
     <!-- تبديل -->
     ${(()=>{
