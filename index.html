@@ -2122,8 +2122,8 @@ function openCalSlotModal(slot){
       slot.host_name===myName()?
       `<div class="note" style="color:var(--sage);text-align:center;margin-bottom:10px;border-color:var(--sage);">🏠 أنت المضيف — حضورك مؤكد</div>`:
       `<div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${slot.id}','yes')">✅ سأحضر</button>
-        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${slot.id}','no')">🙅 أعتذر</button>
+        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','yes')">✅ سأحضر</button>
+        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
       </div>`
     ):''}
 
