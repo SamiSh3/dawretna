@@ -1793,9 +1793,9 @@ function renderHome(){
   }
 
   // قائمة كل الطلعات القادمة مع RSVP
-  const allSlots=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date));
+  const allSlots=D.slots.filter(s=>daysUntil(s.date)>=0&&s.id!==next?.id).sort((a,b)=>a.date.localeCompare(b.date));
   if(allSlots.length){
-    h+=`<div class="h2" style="font-size:15px;margin-bottom:10px;">📅 جميع المواعيد القادمة</div>`;
+    h+=`<div class="h2" style="font-size:15px;margin-bottom:10px;">📅 مواعيد قادمة أخرى</div>`;
     allSlots.forEach(s=>{
       const myRv=D.rsvps.find(r=>r.slot_id===s.id&&r.member_name===myName());
       const du=daysUntil(s.date);
