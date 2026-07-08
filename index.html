@@ -2885,7 +2885,12 @@ window.A={
   },
   calClick(d){selectedDate=d;renderCalendar();},
   async adjHijriCal(id,delta){await adjustHijri(id,delta);const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);},
-  openSlot(id){const s=D.slots.find(x=>x.id===id);if(s)openCalSlotModal(s);else toast('لم يتم العثور على الطلعة','error');},
+  openSlot(id){
+    alert('openSlot called: '+id+' | slots: '+D.slots.length+' | found: '+(D.slots.find(x=>x.id===id)?'yes':'no'));
+    const s=D.slots.find(x=>x.id===id);
+    if(s) openCalSlotModal(s);
+    else toast('لم يتم العثور على الطلعة','error');
+  },
   rsvpCal(slotId,status){
     const mn=myName();
     if(!mn)return;
