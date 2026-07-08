@@ -2087,25 +2087,6 @@ function openCalSlotModal(slot){
   const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
   const outSw=myName()?D.swaps.find(s=>s.from_slot_id===slot.id&&s.requester_name===myName()):null;
 
-  // تحديث الـ swaps في الخلفية لالتقاط أي طلبات جديدة
-  if(session&&slot.host_name===myName()){
-    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
-    fetch(SB_URL+'/rest/v1/swap_requests?select=*&status=eq.pending&to_slot_id=eq.'+slot.id,{headers:H})
-      .then(r=>r.ok?r.json():[])
-      .then(newSwaps=>{
-        if(newSwaps.length){
-          newSwaps.forEach(sw=>{
-            if(!D.swaps.find(s=>s.id===sw.id)) D.swaps.push(sw);
-          });
-          // أعد رسم المحتوى فقط بدون فتح modal جديد
-          if(document.getElementById('calSlotModal')&&!document.getElementById('calSlotModal').classList.contains('hidden')){
-            const fresh=D.swaps.find(s=>s.to_slot_id===slot.id);
-            if(fresh) renderSwapSection(slot);
-          }
-        }
-      }).catch(()=>{});
-  }
-
   let h=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
       <div>
