@@ -1943,7 +1943,8 @@ function renderHome(){
   // ربط الكروت بـ addEventListener لضمان عمل الضغط على أي جهاز
   document.querySelectorAll('[data-open-slot]').forEach(function(card){
     card.addEventListener('click',function(e){
-      if(e.target.tagName==='BUTTON')return; // تجاهل ضغط الأزرار
+      // تجاهل فقط زر "أحجز" اللي عنده stopPropagation
+      if(e.target.closest('.btn-primary')&&e.target.closest('.btn-primary').getAttribute('onclick')?.includes('bookSlot'))return;
       const id=this.getAttribute('data-open-slot');
       const s=D.slots.find(x=>x.id===id);
       if(s) openCalSlotModal(s);
