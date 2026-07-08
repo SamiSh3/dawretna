@@ -1779,7 +1779,7 @@ function renderHome(){
     let yes=0,no=0,pnd=0;
     const chips=D.team.map(t=>{const rv=sRsvp.find(r=>r.member_name===t.name);if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;else pnd++;const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;}).join('');
     const inSw=myName()&&next.host_name===myName()?D.swaps.find(s=>s.to_slot_id===next.id):null;
-    const outSw=myName()?D.swaps.find(s=>s.from_slot_id===next.id&&s.requester_name===myName()):null;
+    const outSw=myName()?D.swaps.find(s=>s.from_slot_id===next.id&&s.requester_name===myName())||D.swaps.find(s=>s.to_slot_id===next.id&&s.requester_name===myName()):null;
 
     h+=`<div class="hero">
       <div class="hero-label">الموعد القادم</div>
@@ -1811,6 +1811,7 @@ function renderHome(){
     if(myProfile?.is_admin){
       h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${next.id}')">💰 ${next.budget?'تعديل الميزانية':'إضافة ميزانية'}</button>`;
     }
+    // خيار التبديل - يظهر لمن ليس المضيف ويملك طلعة أخرى
     if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw){
       const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
       if(mySlots.length){
@@ -1821,8 +1822,11 @@ function renderHome(){
           </select>
           <button class="btn btn-primary btn-sm btn-block" onclick="sendHomeSwap('${next.id}')">📤 إرسال طلب التبديل</button>
         </div>`;
+      } else {
+        h+=`<div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center;">لا يمكن طلب تبديل — احجز موعداً أولاً</div>`;
       }
     }
+    // طلعتك - تظهر طلبات التبديل الواردة
     if(inSw){
       const from=D.slots.find(s=>s.id===inSw.from_slot_id);
       const fromInfo=from?' مقابل ('+esc(toGregShort(from.date))+')':'';
