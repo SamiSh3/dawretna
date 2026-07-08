@@ -1729,10 +1729,13 @@ function renderHome(){
       </div>
       <div class="attendees">${chips||''}</div>
       ${chips?`<div class="muted" style="font-size:11px;margin-bottom:10px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${pnd}</div>`:''}
-      <div class="rsvp-row">
-        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','yes')">✅ سأحضر</button>
-        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','no')">🙅 أعتذر</button>
-      </div>`;
+      ${next.host_name===myName()?
+        `<div style="font-size:13px;color:var(--sage);font-weight:700;margin-bottom:10px;text-align:center;">🏠 أنت المضيف — حضورك مؤكد</div>`:
+        `<div class="rsvp-row">
+          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','yes')">✅ سأحضر</button>
+          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="setRsvp('${next.id}','no')">🙅 أعتذر</button>
+        </div>`
+      }`;
 
     if(!next.host_name){h+=`<button class="btn btn-primary btn-block btn-sm" style="margin-top:6px;" onclick="bookSlot('${next.id}')">🙋 احجز هذا الموعد</button>`;}
     
