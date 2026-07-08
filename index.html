@@ -1334,8 +1334,12 @@ async function resolveSwap(swapId,accept){
     await patchRow('slots',fs.id,{host_name:tsOrigHost||null});
     await patchRow('slots',ts.id,{host_name:fsOrigHost||null});
     await patchRow('swap_requests',swapId,{status:'accepted'});
+    // تنبيه للمرسل (يوديه لطلعته الجديدة = ts)
     await notify(fsOrigHost||'','swap_accepted','طلب التبديل قُبل ✅',
-      `تم تبديل ${toGregShort(fs.date)} مع ${toGregShort(ts.date)}`,sw.from_slot_id);
+      `صار لك يوم ${toGregShort(ts.date)} بدل ${toGregShort(fs.date)}`,ts.id);
+    // تنبيه للمستقبِل (يوديه لطلعته الجديدة = fs)
+    await notify(tsOrigHost||'','swap_accepted','تم تبديل المواعيد ✅',
+      `صار لك يوم ${toGregShort(fs.date)} بدل ${toGregShort(ts.date)}`,fs.id);
     toast('✅ تم التبديل بنجاح');
   } else {
     D.swaps=D.swaps.filter(s=>s.id!==swapId);
