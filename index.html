@@ -1847,7 +1847,7 @@ function renderHome(){
       const murl=mapUrl||(lat?`https://maps.google.com/?q=${lat},${lng}`:'');
       h+=`<a class="map-btn" href="${esc(murl)}" target="_blank" rel="noopener">🗺️ فتح في خرائط جوجل</a>`;
     }
-    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" onclick="window._openSlot('${next.id}')">📋 عرض تفاصيل الطلعة</button>`;
+    h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px;" onclick="alert('slot: '+'${next.id}'+'  A exists: '+(typeof window.A))">📋 عرض تفاصيل (اختبار)</button>`;
     h+=`</div>`;
   } else {
     h+=`<div class="empty"><span class="ei">📅</span>ما فيه مواعيد قادمة.</div>`;
