@@ -128,7 +128,7 @@ button,input,textarea,select{font-family:inherit;}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg-el);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;z-index:40;padding-bottom:env(safe-area-inset-bottom);}
 .bottom-nav-inner{display:flex;width:100%;max-width:520px;}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px 6px;cursor:pointer;border:none;background:transparent;color:var(--muted);font-size:10px;font-weight:700;transition:.15s;position:relative;}
-.nav-item .nav-icon{font-size:20px;line-height:1;}
+.nav-item .nav-icon{font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;height:24px;}
 .nav-item.active{color:var(--amber);}
 .nav-item .nav-badge{position:absolute;top:5px;right:calc(50% - 14px);background:var(--danger);color:#fff;font-size:9px;min-width:15px;height:15px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg-el);}
 
@@ -429,17 +429,13 @@ details.dg[open] summary::before{transform:rotate(90deg);}
     <div class="bottom-nav-inner">
       <button class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span>الرئيسية</button>
       <button class="nav-item" data-tab="calendar">
-        <span class="nav-icon" id="calNavIcon" style="display:flex;align-items:center;justify-content:center;">
-          <svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- جسم التقويم أبيض -->
+        <span class="nav-icon" id="calNavIcon">
+          <svg width="22" height="22" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
             <rect x="1" y="4" width="24" height="21" rx="4" fill="white" stroke="#e0e0e0" stroke-width="0.5"/>
-            <!-- الشريط الأحمر العلوي -->
             <rect x="1" y="4" width="24" height="8" rx="4" fill="#E53935"/>
             <rect x="1" y="8" width="24" height="4" fill="#E53935"/>
-            <!-- ضامتا التقويم -->
             <rect x="7" y="1.5" width="2.5" height="6" rx="1.25" fill="#B71C1C"/>
             <rect x="16.5" y="1.5" width="2.5" height="6" rx="1.25" fill="#B71C1C"/>
-            <!-- رقم اليوم -->
             <text x="13" y="21.5" text-anchor="middle" font-size="10" font-weight="900" fill="#1a1a1a" font-family="system-ui,-apple-system,sans-serif" id="calDayText">5</text>
           </svg>
         </span>التقويم
