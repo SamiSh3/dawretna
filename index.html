@@ -2748,6 +2748,8 @@ function renderSettings(){
       <p style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">اضغط ثم وافق على طلب الإذن</p>`
     }
   </div>`;
+  // موقع الشاليه (للمشرفين فقط)
+  if(myProfile?.is_admin){
     h+=`<div class="card"><div class="h2">📍 مواقع الاجتماع</div>
     <p class="hint" style="margin-top:4px;">تظهر كقائمة عند إنشاء طلعة جديدة. ★ = الافتراضي.</p>
     ${D.locations.map(l=>`<div class="rem-row">
