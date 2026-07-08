@@ -1554,24 +1554,48 @@ function openNotifPopup(){
   if(!body)return;
   if(!D.notifications.length){
     body.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px;">🔔 لا يوجد تنبيهات</div>`;
-  }else{
-    const icons2={week_reminder:'⏰',three_day_reminder:'⏰',day_reminder:'🔥',swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
-    body.innerHTML=D.notifications.map(n=>{
-      const sid=n.related_slot_id;
-      let act=`A.markRead('${n.id}');closeNotifPopup();`;
-      if(sid) act+=`setTab('calendar');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${sid}');if(s)openCalSlotModal(s);},300);`;
-      else if(n.type==='slot_booked'||n.type==='general') act+=`setTab('home');`;
-      return`<div class="notif-panel-item ${n.read?'':'unread'}" style="cursor:pointer;">
-        <span style="font-size:20px;flex-shrink:0;" onclick="${act}">${icons2[n.type]||'🔔'}</span>
-        <div style="flex:1;min-width:0;" onclick="${act}">
+  } else {
+    body.innerHTML=D.notifications.map(n=>`
+      <div class="notif-panel-item ${n.read?'':'unread'}" data-nid="${n.id}" data-sid="${n.related_slot_id||''}" data-type="${n.type||''}">
+        <span style="font-size:20px;flex-shrink:0;">${icons[n.type]||'🔔'}</span>
+        <div style="flex:1;min-width:0;cursor:pointer;" class="notif-nav">
           <div style="font-size:13px;font-weight:700;">${esc(n.title)}</div>
           ${n.body?`<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(n.body)}</div>`:''}
-          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}${sid?' · انتقال ◀':''}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:3px;font-family:var(--fm);">${timeAgo(n.created_at)}${n.related_slot_id?' · انتقال ◀':''}</div>
         </div>
-        <button onclick="event.stopPropagation();A.deleteNotif('${n.id}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px 6px;flex-shrink:0;">✕</button>
-        ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;margin-top:4px;"></div>`:''}
-      </div>`;
-    }).join('');
+        <button class="notif-del-btn" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:6px 8px;flex-shrink:0;line-height:1;">✕</button>
+        ${!n.read?`<div style="width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0;"></div>`:''}
+      </div>`).join('');
+
+    // ربط أحداث الضغط برمجياً
+    body.querySelectorAll('[data-nid]').forEach(row=>{
+      const nid=row.dataset.nid;
+      const sid=row.dataset.sid;
+      const type=row.dataset.type;
+
+      // زر الحذف ✕
+      row.querySelector('.notif-del-btn')?.addEventListener('click',async function(e){
+        e.stopPropagation();
+        e.preventDefault();
+        D.notifications=D.notifications.filter(n=>n.id!==nid);
+        updateNotifBadge();
+        openNotifPopup(); // أعد رسم الـ popup فقط
+        const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)};
+        fetch(SB_URL+'/rest/v1/notifications?id=eq.'+nid,{method:'DELETE',headers:H}).catch(()=>{});
+      });
+
+      // الضغط على محتوى التنبيه للتنقل
+      row.querySelector('.notif-nav')?.addEventListener('click',function(){
+        markRead(nid);
+        closeNotifPopup();
+        if(sid){
+          setTab('calendar');
+          setTimeout(()=>{const s=D.slots.find(x=>x.id===sid);if(s)openCalSlotModal(s);},300);
+        } else if(type==='slot_booked'||type==='general'){
+          setTab('home');
+        }
+      });
+    });
   }
   document.getElementById('notifPopup').classList.add('open');
 }
