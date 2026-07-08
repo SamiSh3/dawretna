@@ -920,12 +920,19 @@ function showNotifPopup(notif){
       <button id="npClose" style="padding:10px 14px;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:10px;font-size:13px;cursor:pointer;">إغلاق</button>
     </div>`;
   document.body.appendChild(popup);
-  const close=()=>popup.remove();
+  const close=()=>{
+    popup.remove();
+    // علّم كمقروء عند الإغلاق
+    markRead(notif.id);
+    const n=D.notifications.find(x=>x.id===notif.id);
+    if(n) n.read=true;
+    updateNotifBadge();
+  };
   popup.querySelector('#npX').onclick=close;
   popup.querySelector('#npClose').onclick=close;
   const go=popup.querySelector('#npGo');
   if(go) go.onclick=()=>{
-    close();markRead(notif.id);
+    close();
     if(notif.related_slot_id){
       setTab('calendar');
       setTimeout(()=>{const s=D.slots.find(x=>x.id===notif.related_slot_id);if(s)openCalSlotModal(s);},400);
