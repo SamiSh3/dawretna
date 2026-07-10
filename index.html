@@ -662,6 +662,9 @@ async function afterLogin(){
   checkAutoReminders().catch(()=>{});
   // فحص تنبيهات جديدة كل 30 ثانية
   setInterval(pollNotifications,8000);
+  // تحقق من انتهاء صلاحية طلبات التبديل كل دقيقة
+  setInterval(expireOldSwaps,60000);
+  expireOldSwaps(); // تشغيل فوري عند التحميل
   startRealtimeNotifs();
   requestNotifPermission(); // طلب إذن تنبيهات نظام التشغيل
 }
@@ -1020,6 +1023,30 @@ async function pollNotifications(){
 }
 
 // Realtime: تنبيهات فورية بدون polling
+// انتهاء صلاحية طلبات التبديل تلقائياً بعد 24 ساعة
+async function expireOldSwaps(){
+  if(!session||!D.swaps.length)return;
+  const now=Date.now();
+  const expired=D.swaps.filter(sw=>{
+    if(!sw.created_at)return false;
+    const age=now-new Date(sw.created_at).getTime();
+    return age>24*60*60*1000; // أكثر من 24 ساعة
+  });
+  if(!expired.length)return;
+  const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+  for(const sw of expired){
+    // تحديث محلي
+    D.swaps=D.swaps.filter(s=>s.id!==sw.id);
+    // إلغاء في DB
+    fetch(SB_URL+'/rest/v1/swap_requests?id=eq.'+sw.id,{method:'PATCH',headers:H,
+      body:JSON.stringify({status:'expired'})}).catch(()=>{});
+    // تنبيه للمرسِل بانتهاء الصلاحية
+    await notify(sw.requester_name,'general','انتهت صلاحية طلب التبديل ⏱️',
+      'لم يستجب العضو خلال 24 ساعة — يمكنك إرسال طلب جديد',sw.from_slot_id).catch(()=>{});
+  }
+  if(expired.length)render();
+}
+
 function startRealtimeNotifs(){
   if(!session||!window.supabase)return;
   try{
