@@ -2239,7 +2239,7 @@ function openCalSlotModal(slot){
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">✏️ عنوان الطلعة</div>
     <div style="display:flex;gap:6px;margin-bottom:10px;">
       <input type="text" id="slotTitleInp_${slot.id}" value="${esc(slot.title||'')}" placeholder="مثال: شواء الصيف، طلعة الربيع..." style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:8px 10px;font-size:13px;outline:none;">
-      <button class="btn btn-primary btn-sm" onclick="A.saveSlotTitle('${slot.id}',event.currentTarget)">حفظ</button>
+      <button class="btn btn-primary btn-sm" onclick="A.saveSlotTitle('${slot.id}')">حفظ</button>
     </div>
     <hr class="sep" style="margin:10px 0;">
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">📍 موقع الطلعة</div>
@@ -2250,7 +2250,7 @@ function openCalSlotModal(slot){
         ${esc(l.name)}${l.address?' — '+esc(l.address):''}${l.is_default?' ⭐':''}
       </option>`).join('')}
     </select>
-    <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocationFromSel('${slot.id}',event.currentTarget)">💾 حفظ الموقع</button>
+    <button class="btn btn-ghost btn-sm btn-block" onclick="A.saveSlotLocationFromSel('${slot.id}')">💾 حفظ الموقع</button>
     `:`
     ${slot.location_name||slot.location_address?`
       <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${esc(slot.location_name||'')}</div>
@@ -2264,7 +2264,7 @@ function openCalSlotModal(slot){
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">💰 تكلفة الطلعة</div>
     <div style="display:flex;gap:6px;margin-bottom:6px;">
       <input type="number" id="slotBudgetInp_${slot.id}" value="${slot.budget||''}" placeholder="التكلفة الكلية (﷼)" style="flex:1;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:13px;outline:none;" min="0">
-      <button class="btn btn-primary btn-sm" onclick="A.saveSlotBudget('${slot.id}',event.currentTarget)">حفظ</button>
+      <button class="btn btn-primary btn-sm" onclick="A.saveSlotBudget('${slot.id}')">حفظ</button>
     </div>
     <input type="text" id="slotBudgetNotes_${slot.id}" value="${esc(slot.budget_notes||'')}" placeholder="ملاحظات التكلفة (اختياري)" style="width:100%;box-sizing:border-box;background:var(--bg-soft);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;outline:none;margin-bottom:4px;">
     ${slot.budget?`<div style="font-size:11px;color:var(--muted);">نصيب الفرد: <b style="color:var(--amber);">${Math.round(slot.budget/(D.team.length||1)).toLocaleString('ar')} ﷼</b></div>`:''}
@@ -2395,14 +2395,14 @@ function renderTrips(){
       <div class="muted" style="font-size:12px;">${esc(toGreg(t.date))}${t.location?' · '+esc(t.location):''}</div>
       <div style="font-size:11px;color:var(--amber);margin-top:3px;">${esc(toHijri(t.date,0))}</div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:5px;">👥 ${pts.length}: ${pts.map(esc).join('، ')||'—'}</div>
-      <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:8px;" onclick="A.toggleJoin('${t.id}',event.currentTarget)">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
+      <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:8px;" onclick="A.toggleJoin('${t.id}')">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
     });
   } else {
     h+=`<div class="card"><div class="h2">📊 استطلاع جديد</div>
     <div class="field"><label>السؤال</label><input type="text" id="pollQ" placeholder="وش نطبخ؟"></div>
     <div id="pollOpts"><div class="field"><label>خيار ١</label><input type="text" class="pi" placeholder="خيار..."></div>
     <div class="field"><label>خيار ٢</label><input type="text" class="pi" placeholder="خيار..."></div></div>
-    <div style="margin-bottom:10px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt(event.currentTarget)">+ خيار</button></div>
+    <div style="margin-bottom:10px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt()">+ خيار</button></div>
     <button class="btn btn-primary btn-block" onclick="A.createPoll()">إنشاء</button></div>`;
     if(!D.polls.length)h+=`<div class="empty"><span class="ei">📊</span>لا يوجد استطلاعات.</div>`;
     else D.polls.forEach(poll=>{
@@ -2483,8 +2483,8 @@ function renderBudget(){
     const amt=Number(share).toLocaleString('ar')+' ﷼';
     let btn='';
     if(myProfile?.is_admin){
-      if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}','${sn}',event.currentTarget)">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
-      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey},${hasPaid},event.currentTarget)">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}','${sn}')">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey},${hasPaid})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
     }
     return `<div class="member-payment-row">
       <div class="payment-av">${m.name[0]}</div>
@@ -2519,7 +2519,7 @@ function renderBudget(){
       </div>
     </div>
     <div class="note" style="margin-bottom:8px;">نصيب كل عضو: <b style="color:var(--amber);">${D.team.length&&annualBudget?Math.round(annualBudget/D.team.length).toLocaleString('ar'):0} ﷼</b></div>
-    <button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget(event.currentTarget)">حفظ الاشتراك</button>`:''}
+    <button class="btn btn-primary btn-block" onclick="A.saveAnnualBudget()">حفظ الاشتراك</button>`:''}
 
     ${budgetType==='per_slot'?`
     <hr class="sep">
@@ -2533,7 +2533,7 @@ function renderBudget(){
       <div class="field"><label>التكلفة الكلية (﷼)</label><input type="number" id="inlineBudgetAmt" placeholder="مثال: 2000" min="0"></div>
       <div class="field"><label>ملاحظات</label><input type="text" id="inlineBudgetNotes" placeholder="اختياري"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget(event.currentTarget)">حفظ التكلفة</button>`:''}
+    <button class="btn btn-primary btn-block" onclick="A.saveInlineBudget()">حفظ التكلفة</button>`:''}
     </div>`;
   }
 
@@ -2735,7 +2735,7 @@ function renderMore(){
     <div class="field"><label>الوصف</label><textarea id="memC" placeholder="وش صار؟"></textarea></div>
     <div class="field"><label>رابط صورة</label><input type="url" id="memI" placeholder="https://..."></div>
     <div class="field"><label>التاريخ</label><input type="date" id="memD" value="${todayISO()}"></div>
-    <button class="btn btn-primary btn-block" onclick="A.addMem(event.currentTarget)">إضافة</button></div>`;
+    <button class="btn btn-primary btn-block" onclick="A.addMem()">إضافة</button></div>`;
     if(!D.memories.length)h+=`<div class="empty"><span class="ei">📷</span>لا توجد ذكريات.</div>`;
     else D.memories.forEach(m=>{
       h+=`<div class="mem-card">`;
@@ -2764,7 +2764,7 @@ function renderMore(){
       <div class="muted" style="font-size:12px;">${esc(toGreg(t.date))}${t.location?' · '+esc(t.location):''}</div>
       <div style="font-size:11px;color:var(--amber);margin-top:3px;">${esc(toHijri(t.date,0))}</div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:5px;">👥 ${pts.length}: ${pts.map(esc).join('، ')||'—'}</div>
-      <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:8px;" onclick="A.toggleJoin('${t.id}',event.currentTarget)">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
+      <button class="btn ${joined?'btn-sage':'btn-ghost'} btn-sm" style="margin-top:8px;" onclick="A.toggleJoin('${t.id}')">${joined?'✅ منضم (اضغط للخروج)':'🙋 انضم'}</button></div>`;
     });
 
   } else {
@@ -2773,7 +2773,7 @@ function renderMore(){
     <div class="field"><label>السؤال</label><input type="text" id="pollQ" placeholder="وش نطبخ؟"></div>
     <div id="pollOpts"><div class="field"><label>خيار ١</label><input type="text" class="pi" placeholder="خيار..."></div>
     <div class="field"><label>خيار ٢</label><input type="text" class="pi" placeholder="خيار..."></div></div>
-    <div style="margin-bottom:10px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt(event.currentTarget)">+ خيار</button></div>
+    <div style="margin-bottom:10px;"><button class="btn btn-ghost btn-sm" onclick="A.addPollOpt()">+ خيار</button></div>
     <button class="btn btn-primary btn-block" onclick="A.createPoll()">إنشاء</button></div>`;
     if(!D.polls.length)h+=`<div class="empty"><span class="ei">📊</span>لا يوجد استطلاعات.</div>`;
     else D.polls.forEach(poll=>{
@@ -2848,7 +2848,7 @@ function renderSettings(){
       <div class="field"><label>Lat</label><input type="number" id="locLat" step="any" placeholder="24.71"></div>
       <div class="field"><label>Lng</label><input type="number" id="locLng" step="any" placeholder="46.67"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.addLocation(event.currentTarget)">إضافة موقع</button></div>
+    <button class="btn btn-primary btn-block" onclick="A.addLocation()">إضافة موقع</button></div>
 `;
     h+=`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
     <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>
@@ -2860,7 +2860,7 @@ function renderSettings(){
       </div>
       <button class="btn ${D.settings.allow_multi_booking==='true'?'btn-sage':'btn-ghost'} btn-sm"
         style="flex-shrink:0;min-width:80px;"
-        onclick="A.toggleMultiBooking(${D.settings.allow_multi_booking!=='true'},event.currentTarget)">
+        onclick="A.toggleMultiBooking(${D.settings.allow_multi_booking!=='true'})">
         ${D.settings.allow_multi_booking==='true'?'✅ مفعّل':'⭕ معطّل'}
       </button>
     </div></div>`;
@@ -2877,7 +2877,7 @@ function renderSettings(){
   h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
   D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}${myProfile?.is_admin?`<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button>`:''}</span>`);
   if(myProfile?.is_admin){
-    h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember(event.currentTarget)">إضافة</button></div>`;
+    h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div>`;
   } else {
     h+=`</div>`;
   }
@@ -2902,7 +2902,7 @@ async function renderAdmin(){
         <div style="font-size:13.5px;font-weight:700;">${regEnabled?'✅ التسجيل مفعّل':'🔒 التسجيل مغلق'}</div>
         <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${regEnabled?'يمكن للأعضاء الجدد إنشاء حسابات':'لا يمكن إنشاء حسابات جديدة'}</div>
       </div>
-      <button class="btn ${regEnabled?'btn-danger':'btn-sage'} btn-sm" onclick="A.toggleReg(${regEnabled},event.currentTarget)">
+      <button class="btn ${regEnabled?'btn-danger':'btn-sage'} btn-sm" onclick="A.toggleReg(${regEnabled})">
         ${regEnabled?'🔒 إغلاق':'✅ تفعيل'}
       </button>
     </div>
@@ -2919,7 +2919,7 @@ async function renderAdmin(){
       </div>
       <div style="display:flex;gap:4px;">
         <button class="btn btn-blue btn-xs" onclick="A.openEditUser('${p.id}','${esc(p.name||'')}','${esc(p.phone_wa||'')}','${esc(p.email||'')}')">✏️</button>
-        ${!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-ghost'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin},event.currentTarget)">${p.is_admin?'إلغاء':'مشرف'}</button>`:''}
+        ${!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-ghost'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin})">${p.is_admin?'إلغاء':'مشرف'}</button>`:''}
       </div>
     </div>`;
   });
@@ -2937,7 +2937,7 @@ function openEditUser(uid,name,phone,email){
 
 /* ════════════════ GLOBAL ACTIONS ════════════════ */
 window.A={
-  togglePay:(slotId,name,btn)=>togglePayment(slotId,name,btn),
+  togglePay:(slotId,name)=>togglePayment(slotId,name),
   book:bookSlot,rsvp:setRsvp,resolveSwap,adjHijri:adjustHijri,
   openSwap:openSwapModal,openNewSlot,
   logRem,sendCustom,openBudget:openBudgetModal,
@@ -3033,8 +3033,7 @@ window.A={
     playNotifSound();
     showNotifPopup({type:'general',title:'اختبار الصوت 🔊',body:'إذا سمعت هذا الصوت فالإشعارات تعمل!',related_slot_id:null});
   },
-  async toggleMultiBooking(val,btn){
-  await withLoading(btn,async()=>{
+  async toggleMultiBooking(val){
     D.settings.allow_multi_booking=val?'true':'false'; // تحديث فوري
     renderSettings(); // حدّث الزر فوراً
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
@@ -3042,8 +3041,7 @@ window.A={
       body:JSON.stringify({key:'allow_multi_booking',value:val?'true':'false'})});
     toast(val?'✅ مُفعَّل: يمكن حجز أكثر من طلعة في السنة':'⭕ مُعطَّل: حجز واحد فقط في السنة');
   },
-  async saveLocation(btn){
-  await withLoading(btn,async()=>{
+  async saveLocation(){
     const name=document.getElementById('sN')?.value.trim()||'دوريتنا';
     const address=document.getElementById('sA')?.value.trim()||'';
     const mapUrl=document.getElementById('sM')?.value.trim()||'';
@@ -3061,60 +3059,54 @@ window.A={
     await loadAll();renderAdmin();
     toast(newVal==='false'?'🔒 التسجيل مغلق':'✅ التسجيل مفعّل');
   },
-  async saveSlotLocationFromSel(slotId,btn){
-    await withLoading(btn,async()=>{
-      const sel=document.getElementById('slotLocSel_'+slotId);
-      if(!sel)return;
-      const locId=sel.value;
-      const loc=locId?D.locations.find(l=>l.id===locId):null;
-      const H={...apiHeaders(),'Prefer':'return=minimal'};
-      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
-        location_name:loc?.name||null,location_address:loc?.address||null,
-        location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
-      })});
-      await loadAll();closeModal('calSlotModal');render();toast('✅ تم حفظ الموقع');
-    });
+  async saveSlotLocationFromSel(slotId){
+    const sel=document.getElementById('slotLocSel_'+slotId);
+    if(!sel)return;
+    const locId=sel.value;
+    const loc=locId?D.locations.find(l=>l.id===locId):null;
+    const H={...apiHeaders(),'Prefer':'return=minimal'};
+    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
+      location_name:loc?.name||null,location_address:loc?.address||null,
+      location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
+    })});
+    await loadAll();closeModal('calSlotModal');render();toast('✅ تم حفظ الموقع');
   },
-  async saveSlotLocation(slotId,btn){
-    await withLoading(btn,async()=>{
-      const locName=document.getElementById('slotLocName_'+slotId)?.value.trim()||null;
-      const locAddr=document.getElementById('slotLocAddr_'+slotId)?.value.trim()||null;
-      const locMap=document.getElementById('slotLocMap_'+slotId)?.value.trim()||null;
-      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
-        body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
-      await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
-    });
+  async saveSlotLocation(slotId){
+    const locName=document.getElementById('slotLocName_'+slotId)?.value.trim()||null;
+    const locAddr=document.getElementById('slotLocAddr_'+slotId)?.value.trim()||null;
+    const locMap=document.getElementById('slotLocMap_'+slotId)?.value.trim()||null;
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
+      body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
+    await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
   },
-  async saveSlotBudget(slotId,btn){
-    await withLoading(btn,async()=>{
-      const amt=parseFloat(document.getElementById('slotBudgetInp_'+slotId)?.value)||null;
-      const notes=document.getElementById('slotBudgetNotes_'+slotId)?.value.trim()||null;
-      const slot=D.slots.find(s=>s.id===slotId);
-      await patchRow('slots',slotId,{budget:amt,budget_notes:notes});
-      if(slot){slot.budget=amt;slot.budget_notes=notes;}
-      const s=D.slots.find(x=>x.id===slotId);
-      if(s) openCalSlotModal(s);
-      if(amt){
-        const perPerson=D.team.length?Math.round(amt/D.team.length):0;
-        await notifyAll('general',`تم تحديد تكلفة طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amt).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
-      }
-      loadAll().catch(()=>{});
-      toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
-    });
+  async saveSlotBudget(slotId){
+    const amt=parseFloat(document.getElementById('slotBudgetInp_'+slotId)?.value)||null;
+    const notes=document.getElementById('slotBudgetNotes_'+slotId)?.value.trim()||null;
+    const slot=D.slots.find(s=>s.id===slotId);
+    await patchRow('slots',slotId,{budget:amt,budget_notes:notes});
+    if(slot){slot.budget=amt;slot.budget_notes=notes;}
+    const s=D.slots.find(x=>x.id===slotId);
+    if(s) openCalSlotModal(s);
+    if(amt){
+      const perPerson=D.team.length?Math.round(amt/D.team.length):0;
+      await notifyAll('general',`تم تحديد تكلفة طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amt).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
+    }
+    loadAll().catch(()=>{});
+    toast(amt?'تم حفظ التكلفة ✅':'تم حذف التكلفة');
   },
-  async saveSlotTitle(slotId,btn){
-    await withLoading(btn,async()=>{
-      const inp=document.getElementById('slotTitleInp_'+slotId);
-      if(!inp)return;
-      const title=inp.value.trim()||null;
-      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-      await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
-      await loadAll();closeModal('calSlotModal');render();toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
-    });
+  async saveSlotTitle(slotId){
+    const inp=document.getElementById('slotTitleInp_'+slotId);
+    if(!inp)return;
+    const title=inp.value.trim()||null;
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
+    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
+    await loadAll();
+    closeModal('calSlotModal');
+    render();
+    toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
   },
-  async toggleAnnualPay(name,year,currentPaid,btn){
-  await withLoading(btn,async()=>{
+  async toggleAnnualPay(name,year,currentPaid){
     const newPaid=!currentPaid;
     const existing=D.annualPayments.find(p=>p.member_name===name&&p.year===year);
     // Optimistic update
@@ -3142,8 +3134,7 @@ window.A={
     }catch(e){console.error('toggleAnnualPay:',e);}
     loadAll().catch(()=>{});
   },
-  async setBudgetType(type,btn){
-  await withLoading(btn,async()=>{
+  async setBudgetType(type){
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     if(D.chalet.id){
       await fetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({budget_type:type})});
@@ -3154,8 +3145,7 @@ window.A={
     renderBudget();
     loadAll().catch(()=>{});
   },
-  async saveAnnualBudget(btn){
-  await withLoading(btn,async()=>{
+  async saveAnnualBudget(){
     const year=parseInt(document.getElementById('budgetYearSel')?.value)||todayYear();
     const amt=parseFloat(document.getElementById('annualBudgetAmt')?.value)||null;
     if(!amt){toast('أدخل المبلغ','error');return;}
@@ -3183,8 +3173,7 @@ window.A={
     if(!loc)return;
     document.getElementById('locNameInp').value=loc.name||'';
           },
-  async addLocation(btn){
-  await withLoading(btn,async()=>{
+  async addLocation(){
     if(!myProfile?.is_admin){toast('مشرفون فقط','error');return;}
     const name=document.getElementById('locName')?.value.trim();
     const addr=document.getElementById('locAddr')?.value.trim();
@@ -3208,8 +3197,7 @@ window.A={
     await patchRow('locations',id,{is_default:true});
     await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ⭐');
   },
-  async saveInlineBudget(btn){
-  await withLoading(btn,async()=>{
+  async saveInlineBudget(){
     const slotId=document.getElementById('budgetSlotSel')?.value;
     const amount=parseFloat(document.getElementById('inlineBudgetAmt')?.value)||null;
     const notes=document.getElementById('inlineBudgetNotes')?.value.trim();
@@ -3260,20 +3248,20 @@ document.getElementById('notifBtn')?.addEventListener('click',()=>openNotifPopup
   await initAuth();
 })();
 
-// ── نظام Loading تلقائي لأزرار A ──
+// ── Loading تلقائي على كل أزرار الحفظ/الإرسال ──
 document.addEventListener('click',function(e){
-  const btn=e.target.closest('button[onclick*="A."]');
-  if(!btn||btn.disabled)return;
-  // ابحث عن دوال save/toggle/add/delete
-  const onclick=btn.getAttribute('onclick')||'';
-  if(!/A\.(save|toggle|add|delete|setBudget|enableNotif)/i.test(onclick))return;
-  // أضف loading مؤقتاً
+  const btn=e.target.closest('button');
+  if(!btn||btn.disabled||btn.dataset.noload)return;
+  const oc=btn.getAttribute('onclick')||'';
+  const isSubmit=/A\.(save|toggle|add|delete|setBudget|cancelSwap|saveSlot|createSpecial|removeMember|setDefault|deleteLoc|saveChalet)/i.test(oc)
+    ||/sendHomeSwap|inlineSwapBtn|bookSlot|cancelBookSlot/i.test(oc);
+  if(!isSubmit)return;
   const orig=btn.innerHTML;
   btn.disabled=true;
-  btn.innerHTML='<span class="spin" style="width:13px;height:13px;border-width:2px;display:inline-block;vertical-align:middle;"></span>';
-  // استعد بعد 5 ثواني إذا ما رجع
-  setTimeout(()=>{if(btn.disabled){btn.disabled=false;btn.innerHTML=orig;}},5000);
-},true); // capture phase - قبل onclick
+  btn.innerHTML='<span class="spin" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin:0 2px;"></span>';
+  const restore=()=>{if(btn.disabled){btn.disabled=false;btn.innerHTML=orig;}};
+  setTimeout(restore,6000); // استعد بعد 6 ثواني كحد أقصى
+},true);
 
 })();
 </script>
