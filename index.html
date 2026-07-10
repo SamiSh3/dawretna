@@ -1242,12 +1242,19 @@ async function notify(name,type,title,body,slotId){
     const r=await fetch(SB_URL+'/rest/v1/profiles?name=eq.'+encodeURIComponent(name)+'&select=id&limit=1',{headers:H});
     const profiles=r.ok?await r.json():[];
     if(!profiles[0])return;
-    // أرسل التنبيه
+    const userId=profiles[0].id;
+    // أرسل التنبيه في DB
     await fetch(SB_URL+'/rest/v1/notifications',{
       method:'POST',
       headers:{...H,'Prefer':'return=minimal'},
-      body:JSON.stringify({user_id:profiles[0].id,type,title,body,related_slot_id:slotId||null})
+      body:JSON.stringify({user_id:userId,type,title,body,related_slot_id:slotId||null})
     });
+    // أرسل Web Push للجهاز حتى لو المتصفح مغلق
+    fetch(SB_URL+'/functions/v1/send-push',{
+      method:'POST',
+      headers:{...H,'Authorization':'Bearer '+SB_KEY},
+      body:JSON.stringify({user_id:userId,title,body,slotId:slotId||null,tag:type})
+    }).catch(()=>{});
   }catch(e){}
 }
 async function notifyAll(type,title,body,slotId){
