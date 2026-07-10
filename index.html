@@ -1029,7 +1029,8 @@ function startRealtimeNotifs(){
         filter:'user_id=eq.'+session.user.id
       },payload=>{
         const n=payload.new;
-        if(n&&!D.notifications.find(x=>x.id===n.id)){
+        // تأكد أن التنبيه للمستخدم الحالي فقط
+        if(n&&n.user_id===session.user.id&&!D.notifications.find(x=>x.id===n.id)){
           D.notifications.unshift(n);
           updateNotifBadge();
           showOsNotif(n);   // تنبيه نظام التشغيل
