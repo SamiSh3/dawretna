@@ -1833,8 +1833,8 @@ function renderHome(){
       ${next.host_name===myName()?
         `<div style="font-size:13px;color:var(--sage);font-weight:700;margin-bottom:10px;text-align:center;">🏠 أنت المضيف — حضورك مؤكد</div>`:
         `<div class="rsvp-row" onclick="event.stopPropagation()">
-          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();A.rsvpCal('${next.id}','yes')">${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}</button>
-          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();A.rsvpCal('${next.id}','no')">${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}</button>
+          <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','yes')">${myRv?.status==='yes'?'✅ سأحضر':'سأحضر'}</button>
+          <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="event.stopPropagation();setRsvp('${next.id}','no')">${myRv?.status==='no'?'🙅 أعتذر':'أعتذر'}</button>
         </div>`
       }`;
 
