@@ -3075,27 +3075,59 @@ window.A={
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
   async enableNotifs(){
     await _unlockAudio();
-    if(!('Notification' in window)){toast('متصفحك لا يدعم الإشعارات','error');return;}
+    const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+    const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+
+    // iOS خارج PWA - يحتاج تثبيت أولاً
+    if(isIOS&&!isStandalone){
+      document.getElementById('content').insertAdjacentHTML('afterbegin',`
+        <div class="card" style="border:2px solid var(--amber);margin-bottom:14px;">
+          <div style="font-size:16px;font-weight:800;margin-bottom:10px;">📱 تثبيت التطبيق على iPhone</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">لتفعيل الإشعارات على iPhone تحتاج تثبيت التطبيق على شاشتك الرئيسية أولاً:</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">1️⃣</span>
+              <span style="font-size:13px;">افتح التطبيق في <b>Safari</b> (ليس Chrome أو Firefox)</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">2️⃣</span>
+              <span style="font-size:13px;">اضغط زر المشاركة <b>⎙</b> في أسفل Safari</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">3️⃣</span>
+              <span style="font-size:13px;">اختر <b>"إضافة إلى الشاشة الرئيسية"</b></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:22px;">4️⃣</span>
+              <span style="font-size:13px;">افتح التطبيق من الأيقونة الجديدة وفعّل الإشعارات</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:10px;">يتطلب iOS 16.4 أو أحدث</div>
+        </div>`);
+      return;
+    }
+
+    if(!('Notification' in window)){
+      toast('متصفحك لا يدعم الإشعارات','error');return;
+    }
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){toast('لم يتم منح الإذن — فعّل من إعدادات المتصفح','error');return;}
 
-    // تسجيل Web Push subscription لتنبيهات خارج المتصفح
     try{
       const reg=await navigator.serviceWorker.ready;
       const sub=await reg.pushManager.subscribe({
         userVisibleOnly:true,
         applicationServerKey:VAPID_PUBLIC
       });
-      // حفظ الـ subscription في DB
       const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
       await fetch(SB_URL+'/rest/v1/push_subscriptions',{method:'POST',headers:H,
         body:JSON.stringify({user_id:session.user.id,subscription:JSON.stringify(sub)})
       }).catch(()=>{});
     }catch(e){}
 
-    new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات ✅ — ستصلك حتى خارج المتصفح',icon:'/favicon.ico'});
+    new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات ✅',icon:'/favicon.ico'});
     playNotifSound();
-    toast('✅ تم تفعيل الإشعارات');
+    toast('✅ تم تفعيل الإشعارات — ستصلك حتى خارج المتصفح');
     renderSettings();
   },
   async testSound(){
