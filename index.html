@@ -1056,19 +1056,30 @@ function startRealtimeNotifs(){
         filter:'user_id=eq.'+session.user.id
       },payload=>{
         const n=payload.new;
-        // تأكد أن التنبيه للمستخدم الحالي فقط
         if(n&&n.user_id===session.user.id&&!D.notifications.find(x=>x.id===n.id)){
           D.notifications.unshift(n);
           updateNotifBadge();
-          showOsNotif(n);   // تنبيه نظام التشغيل
+          // صوت واهتزاز فوري
+          playNotifSound();
+          try{navigator.vibrate&&navigator.vibrate([200,100,200,100,200]);}catch(e){}
+          // تنبيه نظام التشغيل (يشغّل صوت النظام)
+          showOsNotif(n);
+          // popup داخل التطبيق
           showNotifPopup(n);
-          if(['swap_rejected','swap_accepted'].includes(n.type)){
+          // تحديث البيانات إذا كان تبديل
+          if(['swap_rejected','swap_accepted','swap_request'].includes(n.type)){
             loadAll().then(()=>render()).catch(()=>{});
           }
         }
       })
-      .subscribe();
-  }catch(e){}
+      .subscribe((status)=>{
+        // إذا فشل الاتصال، نعتمد على pollNotifications كـ fallback
+        if(status==='CHANNEL_ERROR') setInterval(pollNotifications,3000);
+      });
+  }catch(e){
+    // fallback: فحص كل 3 ثواني إذا فشل Realtime
+    setInterval(pollNotifications,3000);
+  }
 }
 
 /* ════════════════ UTILS ════════════════ */
