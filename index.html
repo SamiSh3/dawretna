@@ -874,6 +874,21 @@ function updateNotifBadge(){
 // ── نظام التنبيهات ──
 
 // طلب إذن التنبيهات
+const VAPID_PUBLIC='BPvtZE_Mk89AYHc9gs8Xr_dPNdFNZWzPYWSaTXBFuHMZDywb_ZDpY4p2FrgjIeIw367bQaWaX-e3XSJMZQpZCPM';
+
+// تسجيل Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/service-worker.js').then(reg=>{
+    // استقبال رسائل من SW (عند الضغط على التنبيه)
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='notif-click'&&e.data.slotId){
+        setTab('calendar');
+        setTimeout(()=>{const s=D.slots.find(x=>x.id===e.data.slotId);if(s)openCalSlotModal(s);},400);
+      }
+    });
+  }).catch(()=>{});
+}
+
 async function requestNotifPermission(){
   if(!('Notification' in window))return;
   if(Notification.permission==='default'){
@@ -3052,20 +3067,29 @@ window.A={
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
   async enableNotifs(){
-    // فتح قناة الصوت أولاً (من gesture مباشر)
     await _unlockAudio();
-    // طلب إذن الإشعارات
     if(!('Notification' in window)){toast('متصفحك لا يدعم الإشعارات','error');return;}
     const perm=await Notification.requestPermission();
-    if(perm==='granted'){
-      // اختبار فوري
-      new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات بنجاح ✅',icon:'/favicon.ico'});
-      playNotifSound();
-      toast('✅ تم تفعيل الإشعارات');
-      renderSettings();
-    } else {
-      toast('لم يتم منح الإذن — فعّل من إعدادات المتصفح','error');
-    }
+    if(perm!=='granted'){toast('لم يتم منح الإذن — فعّل من إعدادات المتصفح','error');return;}
+
+    // تسجيل Web Push subscription لتنبيهات خارج المتصفح
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:VAPID_PUBLIC
+      });
+      // حفظ الـ subscription في DB
+      const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+      await fetch(SB_URL+'/rest/v1/push_subscriptions',{method:'POST',headers:H,
+        body:JSON.stringify({user_id:session.user.id,subscription:JSON.stringify(sub)})
+      }).catch(()=>{});
+    }catch(e){}
+
+    new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات ✅ — ستصلك حتى خارج المتصفح',icon:'/favicon.ico'});
+    playNotifSound();
+    toast('✅ تم تفعيل الإشعارات');
+    renderSettings();
   },
   async testSound(){
     await _unlockAudio();
