@@ -3118,6 +3118,7 @@ window.A={
       if(outcome==='accepted') toast('✅ جاري التثبيت...');
     } else toast('افتح قائمة المتصفح ← تثبيت التطبيق','error');
   },
+  async enableNotifs(){
     await _unlockAudio();
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
     const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
