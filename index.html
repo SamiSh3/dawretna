@@ -868,6 +868,13 @@ async function loadAll(){
     }
   }
   updateNotifBadge();
+  // جلب طلبات التبديل الأخيرة (24 ساعة) للـ cooldown
+  if(session&&myName()){
+    const _H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+    const since=new Date(Date.now()-24*60*60*1000).toISOString();
+    fetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:_H})
+      .then(r=>r.ok?r.json():[]).then(rs=>{D._recentSwaps=rs||[];}).catch(()=>{});
+  }
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
 function updateNotifBadge(){
@@ -1897,7 +1904,10 @@ function renderHome(){
     let yes=0,no=0,pnd=0;
     const chips=D.team.map(t=>{const rv=sRsvp.find(r=>r.member_name===t.name);if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;else pnd++;const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;}).join('');
     const inSw=myName()&&next.host_name===myName()?D.swaps.find(s=>s.to_slot_id===next.id):null;
-    const outSw=myName()?D.swaps.find(s=>s.from_slot_id===next.id&&s.requester_name===myName())||D.swaps.find(s=>s.to_slot_id===next.id&&s.requester_name===myName()):null;
+    const outSw=myName()?D.swaps.find(s=>(s.from_slot_id===next.id||s.to_slot_id===next.id)&&s.requester_name===myName()):null;
+    // تحقق من cooldown 24 ساعة حتى بعد انتهاء الطلب
+    const recentSwap=D._recentSwaps?.find(s=>(s.from_slot_id===next.id||s.to_slot_id===next.id)&&s.requester_name===myName());
+    const onCooldown=recentSwap&&(Date.now()-new Date(recentSwap.created_at).getTime())<24*60*60*1000;
 
     h+=`<div class="hero">
       <div class="hero-label">الموعد القادم</div>
@@ -1929,8 +1939,8 @@ function renderHome(){
     if(myProfile?.is_admin){
       h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${next.id}')">💰 ${next.budget?'تعديل الميزانية':'إضافة ميزانية'}</button>`;
     }
-    // خيار التبديل - يظهر لمن ليس المضيف ويملك طلعة أخرى
-    if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw){
+    // خيار التبديل - يظهر لمن ليس المضيف ولديه طلعة أخرى وبلا cooldown
+    if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw&&!onCooldown){
       const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
       if(mySlots.length){
         h+=`<div style="margin-top:8px;padding:10px;background:var(--bg-soft);border-radius:var(--rsm);border:1px solid var(--border);">
@@ -1954,7 +1964,11 @@ function renderHome(){
           <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false)">❌ أرفض</button>
         </div></div>`;
     }
-    if(outSw)h+=`<div class="note" style="margin-top:8px;">⏳ بانتظار رد ${esc(next.host_name||'')} على التبديل.</div>`;
+    if(outSw)h+=`<div class="note" style="margin-top:8px;">⏳ بانتظار رد ${esc(next.host_name||'')} — ينتهي تلقائياً بعد 24 ساعة.</div>`;
+    if(!outSw&&onCooldown){
+      const hrs=Math.ceil((24*60*60*1000-(Date.now()-new Date(recentSwap.created_at).getTime()))/3600000);
+      h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">🔒 لا يمكن إرسال طلب جديد — انتظر ${hrs} ساعة</div>`;
+    }
 
     const lat=next.location_lat||D.chalet.lat;
     const lng=next.location_lng||D.chalet.lng;
