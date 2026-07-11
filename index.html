@@ -3156,23 +3156,36 @@ window.A={
       toast('متصفحك لا يدعم الإشعارات','error');return;
     }
     const perm=await Notification.requestPermission();
-    if(perm!=='granted'){toast('لم يتم منح الإذن — فعّل من إعدادات المتصفح','error');return;}
+    if(perm!=='granted'){toast('لم يتم منح الإذن','error');return;}
 
     try{
+      if(!('serviceWorker' in navigator)){toast('Service Worker غير مدعوم','error');return;}
+
+      // تحويل VAPID key من base64url لـ Uint8Array
+      const vk=VAPID_PUBLIC;
+      const b64=(vk+'===').slice(0,vk.length+((4-vk.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/');
+      const raw=atob(b64);
+      const keyArr=new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i++) keyArr[i]=raw.charCodeAt(i);
+
       const reg=await navigator.serviceWorker.ready;
       const sub=await reg.pushManager.subscribe({
         userVisibleOnly:true,
-        applicationServerKey:VAPID_PUBLIC
+        applicationServerKey:keyArr
       });
-      const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-      await fetch(SB_URL+'/rest/v1/push_subscriptions',{method:'POST',headers:H,
-        body:JSON.stringify({user_id:session.user.id,subscription:JSON.stringify(sub)})
-      }).catch(()=>{});
-    }catch(e){}
 
-    new Notification('دوريتنا 🏕️',{body:'تم تفعيل الإشعارات ✅',icon:'/favicon.ico'});
-    playNotifSound();
-    toast('✅ تم تفعيل الإشعارات — ستصلك حتى خارج المتصفح');
+      const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+      const r=await fetch(SB_URL+'/rest/v1/push_subscriptions',{method:'POST',headers:H,
+        body:JSON.stringify({user_id:session.user.id,subscription:JSON.stringify(sub)})
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+
+      new Notification('دوريتنا 🏕️',{body:'✅ الإشعارات تعمل خارج التطبيق!',icon:'/dawretna/icon.png'});
+      playNotifSound();
+      toast('✅ تم التفعيل — ستصلك حتى لو التطبيق مغلق');
+    }catch(e){
+      toast('❌ خطأ: '+e.message,'error');
+    }
     renderSettings();
   },
   async testSound(){
