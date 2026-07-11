@@ -1058,7 +1058,6 @@ async function pollNotifications(){
     D.notifications=fresh;
     updateNotifBadge();
     if(newOnes.length){
-      showOsNotif(newOnes[0]);   // تنبيه نظام التشغيل
       showNotifPopup(newOnes[0]); // popup داخل التطبيق
       // إذا رُفض أو قُبل التبديل — حدّث D.swaps فوراً
       if(newOnes.some(n=>['swap_rejected','swap_accepted'].includes(n.type))){
@@ -1109,7 +1108,6 @@ function startRealtimeNotifs(){
           playNotifSound();
           try{navigator.vibrate&&navigator.vibrate([200,100,200,100,200]);}catch(e){}
           // تنبيه نظام التشغيل (يشغّل صوت النظام)
-          showOsNotif(n);
           // popup داخل التطبيق
           showNotifPopup(n);
           // تحديث البيانات إذا كان تبديل
