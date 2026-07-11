@@ -2261,7 +2261,11 @@ function openCalSlotModal(slot){
   }).join('');
   const myRv=sRsvp.find(r=>r.member_name===myName());
   const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
-  const outSw=myName()?D.swaps.find(s=>s.from_slot_id===slot.id&&s.requester_name===myName()):null;
+  // outSw = طلب أرسلته أنا يستهدف هذه الطلعة (to) أو من طلعتي (from)
+  const outSw=myName()?(
+    D.swaps.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName())||
+    D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName())
+  ):null;
 
   let h=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
@@ -2309,7 +2313,10 @@ function openCalSlotModal(slot){
     <!-- تبديل -->
     ${(()=>{
       let swapHtml='';
-      if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw){
+      // cooldown: هل أرسلت طلباً لهذه الطلعة خلال آخر 7 ساعات؟
+      const _calCooldown=D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName());
+      const _onCooldown=_calCooldown&&(Date.now()-new Date(_calCooldown.created_at).getTime())<7*60*60*1000;
+      if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw&&!_onCooldown){
         const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
         if(mine.length){
           swapHtml+=`<hr class="sep">
@@ -2334,8 +2341,12 @@ function openCalSlotModal(slot){
         </div>`;
       }
       if(outSw){
-      const _tSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
-      swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||'')}</b> على طلب التبديل</div>`;
+        const _tSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
+        swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||slot.host_name||'')}</b> على طلب التبديل</div>`;
+      }
+      if(!outSw&&_onCooldown){
+        const _hrs=Math.ceil((7*60*60*1000-(Date.now()-new Date(_calCooldown.created_at).getTime()))/3600000);
+        swapHtml+=`<hr class="sep"><div class="note" style="border-color:var(--muted);">🔒 انتظر ${_hrs} ساعة قبل إرسال طلب جديد لهذه الطلعة</div>`;
       }
       return swapHtml;
     })()}
