@@ -1920,9 +1920,9 @@ function renderHome(){
     const chips=D.team.map(t=>{const rv=sRsvp.find(r=>r.member_name===t.name);if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;else pnd++;const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');return`<span class="chip ${cls}">${rv?.status==='yes'?'✅ ':rv?.status==='no'?'🙅 ':''}${esc(t.name)}</span>`;}).join('');
     const inSw=myName()&&next.host_name===myName()?D.swaps.find(s=>s.to_slot_id===next.id):null;
     // outSw = طلب أرسله أنا من طلعتي (أنا المُرسِل فقط)
-    const outSw=myName()?D.swaps.find(s=>s.from_slot_id!==next.id&&s.to_slot_id===next.id&&s.requester_name===myName()):null;
+    const outSw=myName()?D.swaps.find(s=>s.from_slot_id!==next.id&&s.to_slot_id===next.id&&s.requester_name===myName()&&s.status!=='rejected'):null;
     // تحقق من cooldown 24 ساعة حتى بعد انتهاء الطلب
-    const recentSwap=D._recentSwaps?.find(s=>(s.from_slot_id===next.id||s.to_slot_id===next.id)&&s.requester_name===myName());
+    const recentSwap=D._recentSwaps?.find(s=>(s.from_slot_id===next.id||s.to_slot_id===next.id)&&s.requester_name===myName()&&s.status!=='rejected');
     const onCooldown=recentSwap&&(Date.now()-new Date(recentSwap.created_at).getTime())<7*60*60*1000;
 
     h+=`<div class="hero">
@@ -2316,7 +2316,7 @@ function openCalSlotModal(slot){
     ${(()=>{
       let swapHtml='';
       // cooldown: هل أرسلت طلباً لهذه الطلعة خلال آخر 7 ساعات؟
-      const _calCooldown=D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName());
+      const _calCooldown=D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected');
       const _onCooldown=_calCooldown&&(Date.now()-new Date(_calCooldown.created_at).getTime())<7*60*60*1000;
       if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw&&!_onCooldown){
         const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
