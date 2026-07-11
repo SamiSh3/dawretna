@@ -2369,6 +2369,7 @@ async function openCalSlotModal(slot){
         </div>`;
       }
       if(outSw){
+        alert('DEBUG outSw: status='+outSw.status+' | to='+outSw.to_slot_id?.slice(0,8)+' | req='+outSw.requester_name+' | swaps='+D.swaps.length+' | recent='+JSON.stringify((D._recentSwaps||[]).map(s=>s.status)));
         const _tSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
         swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||slot.host_name||'')}</b> على طلب التبديل</div>`;
       }
