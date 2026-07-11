@@ -2406,22 +2406,24 @@ function openCalSlotModal(slot){
   // زر قبول التبديل
   const acceptBtn=box.querySelector('#swapAcceptBtn');
   if(acceptBtn){
-    acceptBtn.onclick=function(){
+    acceptBtn.onclick=async function(){
       acceptBtn.disabled=true;acceptBtn.textContent='⏳ جاري...';
       const swapId=this.getAttribute('data-id');
       closeModal('calSlotModal');
-      resolveSwap(swapId,true); // بدون await - فوري
+      await resolveSwap(swapId,true);
+      await loadAll();render(); // تأكد من تحديث D.swaps
     };
   }
 
   // زر رفض التبديل
   const rejectBtn=box.querySelector('#swapRejectBtn');
   if(rejectBtn){
-    rejectBtn.onclick=function(){
+    rejectBtn.onclick=async function(){
       rejectBtn.disabled=true;rejectBtn.textContent='⏳ جاري...';
       const swapId=this.getAttribute('data-id');
       closeModal('calSlotModal');
-      resolveSwap(swapId,false); // بدون await - فوري
+      await resolveSwap(swapId,false);
+      await loadAll();render(); // تأكد من تحديث D.swaps
     };
   }
 }
