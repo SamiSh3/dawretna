@@ -1070,6 +1070,16 @@ async function pollNotifications(){
       showNotifPopup(newOnes[0]); // popup داخل التطبيق
       // إذا رُفض أو قُبل التبديل — حدّث D.swaps فوراً
       if(newOnes.some(n=>['swap_rejected','swap_accepted'].includes(n.type))){
+        // حذف فوري من D.swaps بدون انتظار loadAll
+        newOnes.filter(n=>['swap_rejected','swap_accepted'].includes(n.type)).forEach(n=>{
+          if(n.related_slot_id){
+            D.swaps=D.swaps.filter(s=>s.to_slot_id!==n.related_slot_id||s.requester_name!==myName());
+            if(D._recentSwaps) D._recentSwaps.forEach(s=>{
+              if(s.to_slot_id===n.related_slot_id) s.status='rejected';
+            });
+          }
+        });
+        render();
         loadAll().then(()=>render()).catch(()=>{});
       }
     }
@@ -1119,7 +1129,16 @@ function startRealtimeNotifs(){
           // تنبيه نظام التشغيل (يشغّل صوت النظام)
           // popup داخل التطبيق
           showNotifPopup(n);
-          // تحديث البيانات إذا كان تبديل
+          // تحديث فوري عند رفض/قبول التبديل
+          if(['swap_rejected','swap_accepted'].includes(n.type)){
+            if(n.related_slot_id){
+              D.swaps=D.swaps.filter(s=>s.to_slot_id!==n.related_slot_id||s.requester_name!==myName());
+              if(D._recentSwaps) D._recentSwaps.forEach(s=>{
+                if(s.to_slot_id===n.related_slot_id) s.status='rejected';
+              });
+            }
+            render();
+          }
           if(['swap_rejected','swap_accepted','swap_request'].includes(n.type)){
             loadAll().then(()=>render()).catch(()=>{});
           }
