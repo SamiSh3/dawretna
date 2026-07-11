@@ -2426,6 +2426,7 @@ function openCalSlotModal(slot){
         if(!D._recentSwaps) D._recentSwaps=[];
         D._recentSwaps.push(_sw);
         D.swaps.push(_sw);
+        const toSlot=D.slots.find(s=>s.id===toSlotId);
         const fromSlot=D.slots.find(s=>s.id===fromId);
         if(toSlot?.host_name) await notify(toSlot.host_name,'swap_request',
           `🔁 ${esc(myName())} يريد تبديل موعدك`,
