@@ -2269,6 +2269,23 @@ async function openCalSlotModal(slot){
       }
     }catch(e){}
   }
+  // تحقق من حالة الطلب الصادر — إذا رُفض نحدّث محلياً فوراً
+  if(session&&myName()){
+    try{
+      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+      const r=await fetch(SB_URL+'/rest/v1/swap_requests?select=id,status&to_slot_id=eq.'+slot.id+'&requester_name=eq.'+encodeURIComponent(myName())+'&order=created_at.desc&limit=1',{headers:H});
+      if(r.ok){
+        const rows=await r.json();
+        if(rows[0]&&rows[0].status!=='pending'){
+          // الطلب رُفض أو انتهت صلاحيته — أزله من D.swaps
+          D.swaps=D.swaps.filter(s=>!(s.to_slot_id===slot.id&&s.requester_name===myName()));
+          if(D._recentSwaps) D._recentSwaps.forEach(s=>{
+            if(s.to_slot_id===slot.id&&s.requester_name===myName()) s.status=rows[0].status;
+          });
+        }
+      }
+    }catch(e){}
+  }
   const du=daysUntil(slot.date),isPast=du<0;
   const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
   let yes=0,no=0;
