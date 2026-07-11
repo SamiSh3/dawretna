@@ -927,6 +927,8 @@ async function requestNotifPermission(){
 
 // إظهار تنبيه نظام التشغيل
 function showOsNotif(notif){
+  // أظهر فقط إذا كان التطبيق في الخلفية أو غير مفعّل
+  if(document.visibilityState==='visible'&&document.hasFocus())return;
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const icons={swap_request:'🔁',swap_accepted:'✅',swap_rejected:'❌',slot_booked:'🏕️',rsvp:'📋',general:'💬'};
   const n=new Notification('دوريتنا 🏕️ — '+notif.title,{
