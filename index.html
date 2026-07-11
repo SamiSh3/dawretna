@@ -868,12 +868,14 @@ async function loadAll(){
     }
   }
   updateNotifBadge();
-  // جلب طلبات التبديل الأخيرة (24 ساعة) للـ cooldown
+  // جلب طلبات التبديل الأخيرة (7 ساعات) للـ cooldown - await لضمان التزامن مع render
   if(session&&myName()){
-    const _H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
-    const since=new Date(Date.now()-24*60*60*1000).toISOString();
-    fetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:_H})
-      .then(r=>r.ok?r.json():[]).then(rs=>{D._recentSwaps=rs||[];}).catch(()=>{});
+    try{
+      const _H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+      const since=new Date(Date.now()-7*60*60*1000).toISOString();
+      const _r=await fetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at,status&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:_H});
+      D._recentSwaps=_r.ok?await _r.json():[];
+    }catch(e){D._recentSwaps=[];}
   }
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
@@ -1075,7 +1077,7 @@ async function expireOldSwaps(){
   const expired=D.swaps.filter(sw=>{
     if(!sw.created_at)return false;
     const age=now-new Date(sw.created_at).getTime();
-    return age>24*60*60*1000; // أكثر من 24 ساعة
+    return age>24*60*60*1000; // انتهاء صلاحية طلب التبديل بعد 24 ساعة
   });
   if(!expired.length)return;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
@@ -1908,7 +1910,7 @@ function renderHome(){
     const outSw=myName()?D.swaps.find(s=>s.from_slot_id!==next.id&&s.to_slot_id===next.id&&s.requester_name===myName()):null;
     // تحقق من cooldown 24 ساعة حتى بعد انتهاء الطلب
     const recentSwap=D._recentSwaps?.find(s=>(s.from_slot_id===next.id||s.to_slot_id===next.id)&&s.requester_name===myName());
-    const onCooldown=recentSwap&&(Date.now()-new Date(recentSwap.created_at).getTime())<24*60*60*1000;
+    const onCooldown=recentSwap&&(Date.now()-new Date(recentSwap.created_at).getTime())<7*60*60*1000;
 
     h+=`<div class="hero">
       <div class="hero-label">الموعد القادم</div>
@@ -1976,7 +1978,7 @@ function renderHome(){
       </div>`;
     }
     if(!outSw&&onCooldown){
-      const hrs=Math.ceil((24*60*60*1000-(Date.now()-new Date(recentSwap.created_at).getTime()))/3600000);
+      const hrs=Math.ceil((7*60*60*1000-(Date.now()-new Date(recentSwap.created_at).getTime()))/3600000);
       h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">🔒 لا يمكن إرسال طلب جديد — انتظر ${hrs} ساعة</div>`;
     }
 
