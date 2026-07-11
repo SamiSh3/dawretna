@@ -2291,8 +2291,8 @@ async function openCalSlotModal(slot){
   const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
   // outSw = طلب أرسلته أنا يستهدف هذه الطلعة (to) أو من طلعتي (from)
   const outSw=myName()?(
-    D.swaps.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName())||
-    D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName())
+    D.swaps.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected')||
+    D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected')
   ):null;
 
   let h=`
