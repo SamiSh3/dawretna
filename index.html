@@ -943,8 +943,7 @@ function showOsNotif(notif){
   n.onclick=()=>{
     window.focus();
     if(notif.related_slot_id){
-      setTab('calendar');
-      setTimeout(()=>{const s=D.slots.find(x=>x.id===notif.related_slot_id);if(s)openCalSlotModal(s);},400);
+      setTimeout(()=>{const s=D.slots.find(x=>x.id===notif.related_slot_id);if(s)openCalSlotModal(s);},200);
     }
     n.close();
   };
@@ -985,7 +984,6 @@ function showNotifPopup(notif){
   if(go) go.onclick=()=>{
     close();
     if(notif.related_slot_id){
-      setTab('calendar');
       setTimeout(()=>{
         const s=D.slots.find(x=>x.id===notif.related_slot_id);
         if(s) openCalSlotModal(s);
@@ -993,7 +991,7 @@ function showNotifPopup(notif){
           const s2=D.slots.find(x=>x.id===notif.related_slot_id);
           if(s2) openCalSlotModal(s2);
         });
-      },400);
+      },200);
     }
   };
   setTimeout(close,8000);
@@ -2500,7 +2498,7 @@ function renderNotifications(){
     const slotId=n.related_slot_id;
     let navAction='';
     if(slotId){
-      navAction=`A.markRead('${n.id}');setTab('calendar');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${slotId}');if(s)openCalSlotModal(s);},300);`;
+      navAction=`A.markRead('${n.id}');setTimeout(()=>{const s=D.slots.find(x=>x.id==='${slotId}');if(s)openCalSlotModal(s);},200);`;
     } else if(n.type==='slot_booked'||n.type==='general'){
       navAction=`A.markRead('${n.id}');setTab('home');`;
     } else {
