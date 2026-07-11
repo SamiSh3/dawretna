@@ -1486,7 +1486,7 @@ async function resolveSwap(swapId,accept){
     render();
     await patchRow('swap_requests',swapId,{status:'rejected'});
     await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌',
-      `رفض ${esc(myName())} طلب التبديل`,sw.from_slot_id);
+      `رفض ${esc(myName())} طلب التبديل — يمكنك المحاولة لاحقاً`,sw.to_slot_id);
     toast('❌ تم الرفض');
   }
   loadAll().catch(()=>{});
