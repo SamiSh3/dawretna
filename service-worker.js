@@ -1,28 +1,43 @@
-// دوريتنا - Service Worker للتنبيهات
+// دوريتنا - Service Worker
+const ICON = 'https://samish3.github.io/dawretna/icon.png';
+const APP_URL = 'https://samish3.github.io/dawretna/';
+
 self.addEventListener('push', function(e) {
   if (!e.data) return;
-  const data = e.data.json();
+  let data = {};
+  try { data = e.data.json(); } catch(err) { data = {title: 'دوريتنا', body: e.data.text()}; }
+
   const opts = {
     body: data.body || '',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: data.tag || 'dawretna',
-    data: { url: data.url || '/', slotId: data.slotId },
-    requireInteraction: data.requireInteraction || false,
-    vibrate: [200, 100, 200]
+    icon: ICON,
+    badge: ICON,
+    tag: data.tag || 'dawretna-notif',
+    data: { url: APP_URL, slotId: data.slotId || null },
+    requireInteraction: false,
+    vibrate: [200, 100, 200],
+    silent: false
   };
-  e.waitUntil(self.registration.showNotification(data.title || 'دوريتنا 🏕️', opts));
+
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'دوريتنا 🏕️', opts)
+  );
 });
 
 self.addEventListener('notificationclick', function(e) {
   e.notification.close();
-  const url = e.notification.data?.url || '/';
+  const slotId = e.notification.data?.slotId;
+
   e.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cls => {
-      const match = cls.find(c => c.url.includes('dawretna'));
-      if (match) { match.focus(); match.postMessage({ type: 'notif-click', slotId: e.notification.data?.slotId }); }
-      else clients.openWindow(url);
-    })
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(cls => {
+        const match = cls.find(c => c.url.includes('dawretna'));
+        if (match) {
+          match.focus();
+          if (slotId) match.postMessage({ type: 'notif-click', slotId });
+        } else {
+          clients.openWindow(APP_URL + (slotId ? '#slot=' + slotId : ''));
+        }
+      })
   );
 });
 
