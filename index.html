@@ -1271,12 +1271,15 @@ async function notify(name,type,title,body,slotId){
       headers:{...H,'Prefer':'return=minimal'},
       body:JSON.stringify({user_id:userId,type,title,body,related_slot_id:slotId||null})
     });
-    // أرسل Web Push للجهاز حتى لو المتصفح مغلق
-    fetch(SB_URL+'/functions/v1/send-push',{
-      method:'POST',
-      headers:{...H,'Authorization':'Bearer '+SB_KEY},
-      body:JSON.stringify({user_id:userId,title,body,slotId:slotId||null,tag:type})
-    }).catch(()=>{});
+    // Web Push فقط للأنواع المهمة (طلبات التبديل والرسائل الخاصة)
+    const webPushTypes=['swap_request','swap_accepted','swap_rejected'];
+    if(webPushTypes.includes(type)){
+      fetch(SB_URL+'/functions/v1/send-push',{
+        method:'POST',
+        headers:{...H,'Authorization':'Bearer '+SB_KEY},
+        body:JSON.stringify({user_id:userId,title,body,slotId:slotId||null,tag:type})
+      }).catch(()=>{});
+    }
   }catch(e){}
 }
 async function notifyAll(type,title,body,slotId){
