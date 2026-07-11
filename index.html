@@ -913,8 +913,9 @@ if('serviceWorker' in navigator){
     // استقبال رسائل من SW (عند الضغط على التنبيه)
     navigator.serviceWorker.addEventListener('message',e=>{
       if(e.data?.type==='notif-click'&&e.data.slotId){
-        setTab('calendar');
-        setTimeout(()=>{const s=D.slots.find(x=>x.id===e.data.slotId);if(s)openCalSlotModal(s);},400);
+        const _s=D.slots.find(x=>x.id===e.data.slotId);
+        if(_s) openCalSlotModal(_s);
+        else loadAll().then(()=>{const _s2=D.slots.find(x=>x.id===e.data.slotId);if(_s2)openCalSlotModal(_s2);});
       }
     });
   }).catch(()=>{});
@@ -1871,8 +1872,7 @@ function openNotifPopup(){
         markRead(nid);
         closeNotifPopup();
         if(sid){
-          setTab('calendar');
-          setTimeout(()=>{const s=D.slots.find(x=>x.id===sid);if(s)openCalSlotModal(s);},300);
+          const s=D.slots.find(x=>x.id===sid);if(s)openCalSlotModal(s);
         } else if(type==='slot_booked'||type==='general'){
           setTab('home');
         }
