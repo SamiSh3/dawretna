@@ -1089,7 +1089,7 @@ async function expireOldSwaps(){
       body:JSON.stringify({status:'expired'})}).catch(()=>{});
     // تنبيه للمرسِل بانتهاء الصلاحية
     await notify(sw.requester_name,'general','انتهت صلاحية طلب التبديل ⏱️',
-      'لم يستجب العضو خلال 24 ساعة — يمكنك إرسال طلب جديد',sw.from_slot_id).catch(()=>{});
+      'لم يستجب العضو — يمكنك إرسال طلب جديد الآن',sw.to_slot_id).catch(()=>{});
   }
   if(expired.length)render();
 }
