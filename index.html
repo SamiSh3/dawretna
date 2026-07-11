@@ -2,8 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>دوريتنا</title>
+<link rel="manifest" href="/dawretna/manifest.json">
+<meta name="theme-color" content="#d4a843">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="دوريتنا">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='24' fill='%230f1923'/><text y='130' x='96' text-anchor='middle' font-size='120'>🏕️</text></svg>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="دوريتنا">
@@ -877,6 +884,21 @@ function updateNotifBadge(){
 const VAPID_PUBLIC='BPvtZE_Mk89AYHc9gs8Xr_dPNdFNZWzPYWSaTXBFuHMZDywb_ZDpY4p2FrgjIeIw367bQaWaX-e3XSJMZQpZCPM';
 
 // تسجيل Service Worker
+let _deferredInstall=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  _deferredInstall=e;
+  // أظهر زر التثبيت
+  const btn=document.getElementById('installBtn');
+  if(btn)btn.style.display='flex';
+});
+window.addEventListener('appinstalled',()=>{
+  _deferredInstall=null;
+  const btn=document.getElementById('installBtn');
+  if(btn)btn.style.display='none';
+  toast('✅ تم تثبيت التطبيق!');
+});
+
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/service-worker.js').then(reg=>{
     // استقبال رسائل من SW (عند الضغط على التنبيه)
@@ -2873,17 +2895,33 @@ function renderSettings(){
 
   // ── قسم الإشعارات والصوت (لكل المستخدمين) ──
   const notifPerm=typeof Notification!=='undefined'?Notification.permission:'unsupported';
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
   h+=`<div class="card">
     <div class="h2">🔔 الإشعارات والصوت</div>
-    <p class="hint" style="margin-top:4px;margin-bottom:12px;">فعّل إشعارات النظام لتصل إليك التنبيهات بصوت حتى لو التطبيق في الخلفية.</p>
+    <p class="hint" style="margin-top:4px;margin-bottom:12px;">فعّل الإشعارات لتصلك التنبيهات حتى لو التطبيق في الخلفية.</p>
+
+    ${!isStandalone?`
+    <div style="background:var(--bg-soft);border-radius:var(--rsm);padding:12px;margin-bottom:12px;border:1px solid var(--amber)20;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;">📲 ثبّت التطبيق للإشعارات الكاملة</div>
+      ${isIOS?`
+      <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+        ١. افتح في <b>Safari</b> ← اضغط <b>⎙</b> في الأسفل<br>
+        ٢. اختر <b>"إضافة إلى الشاشة الرئيسية"</b><br>
+        ٣. افتح الأيقونة الجديدة وفعّل الإشعارات
+      </div>`:
+      `<button id="installBtn" class="btn btn-primary btn-sm btn-block" style="display:none;margin-top:8px;" onclick="A.installPWA()">📲 تثبيت التطبيق</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">أو: في Chrome اضغط ⋮ ← "تثبيت التطبيق"</div>`}
+    </div>`:
+    `<div style="font-size:12px;color:var(--sage);margin-bottom:10px;">✅ التطبيق مثبّت</div>`}
+
     ${notifPerm==='granted'?
       `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span style="font-size:18px;">✅</span>
         <span style="font-size:13px;color:var(--sage);font-weight:700;">الإشعارات مفعّلة</span>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="A.testSound()">🔊 اختبار الصوت</button>`:
-      `<button class="btn btn-primary btn-block" onclick="A.enableNotifs()">🔔 تفعيل الإشعارات والصوت</button>
-      <p style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">اضغط ثم وافق على طلب الإذن</p>`
+      `<button class="btn btn-primary btn-block" onclick="A.enableNotifs()">🔔 تفعيل الإشعارات والصوت</button>`
     }
   </div>`;
   // موقع الشاليه (للمشرفين فقط)
@@ -3073,7 +3111,13 @@ window.A={
   createPoll(){const q=document.getElementById('pollQ')?.value.trim();const opts=[...document.querySelectorAll('.pi')].map(i=>i.value.trim()).filter(Boolean);createPoll(q,opts);},
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
   delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
-  async enableNotifs(){
+  async installPWA(){
+    if(_deferredInstall){
+      _deferredInstall.prompt();
+      const {outcome}=await _deferredInstall.userChoice;
+      if(outcome==='accepted') toast('✅ جاري التثبيت...');
+    } else toast('افتح قائمة المتصفح ← تثبيت التطبيق','error');
+  },
     await _unlockAudio();
     const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
     const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
