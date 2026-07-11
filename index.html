@@ -995,6 +995,8 @@ function showNotifPopup(notif){
         });
       },400);
     }
+  };
+  setTimeout(close,8000);
   // صوت + اهتزاز
   playNotifSound();
   try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}
