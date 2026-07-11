@@ -986,10 +986,15 @@ function showNotifPopup(notif){
     close();
     if(notif.related_slot_id){
       setTab('calendar');
-      setTimeout(()=>{const s=D.slots.find(x=>x.id===notif.related_slot_id);if(s)openCalSlotModal(s);},400);
+      setTimeout(()=>{
+        const s=D.slots.find(x=>x.id===notif.related_slot_id);
+        if(s) openCalSlotModal(s);
+        else loadAll().then(()=>{
+          const s2=D.slots.find(x=>x.id===notif.related_slot_id);
+          if(s2) openCalSlotModal(s2);
+        });
+      },400);
     }
-  };
-  setTimeout(close,8000);
   // صوت + اهتزاز
   playNotifSound();
   try{navigator.vibrate&&navigator.vibrate([200,100,200]);}catch(e){}
