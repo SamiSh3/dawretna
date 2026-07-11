@@ -1905,7 +1905,22 @@ function render(){
   const calIcon=document.getElementById('calDayText');
   if(calIcon) calIcon.textContent=todayDayNum();
   updateNotifBadge();
-  if(tab==='home')renderHome();
+  if(tab==='home'){
+    renderHome();
+    // تحديث طلبات التبديل في الخلفية لضمان دقة الحالة
+    if(session){
+      const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+      const since=new Date(Date.now()-7*60*60*1000).toISOString();
+      Promise.all([
+        fetch(SB_URL+'/rest/v1/swap_requests?select=*&status=eq.pending',{headers:H}).then(r=>r.ok?r.json():[]),
+        fetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at,status&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:H}).then(r=>r.ok?r.json():[])
+      ]).then(([pending,recent])=>{
+        D.swaps=pending;
+        D._recentSwaps=recent;
+        renderHome(); // إعادة الرسم بالبيانات المحدّثة
+      }).catch(()=>{});
+    }
+  }
   else if(tab==='calendar'){renderCalendar();loadAll().then(()=>renderCalendar()).catch(()=>{});}
   else if(tab==='notifications'){setTab('home');openNotifPopup();}
   else if(tab==='trips')renderTrips();
