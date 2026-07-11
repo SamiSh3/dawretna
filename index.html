@@ -1194,6 +1194,12 @@ window.sendHomeSwap=async function(toSlotId){
       body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
+    // تحديث محلي فوري — يمنع إرسال طلب ثانٍ قبل loadAll
+    const newSwap={id:'tmp_'+Date.now(),from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending',created_at:new Date().toISOString()};
+    if(!D._recentSwaps) D._recentSwaps=[];
+    D._recentSwaps.push(newSwap);
+    D.swaps.push(newSwap);
+    render(); // أعد الرسم فوراً لإخفاء زر التبديل
     const toSlot=D.slots.find(s=>s.id===toSlotId);
     const fromSlot=D.slots.find(s=>s.id===fromId);
     if(toSlot?.host_name) await notify(toSlot.host_name,'swap_request',
@@ -2404,7 +2410,11 @@ function openCalSlotModal(slot){
           body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
         });
         if(!r.ok)throw new Error('HTTP '+r.status);
-        const toSlot=D.slots.find(s=>s.id===toSlotId);
+        // تحديث محلي فوري لمنع الإرسال المتكرر
+        const _sw={id:'tmp_'+Date.now(),from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending',created_at:new Date().toISOString()};
+        if(!D._recentSwaps) D._recentSwaps=[];
+        D._recentSwaps.push(_sw);
+        D.swaps.push(_sw);
         const fromSlot=D.slots.find(s=>s.id===fromId);
         if(toSlot?.host_name) await notify(toSlot.host_name,'swap_request',
           `🔁 ${esc(myName())} يريد تبديل موعدك`,
