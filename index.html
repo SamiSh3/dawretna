@@ -1966,7 +1966,16 @@ function renderHome(){
           <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false)">❌ أرفض</button>
         </div></div>`;
     }
-    if(outSw)h+=`<div class="note" style="margin-top:8px;">⏳ بانتظار رد ${esc(next.host_name||'')} — ينتهي تلقائياً بعد 24 ساعة.</div>`;
+    if(outSw){
+      const targetSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
+      const targetName=targetSlot?.host_name||next.host_name||'';
+      const sentAgo=outSw.created_at?Math.floor((Date.now()-new Date(outSw.created_at).getTime())/3600000):0;
+      const remaining=Math.max(0,24-sentAgo);
+      h+=`<div class="note" style="margin-top:8px;">
+        ⏳ في انتظار رد <b>${esc(targetName)}</b> على طلب التبديل
+        <div style="font-size:10px;color:var(--muted);margin-top:3px;">ينتهي الطلب تلقائياً خلال ${remaining} ساعة إذا لم يرد</div>
+      </div>`;
+    }
     if(!outSw&&onCooldown){
       const hrs=Math.ceil((24*60*60*1000-(Date.now()-new Date(recentSwap.created_at).getTime()))/3600000);
       h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">🔒 لا يمكن إرسال طلب جديد — انتظر ${hrs} ساعة</div>`;
@@ -2318,7 +2327,8 @@ function openCalSlotModal(slot){
         </div>`;
       }
       if(outSw){
-        swapHtml+=`<hr class="sep"><div class="note">⏳ بانتظار رد على طلب التبديل.</div>`;
+      const _tSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
+      swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||'')}</b> على طلب التبديل</div>`;
       }
       return swapHtml;
     })()}
