@@ -1212,6 +1212,7 @@ window.togglePayment=togglePayment;
 window.sendHomeSwap=async function(toSlotId){
   const fromId=document.getElementById('homeSwapSel')?.value;
   if(!fromId){toast('اختر موعدك','error');return;}
+  if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
   try{
     const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
       method:'POST',
@@ -1931,6 +1932,13 @@ function render(){
 }
 
 /* ── Home ── */
+// فحص وجود طلب تبديل معلق لهذا المستخدم (عالمي)
+function hasActivePendingSwap(){
+  return !!(myName()&&(
+    D.swaps.find(s=>s.requester_name===myName()&&s.status!=='rejected')||
+    (D._recentSwaps||[]).find(s=>s.requester_name===myName()&&s.status==='pending')
+  ));
+}
 function renderHome(){
   if(!_dataLoaded){
     document.getElementById('content').innerHTML=
@@ -1987,8 +1995,8 @@ function renderHome(){
     if(myProfile?.is_admin){
       h+=`<button class="btn btn-ghost btn-sm btn-block" style="margin-top:6px;" onclick="A.openBudget('${next.id}')">💰 ${next.budget?'تعديل الميزانية':'إضافة ميزانية'}</button>`;
     }
-    // خيار التبديل - يظهر لمن ليس المضيف ولديه طلعة أخرى وبلا cooldown
-    if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw&&!onCooldown){
+    // خيار التبديل - يظهر لمن ليس المضيف ولديه طلعة أخرى وبلا cooldown وبلا طلب معلق
+    if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw&&!onCooldown&&!hasActivePendingSwap()){
       const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
       if(mySlots.length){
         h+=`<div style="margin-top:8px;padding:10px;background:var(--bg-soft);border-radius:var(--rsm);border:1px solid var(--border);">
@@ -2344,7 +2352,7 @@ async function openCalSlotModal(slot){
       // cooldown: هل أرسلت طلباً لهذه الطلعة خلال آخر 7 ساعات؟
       const _calCooldown=D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected');
       const _onCooldown=_calCooldown&&(Date.now()-new Date(_calCooldown.created_at).getTime())<7*60*60*1000;
-      if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw&&!_onCooldown){
+      if(myName()&&slot.host_name&&slot.host_name!==myName()&&!isPast&&!inSw&&!outSw&&!_onCooldown&&!hasActivePendingSwap()){
         const mine=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
         if(mine.length){
           swapHtml+=`<hr class="sep">
@@ -2441,6 +2449,7 @@ async function openCalSlotModal(slot){
       const toSlotId=this.getAttribute('data-to');
       const fromId=box.querySelector('#inlineSwapSel')?.value;
       if(!fromId||!toSlotId)return;
+      if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
       this.disabled=true;this.textContent='يتم الإرسال...';
       try{
         const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
