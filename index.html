@@ -879,6 +879,11 @@ async function loadAll(){
   }
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
+
+// هل عندي طلب تبديل معلق؟
+function hasPendingSwap(){
+  return !!(D.swaps.find(s=>s.requester_name===myName()&&s.status!=='rejected'));
+}
 function updateNotifBadge(){
   const unread=D.notifications.filter(n=>!n.read).length;
   const b1=document.getElementById('notifBadge'),b2=document.getElementById('navBadge');
@@ -1212,6 +1217,7 @@ window.togglePayment=togglePayment;
 window.sendHomeSwap=async function(toSlotId){
   const fromId=document.getElementById('homeSwapSel')?.value;
   if(!fromId){toast('اختر موعدك','error');return;}
+  if(hasPendingSwap()){toast('لديك طلب تبديل معلق — انتظر الرد عليه أولاً','error');return;}
   if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
   try{
     const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
@@ -2020,6 +2026,7 @@ function renderHome(){
           <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false)">❌ أرفض</button>
         </div></div>`;
     }
+    if(!outSw&&hasPendingSwap()&&!onCooldown)h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">🔒 لديك طلب تبديل معلق — انتظر الرد أولاً</div>`;
     if(outSw){
       const targetSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
       const targetName=targetSlot?.host_name||next.host_name||'';
@@ -2380,6 +2387,9 @@ async function openCalSlotModal(slot){
         const _tSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
         swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||slot.host_name||'')}</b> على طلب التبديل</div>`;
       }
+      if(!outSw&&!_onCooldown&&hasPendingSwap()){
+        swapHtml+=`<hr class="sep"><div class="note" style="border-color:var(--muted);">🔒 لديك طلب تبديل معلق — انتظر الرد عليه أولاً</div>`;
+      }
       if(!outSw&&_onCooldown){
         const _hrs=Math.ceil((7*60*60*1000-(Date.now()-new Date(_calCooldown.created_at).getTime()))/3600000);
         swapHtml+=`<hr class="sep"><div class="note" style="border-color:var(--muted);">🔒 انتظر ${_hrs} ساعة قبل إرسال طلب جديد لهذه الطلعة</div>`;
@@ -2449,6 +2459,7 @@ async function openCalSlotModal(slot){
       const toSlotId=this.getAttribute('data-to');
       const fromId=box.querySelector('#inlineSwapSel')?.value;
       if(!fromId||!toSlotId)return;
+      if(hasPendingSwap()){toast('لديك طلب تبديل معلق — انتظر الرد عليه أولاً','error');return;}
       if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
       this.disabled=true;this.textContent='يتم الإرسال...';
       try{
