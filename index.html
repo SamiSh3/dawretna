@@ -880,6 +880,16 @@ async function loadAll(){
 }
 function myName(){return myProfile?.name||session?.user?.email?.split('@')[0]||'';}
 
+
+function pendingSwapMsg(){
+  const sw=D.swaps.find(s=>s.requester_name===myName()&&s.status!=='rejected');
+  if(!sw)return '';
+  const tSlot=D.slots.find(s=>s.id===sw.to_slot_id);
+  const tName=tSlot?.host_name||'';
+  const tDate=tSlot?toGregShort(tSlot.date):'';
+  return `🔒 لديك طلب تبديل معلق مع <b>${esc(tName)}</b> (${esc(tDate)}) — 
+    <span style="color:var(--amber);cursor:pointer;text-decoration:underline;" onclick="A.openSlot('${sw.to_slot_id}')">عرض الطلعة ◀</span>`;
+}
 // هل عندي طلب تبديل معلق؟
 function hasPendingSwap(){
   return !!(D.swaps.find(s=>s.requester_name===myName()&&s.status!=='rejected'));
@@ -2026,7 +2036,7 @@ function renderHome(){
           <button class="btn btn-danger btn-sm btn-block" onclick="resolveSwap('${inSw.id}',false)">❌ أرفض</button>
         </div></div>`;
     }
-    if(!outSw&&hasPendingSwap()&&!onCooldown)h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">🔒 لديك طلب تبديل معلق — انتظر الرد أولاً</div>`;
+    if(!outSw&&hasPendingSwap()&&!onCooldown)h+=`<div class="note" style="margin-top:8px;border-color:var(--muted);">${pendingSwapMsg()}</div>`;
     if(outSw){
       const targetSlot=D.slots.find(s=>s.id===outSw.to_slot_id);
       const targetName=targetSlot?.host_name||next.host_name||'';
@@ -2388,7 +2398,7 @@ async function openCalSlotModal(slot){
         swapHtml+=`<hr class="sep"><div class="note">⏳ في انتظار رد <b>${esc(_tSlot?.host_name||slot.host_name||'')}</b> على طلب التبديل</div>`;
       }
       if(!outSw&&!_onCooldown&&hasPendingSwap()){
-        swapHtml+=`<hr class="sep"><div class="note" style="border-color:var(--muted);">🔒 لديك طلب تبديل معلق — انتظر الرد عليه أولاً</div>`;
+        swapHtml+=`<hr class="sep"><div class="note" style="border-color:var(--muted);">${pendingSwapMsg()}</div>`;
       }
       if(!outSw&&_onCooldown){
         const _hrs=Math.ceil((7*60*60*1000-(Date.now()-new Date(_calCooldown.created_at).getTime()))/3600000);
