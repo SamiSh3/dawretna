@@ -2321,6 +2321,13 @@ async function openCalSlotModal(slot){
   ):null;
 
   let h=`
+    ${isPast?`<div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--rsm);padding:7px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:16px;">🗄️</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);">طلعة مؤرشفة</div>
+        <div style="font-size:11px;color:var(--muted);">للعرض فقط — لا يمكن تعديل هذه الطلعة</div>
+      </div>
+    </div>`:''}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;">
       <div>
         ${slot.title?`<div style="font-family:var(--fd);font-size:16px;color:var(--amber);margin-bottom:4px;">${esc(slot.title)}</div>`:''}
@@ -2429,7 +2436,7 @@ async function openCalSlotModal(slot){
     </div>
     <hr class="sep" style="margin:10px 0;">
     <div style="font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700;">📍 موقع الطلعة</div>
-    ${myProfile?.is_admin?`
+    ${myProfile?.is_admin&&!isPast?`
     <select id="slotLocSel_${slot.id}" style="width:100%;padding:8px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);font-size:12px;margin-bottom:6px;">
       <option value="">— بدون موقع محدد —</option>
       ${D.locations.map(l=>`<option value="${l.id}" ${slot.location_name===l.name?'selected':''}>
