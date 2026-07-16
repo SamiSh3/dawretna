@@ -912,11 +912,7 @@ let _deferredInstall=null;
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();
   _deferredInstall=e;
-  // أظهر بانر التثبيت تلقائياً على Android
-  const isStandalone=window.matchMedia('(display-mode: standalone)').matches;
-  if(!isStandalone&&!sessionStorage.getItem('installDismissed')){
-    showInstallBanner();
-  }
+
 });
 window.addEventListener('appinstalled',()=>{
   _deferredInstall=null;
@@ -963,14 +959,7 @@ window.triggerInstall=async function(){
   }
 };
 
-// iOS: أظهر البانر تلقائياً
-(function(){
-  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
-  const isStandalone=window.navigator.standalone;
-  if(isIOS&&!isStandalone&&!sessionStorage.getItem('installDismissed')){
-    setTimeout(showInstallBanner,2000); // بعد ثانيتين من الفتح
-  }
-})();
+
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/dawretna/service-worker.js',{scope:'/dawretna/'}).then(reg=>{
