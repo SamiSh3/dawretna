@@ -3018,6 +3018,102 @@ function renderSettings(){
   const notifPerm=typeof Notification!=='undefined'?Notification.permission:'unsupported';
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+
+  // دليل تثبيت التطبيق
+  h+=`<div class="card" style="margin-bottom:14px;">
+    <div class="h2">📱 تثبيت التطبيق على جوالك</div>
+    <p class="hint" style="margin-top:4px;margin-bottom:14px;">ثبّت التطبيق للحصول على تجربة كاملة وإشعارات فورية</p>
+
+    <!-- iOS -->
+    <div style="border:1px solid var(--border);border-radius:var(--rsm);overflow:hidden;margin-bottom:10px;">
+      <div style="background:var(--bg-soft);padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span style="font-size:20px;"></span>
+        <div style="flex:1;font-size:13px;font-weight:700;">iPhone / iPad (iOS)</div>
+        <span style="color:var(--muted);font-size:12px;">اضغط للتفاصيل ▼</span>
+      </div>
+      <div style="padding:12px;display:none;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">١</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">افتح في Safari</div>
+              <div style="font-size:11px;color:var(--muted);">Chrome وFirefox لا يدعمان التثبيت على iOS</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٢</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اضغط زر المشاركة</div>
+              <div style="font-size:12px;margin-top:3px;background:var(--bg-soft);border-radius:6px;padding:6px 10px;display:inline-block;">
+                <span style="font-size:18px;">⎙</span> في أسفل الشاشة (وسط شريط Safari)
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٣</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اختر "إضافة إلى الشاشة الرئيسية"</div>
+              <div style="font-size:11px;color:var(--muted);">مرّر للأسفل في القائمة</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٤</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اضغط "إضافة" ✅</div>
+              <div style="font-size:11px;color:var(--muted);">ستجد أيقونة دوريتنا 🏕️ في شاشتك الرئيسية</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--sage);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٥</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">افتح من الأيقونة وفعّل الإشعارات</div>
+              <div style="font-size:11px;color:var(--muted);">الإعدادات ← 🔔 تفعيل الإشعارات — يتطلب iOS 16.4+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Android -->
+    <div style="border:1px solid var(--border);border-radius:var(--rsm);overflow:hidden;">
+      <div style="background:var(--bg-soft);padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span style="font-size:20px;">🤖</span>
+        <div style="flex:1;font-size:13px;font-weight:700;">Android</div>
+        <span style="color:var(--muted);font-size:12px;">اضغط للتفاصيل ▼</span>
+      </div>
+      <div style="padding:12px;display:none;">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">١</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">افتح في Chrome</div>
+              <div style="font-size:11px;color:var(--muted);">Chrome هو الأفضل لتثبيت التطبيق على Android</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٢</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اضغط ⋮ (ثلاث نقاط) أعلى يسار الشاشة</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--amber);color:#000;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٣</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اختر "إضافة إلى الشاشة الرئيسية" أو "تثبيت التطبيق"</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <div style="background:var(--sage);color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">٤</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">اضغط "تثبيت" ✅ — تنتهي!</div>
+              <div style="font-size:11px;color:var(--muted);">الإشعارات تعمل تلقائياً بعد التثبيت</div>
+            </div>
+          </div>
+          <button id="installBtn" class="btn btn-primary btn-sm btn-block" style="display:none;margin-top:4px;" onclick="A.installPWA()">📲 تثبيت مباشرة من هنا</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
   h+=`<div class="card">
     <div class="h2">🔔 الإشعارات والصوت</div>
     <p class="hint" style="margin-top:4px;margin-bottom:12px;">فعّل الإشعارات لتصلك التنبيهات حتى لو التطبيق في الخلفية.</p>
