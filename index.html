@@ -1683,9 +1683,10 @@ function updateNewSlotHijri(){
 
 function openNewSlot(){
   if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم إضافة طلعات','error');return;}
+  const today=new Date().toISOString().slice(0,10);
   const suggested=nextFirstTuesday();
   const inp=document.getElementById('newSlotDate');
-  if(inp) inp.value=suggested;
+  if(inp){inp.value=suggested;inp.min=today;} // منع التواريخ السابقة
   const sugEl=document.getElementById('newSlotSuggest');
   if(sugEl) sugEl.textContent=`المقترح: أقرب أول ثلاثاء في شهر هجري — ${toGreg(suggested)}`;
   document.getElementById('newSlotTitle').value='';
@@ -1726,6 +1727,7 @@ document.getElementById('newSlotCancelBtn').onclick=()=>closeModal('newSlotModal
 document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const date=document.getElementById('newSlotDate').value;
   if(!date){toast('اختر تاريخ','error');return;}
+  if(daysUntil(date)<0){toast('لا يمكن إضافة طلعة بتاريخ سابق','error');return;}
   if(D.slots.find(s=>s.date===date)){toast('هذا التاريخ موجود من قبل','error');return;}
   const title=document.getElementById('newSlotTitle').value.trim()||null;
   const budget=parseFloat(document.getElementById('newSlotBudget').value)||null;
