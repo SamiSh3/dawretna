@@ -2410,6 +2410,21 @@ async function openCalSlotModal(slot){
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}',event.currentTarget)">🙋 احجز هذا الموعد</button>`:''}
     ${slot.host_name&&!isPast&&slot.host_name===myName()?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}',event.currentTarget)">↩️ إلغاء الحجز</button>`:''}
 
+    <!-- أدوات المشرف -->
+    ${myProfile?.is_admin?`
+    <hr class="sep">
+    <div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:8px;">⚙️ أدوات المشرف</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <select id="adminHostSel_${slot.id}" style="flex:1;padding:7px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);font-size:12px;">
+          <option value="">— بدون مضيف —</option>
+          ${D.team.map(m=>`<option value="${esc(m.name)}" ${slot.host_name===m.name?'selected':''}>${esc(m.name)}</option>`).join('')}
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="A.adminSetHost('${slot.id}')" style="flex-shrink:0;">💾 تغيير المضيف</button>
+      </div>
+      <button class="btn btn-danger btn-sm btn-block" onclick="A.adminDeleteSlot('${slot.id}','${toGregShort(slot.date)}')">🗑️ حذف الطلعة</button>
+    </div>`:''}
+
     <!-- تبديل -->
     ${(()=>{
       let swapHtml='';
@@ -3520,6 +3535,27 @@ window.A={
     closeModal('calSlotModal');
     render();
     toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
+  },
+  async adminSetHost(slotId){
+    const sel=document.getElementById('adminHostSel_'+slotId);
+    if(!sel)return;
+    const newHost=sel.value||null;
+    const slot=D.slots.find(s=>s.id===slotId);
+    if(slot)slot.host_name=newHost;
+    render();
+    await patchRow('slots',slotId,{host_name:newHost});
+    closeModal('calSlotModal');
+    await loadAll();render();
+    toast(newHost?`✅ المضيف: ${newHost}`:'✅ تم إزالة المضيف');
+  },
+  async adminDeleteSlot(slotId,dateStr){
+    if(!confirm(`حذف طلعة ${dateStr}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
+    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'DELETE',headers:H});
+    D.slots=D.slots.filter(s=>s.id!==slotId);
+    closeModal('calSlotModal');
+    render();
+    toast('🗑️ تم حذف الطلعة');
   },
   async toggleAnnualPay(name,year,currentPaid){
     const newPaid=!currentPaid;
