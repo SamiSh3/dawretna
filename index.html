@@ -2426,6 +2426,7 @@ async function openCalSlotModal(slot){
     <hr class="sep">
     <div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:8px;">⚙️ أدوات المشرف</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
+      ${!isPast?`
       <div style="display:flex;gap:6px;align-items:center;">
         <select id="adminHostSel_${slot.id}" style="flex:1;padding:7px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);font-size:12px;">
           <option value="">— بدون مضيف —</option>
@@ -2434,6 +2435,21 @@ async function openCalSlotModal(slot){
         <button class="btn btn-ghost btn-sm" onclick="A.adminSetHost('${slot.id}')" style="flex-shrink:0;">💾 تغيير المضيف</button>
       </div>
       <button class="btn btn-danger btn-sm btn-block" onclick="A.adminDeleteSlot('${slot.id}','${toGregShort(slot.date)}')">🗑️ حذف الطلعة</button>
+      `:''}
+      ${isPast?`
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">👥 تخصيص الحضور والاعتذار</div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        ${D.team.map(member=>{
+          const rv=D.rsvps.find(r=>r.slot_id===slot.id&&r.member_name===member.name);
+          return `<div style="display:flex;align-items:center;gap:6px;">
+            <span style="flex:1;font-size:12px;">${esc(member.name)}</span>
+            <button class="btn btn-xs ${rv?.status==='yes'?'btn-sage':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','yes')">✅ حضر</button>
+            <button class="btn btn-xs ${rv?.status==='no'?'btn-danger':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','no')">🙅 اعتذر</button>
+            <button class="btn btn-xs ${!rv?'btn-ghost':''}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','clear')" style="${!rv?'opacity:.4':''}" title="مسح">✕</button>
+          </div>`;
+        }).join('')}
+      </div>
+      `:''}
     </div>`:''}
 
     <!-- تبديل -->
@@ -3567,6 +3583,23 @@ window.A={
     closeModal('calSlotModal');
     render();
     toast(title?`تم حفظ عنوان الطلعة ✅`:'تم حذف العنوان');
+  },
+  async adminSetRsvp(slotId,memberName,status){
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    if(status==='clear'){
+      // حذف الـ RSVP
+      await fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{method:'DELETE',headers:H});
+      D.rsvps=D.rsvps.filter(r=>!(r.slot_id===slotId&&r.member_name===memberName));
+    } else {
+      await fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
+        body:JSON.stringify({slot_id:slotId,member_name:memberName,status})});
+      const ex=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===memberName);
+      if(ex) ex.status=status;
+      else D.rsvps.push({slot_id:slotId,member_name:memberName,status});
+    }
+    const s=D.slots.find(x=>x.id===slotId);
+    if(s) openCalSlotModal(s);
+    toast(status==='clear'?'تم المسح':status==='yes'?'✅ سُجّل الحضور':'🙅 سُجّل الاعتذار');
   },
   async adminSetHost(slotId){
     const sel=document.getElementById('adminHostSel_'+slotId);
