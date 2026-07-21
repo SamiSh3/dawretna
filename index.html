@@ -2990,13 +2990,26 @@ function renderMore(){
   if(_moreSubTab==='memories'){
     h+=`<div class="card"><div class="h2">📸 ذكرى جديدة</div>
     <div class="field"><label>الوصف</label><textarea id="memC" placeholder="وش صار؟"></textarea></div>
-    <div class="field"><label>رابط صورة</label><input type="url" id="memI" placeholder="https://..."></div>
+    <div class="field"><label>رابط الصورة (اختياري)</label>
+      <input type="url" id="memI" placeholder="https://i.imgur.com/...">
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">💡 يعمل مع: Imgur, imgbb, أو أي رابط ينتهي بـ .jpg/.png/.webp</div>
+    </div>
     <div class="field"><label>التاريخ</label><input type="date" id="memD" value="${todayISO()}"></div>
     <button class="btn btn-primary btn-block" onclick="A.addMem()">إضافة</button></div>`;
     if(!D.memories.length)h+=`<div class="empty"><span class="ei">📷</span>لا توجد ذكريات.</div>`;
     else D.memories.forEach(m=>{
       h+=`<div class="mem-card">`;
-      if(m.image_url)h+=`<img class="mem-img" src="${esc(m.image_url)}" onerror="this.style.display='none'">`;
+      if(m.image_url){
+        // محاولة عرض الصورة مع fallback لرابط قابل للضغط
+        h+=`<div style="position:relative;">
+          <img class="mem-img" src="${esc(m.image_url)}" 
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+            onload="this.nextElementSibling.style.display='none';">
+          <a href="${esc(m.image_url)}" target="_blank" style="display:none;background:var(--bg-soft);padding:14px;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--amber);font-size:12px;font-weight:700;">
+            🖼️ عرض الصورة ←
+          </a>
+        </div>`;
+      }
       h+=`<div class="mem-body"><div style="font-size:13.5px;line-height:1.7;">${esc(m.caption)}</div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:7px;font-family:var(--fm);">${esc(toGreg(m.date))} · ${esc(m.author_name||'')}
       ${myName()&&(m.author_name===myName()||myProfile?.is_admin)?` <button class="btn btn-danger btn-xs" onclick="A.delMem('${m.id}')">حذف</button>`:''}</div></div></div>`;
