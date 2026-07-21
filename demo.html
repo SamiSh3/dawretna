@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دوريتنا — الدليل التفاعلي الكامل</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0f14;color:#e8e8e8;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 16px}
+h1{font-size:21px;font-weight:800;color:#d4a843;text-align:center;margin-bottom:3px}
+.sub{font-size:12px;color:#666;text-align:center;margin-bottom:6px}
+/* Chapter tabs */
+.chapters{display:flex;gap:6px;margin-bottom:16px;width:300px}
+.ch-btn{flex:1;background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:7px 4px;font-size:11px;color:#999;cursor:pointer;text-align:center;transition:all .2s}
+.ch-btn.active{background:#d4a843;color:#1a1a1a;border-color:#d4a843;font-weight:700}
+/* Phone */
+.phone{width:300px;height:555px;background:#0f1923;border-radius:36px;border:3px solid #2a3540;overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:88px;height:20px;background:#0f1923;border-radius:0 0 14px 14px;z-index:10;border:3px solid #2a3540;border-top:none}
+.screen{width:100%;height:100%;overflow:hidden;position:relative}
+.slide{position:absolute;inset:0;opacity:0;transform:translateX(28px);transition:all .42s cubic-bezier(.4,0,.2,1);pointer-events:none;overflow-y:auto}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all}
+.slide.exit{opacity:0;transform:translateX(-28px)}
+/* Nav bar */
+.nav-bar{position:absolute;bottom:0;left:0;right:0;background:#0a0f14;border-top:1px solid #1e2d3d;display:flex;padding:6px 0 9px}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;color:#555}
+.nav-item.on{color:#d4a843}
+.nav-icon{font-size:16px}
+/* Common */
+.hdr{background:#0f1923;padding:27px 16px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #1e2d3d}
+.amber{color:#d4a843}
+.muted{color:#666;font-size:11px}
+.hero{background:linear-gradient(135deg,#1a2a1a,#1e3020);border-bottom:1px solid #2a3a2a;padding:13px 15px}
+.hero-lbl{font-size:9px;color:#d4a843;font-weight:700;letter-spacing:1px;margin-bottom:2px}
+.hero-date{font-size:18px;font-weight:800}
+.hero-hij{font-size:10px;color:#d4a843;margin-bottom:6px}
+.hero-b{background:linear-gradient(135deg,#2a1a1a,#301a20)}
+.btn-p{background:#d4a843;color:#1a1a1a;border:none;border-radius:99px;padding:10px;width:100%;font-size:12px;font-weight:800;cursor:pointer;margin-top:8px}
+.btn-ghost{background:transparent;border:1px solid #2a3540;border-radius:99px;padding:8px;width:100%;font-size:11px;color:#e8e8e8;cursor:pointer;margin-top:5px}
+.btn-g{background:#1a3020;border:1px solid #2a6a3a;border-radius:99px;padding:8px;width:100%;font-size:11px;color:#4a9a5a;font-weight:700;cursor:pointer}
+.btn-r{background:#3a1a1a;border:1px solid #6a2a2a;border-radius:99px;padding:8px;width:100%;font-size:11px;color:#d45a5a;cursor:pointer}
+.rsvp-row{display:flex;gap:7px;margin-top:9px}
+.rsvp-btn{flex:1;background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:7px;font-size:11px;text-align:center}
+.rsvp-btn.yes{background:#1a3020;border-color:#2a6a3a;color:#4a9a5a;font-weight:700}
+.list{padding:11px 15px}
+.item{background:#1a2530;border:1px solid #2a3540;border-radius:10px;padding:9px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:7px}
+.cal-dn{font-size:8px;color:#555;text-align:center;padding:2px}
+.cal-d{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:5px}
+.cal-d.booked{background:#d4a843;color:#1a1a1a;font-weight:800;animation:pg 1.5s infinite}
+.cal-d.free{background:#1a3020;color:#4a9a5a}
+.cal-d.today{border:1px solid #d4a843}
+@keyframes pg{0%,100%{box-shadow:0 0 0 0 rgba(212,168,67,.4)}70%{box-shadow:0 0 0 6px rgba(212,168,67,0)}}
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;backdrop-filter:blur(3px)}
+.mbox{background:#132030;border-radius:18px 18px 0 0;padding:17px 15px;width:100%}
+.mtitle{font-size:14px;font-weight:800;color:#d4a843;margin-bottom:11px}
+.info-r{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px}
+.sep{border:none;border-top:1px solid #1e2d3d;margin:9px 0}
+.chip-row{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.chip{background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:3px 8px;font-size:10px}
+.chip.yes{background:#1a3020;border-color:#2a5030;color:#4a9a5a}
+.swap-box{background:#1a2530;border:1px solid #2a4050;border-radius:9px;padding:9px 11px;margin-bottom:9px}
+.swap-lbl{font-size:10px;color:#d4a843;font-weight:700;margin-bottom:5px}
+select.fake{width:100%;background:#1a2530;border:1px solid #2a3540;color:#e8e8e8;border-radius:7px;padding:7px 9px;font-size:10px;margin-bottom:7px;appearance:none}
+.note{background:#1a2f40;border:1px solid #2a4f60;border-radius:8px;padding:9px 11px;font-size:11px;margin-top:7px}
+.lock-note{background:#1f1f1a;border:1px solid #3a3a20;border-radius:8px;padding:9px 11px;font-size:11px;margin-top:7px;color:#aaaa60}
+.notif{position:relative;margin:11px;background:#132030;border:2px solid #d4a843;border-radius:13px;padding:11px 13px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.notif.green{border-color:#4a9a5a}
+.notif.red{border-color:#d45a5a}
+.notif-t{font-size:12px;font-weight:800;color:#d4a843;margin-bottom:2px}
+.notif-t.green{color:#4a9a5a}
+.notif-t.red{color:#d45a5a}
+.notif-b{font-size:10px;color:#999}
+.notif-btns{display:flex;gap:5px;margin-top:7px}
+.notif-go{flex:1;background:#d4a843;color:#1a1a1a;border:none;border-radius:99px;padding:6px;font-size:10px;font-weight:700;cursor:pointer}
+.notif-cl{background:#1a2530;border:1px solid #2a3540;color:#999;border-radius:99px;padding:6px 9px;font-size:10px;cursor:pointer}
+.toast{position:absolute;bottom:65px;left:50%;transform:translateX(-50%);background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:7px 14px;font-size:10px;white-space:nowrap;z-index:100;pointer-events:none}
+.success{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;padding:26px;text-align:center;background:#0f1923}
+.splash{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:#0f1923}
+.lbl{font-size:10px;color:#999;margin-bottom:3px;margin-top:11px}
+.inp{background:#1a2530;border:1px solid #2a3540;border-radius:8px;padding:9px 12px;font-size:11px;color:#e8e8e8;width:100%}
+.inp.focus{border-color:#d4a843}
+.cursor{display:inline-block;width:2px;height:12px;background:#d4a843;animation:blink .8s infinite;vertical-align:middle;margin-left:1px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.divider{display:flex;align-items:center;gap:7px;margin:11px 0}
+.div-l{flex:1;height:1px;background:#2a3540}
+.avail-box{background:#1a3020;border:1px solid #2a5030;border-radius:8px;padding:8px;margin-bottom:10px}
+.who{display:inline-flex;align-items:center;gap:4px;background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:2px 8px;font-size:10px;margin-bottom:7px}
+/* Controls */
+.controls{width:300px;margin-top:16px}
+.progress{height:3px;background:#1a2530;border-radius:99px;margin-bottom:12px;overflow:hidden}
+.pf{height:100%;background:#d4a843;border-radius:99px;transition:width .4s}
+.step-box{background:#0f1923;border:1px solid #2a3540;border-radius:10px;padding:12px 14px;margin-bottom:10px;text-align:center}
+.sn{font-size:10px;color:#d4a843;margin-bottom:2px}
+.st{font-size:13px;font-weight:700;margin-bottom:2px}
+.sd{font-size:11px;color:#666;line-height:1.5}
+.btn-row{display:flex;gap:6px}
+.nbtn{flex:1;background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:9px;font-size:12px;color:#e8e8e8;cursor:pointer;font-weight:600;transition:all .2s}
+.nbtn:hover{border-color:#d4a843;color:#d4a843}
+.nbtn.nxt{background:#d4a843;color:#1a1a1a;border-color:#d4a843}
+.nbtn:disabled{opacity:.3;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<h1>🏕️ دوريتنا — الدليل الكامل</h1>
+<p class="sub">١٧ خطوة تفاعلية</p>
+
+<div class="chapters">
+  <button class="ch-btn active" id="ch1" onclick="goChapter(0)">🏠 الأساسيات</button>
+  <button class="ch-btn" id="ch2" onclick="goChapter(8)">🔁 التبديل</button>
+</div>
+
+<div class="phone">
+  <div class="notch"></div>
+  <div class="screen">
+
+    <!-- ══ الفصل الأول: الأساسيات (8 شرائح) ══ -->
+
+    <!-- 1: Splash -->
+    <div class="slide active" id="s0">
+      <div class="splash">
+        <div style="font-size:56px">🏕️</div>
+        <div style="font-size:25px;font-weight:800;color:#d4a843">دوريتنا</div>
+        <div class="muted">إدارة طلعات الشاليه</div>
+        <div style="display:flex;gap:5px;margin-top:20px">
+          <div style="width:7px;height:7px;background:#d4a843;border-radius:50%;animation:dot 1.2s .0s infinite"></div>
+          <div style="width:7px;height:7px;background:#d4a843;border-radius:50%;animation:dot 1.2s .2s infinite"></div>
+          <div style="width:7px;height:7px;background:#d4a843;border-radius:50%;animation:dot 1.2s .4s infinite"></div>
+        </div>
+        <style>@keyframes dot{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}</style>
+      </div>
+    </div>
+
+    <!-- 2: Login -->
+    <div class="slide" id="s1">
+      <div style="background:#0f1923;padding:20px 17px;height:100%;overflow-y:auto">
+        <div style="height:16px"></div>
+        <div style="font-size:18px;font-weight:800;color:#d4a843">أهلاً بك 👋</div>
+        <div class="muted" style="margin-top:2px;margin-bottom:18px">سجّل دخولك للمتابعة</div>
+        <div class="lbl">البريد الإلكتروني</div>
+        <div class="inp focus"><span id="et"></span><span class="cursor"></span></div>
+        <div class="lbl">كلمة المرور</div>
+        <div class="inp"><span id="pt"></span></div>
+        <button class="btn-p">تسجيل الدخول</button>
+        <div class="divider"><div class="div-l"></div><span class="muted">أو</span><div class="div-l"></div></div>
+        <button style="background:#1a2530;border:1px solid #2a3540;border-radius:99px;padding:9px;width:100%;font-size:11px;color:#e8e8e8;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          الدخول بـ Google
+        </button>
+      </div>
+    </div>
+
+    <!-- 3: Home -->
+    <div class="slide" id="s2">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div><div class="muted">أهلاً، سامي</div></div><span style="font-size:17px">🔔</span></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="hero-hij">٢٤ محرم ١٤٤٨</div>
+          <div class="muted">المضيف: فهد الوهابي</div>
+          <div class="rsvp-row"><div class="rsvp-btn">سأحضر</div><div class="rsvp-btn">أعتذر</div></div>
+        </div>
+        <div class="list">
+          <div style="font-size:11px;font-weight:700;margin-bottom:7px">📅 المواعيد القادمة</div>
+          <div class="item"><div><div style="font-size:11px;font-weight:700">١٥ سبتمبر ٢٠٢٦</div><div class="muted">المضيف: سامي</div></div><span class="amber" style="font-size:10px">التفاصيل ←</span></div>
+          <div class="item" style="border-color:#2a4030"><div><div style="font-size:11px;font-weight:700">١٧ نوفمبر ٢٠٢٦</div><div style="font-size:10px;color:#4a9a5a">متاح للحجز</div></div><span style="font-size:10px;color:#4a9a5a;font-weight:700">🙋 أحجز</span></div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 4: RSVP -->
+    <div class="slide" id="s3">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="hero-hij">٢٤ محرم ١٤٤٨</div>
+          <div class="muted">المضيف: فهد الوهابي</div>
+          <div class="rsvp-row"><div class="rsvp-btn yes">✅ سأحضر</div><div class="rsvp-btn">أعتذر</div></div>
+        </div>
+        <div class="list"><div class="item"><div><div style="font-size:11px;font-weight:700">١٥ سبتمبر</div><div class="muted">المضيف: سامي</div></div><span class="amber" style="font-size:10px">التفاصيل ←</span></div></div>
+      </div>
+      <div class="toast">✅ تم تسجيل حضورك</div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 5: Calendar -->
+    <div class="slide" id="s4">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div style="font-size:15px;font-weight:800;color:#d4a843">التقويم</div><span class="amber" style="font-size:10px">أغسطس ٢٠٢٦</span></div>
+        <div style="padding:11px">
+          <div class="cal-grid">
+            <div class="cal-dn">أحد</div><div class="cal-dn">إثنين</div><div class="cal-dn">ثلاثاء</div><div class="cal-dn">أربعاء</div><div class="cal-dn">خميس</div><div class="cal-dn">جمعة</div><div class="cal-dn">سبت</div>
+            <div></div><div></div><div></div><div></div><div class="cal-d">١</div><div class="cal-d">٢</div><div class="cal-d">٣</div>
+            <div class="cal-d">٤</div><div class="cal-d">٥</div><div class="cal-d">٦</div><div class="cal-d">٧</div><div class="cal-d">٨</div><div class="cal-d">٩</div><div class="cal-d">١٠</div>
+            <div class="cal-d">١١</div><div class="cal-d">١٢</div><div class="cal-d today">١٣</div><div class="cal-d">١٤</div><div class="cal-d">١٥</div><div class="cal-d">١٦</div><div class="cal-d">١٧</div>
+            <div class="cal-d booked">١٨</div><div class="cal-d">١٩</div><div class="cal-d">٢٠</div><div class="cal-d">٢١</div><div class="cal-d">٢٢</div><div class="cal-d">٢٣</div><div class="cal-d">٢٤</div>
+            <div class="cal-d">٢٥</div><div class="cal-d">٢٦</div><div class="cal-d free">٢٧</div><div class="cal-d">٢٨</div><div class="cal-d">٢٩</div><div class="cal-d">٣٠</div><div class="cal-d">٣١</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:11px;font-size:9px">
+            <div style="display:flex;align-items:center;gap:4px"><div style="width:9px;height:9px;background:#d4a843;border-radius:2px"></div>محجوز</div>
+            <div style="display:flex;align-items:center;gap:4px"><div style="width:9px;height:9px;background:#1a3020;border:1px solid #2a5030;border-radius:2px"></div>متاح</div>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item on"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 6: Slot detail -->
+    <div class="slide" id="s5">
+      <div style="height:100%;position:relative;background:#0f1923">
+        <div class="hdr" style="filter:blur(2px);opacity:.3"><div style="font-size:15px;font-weight:800;color:#d4a843">التقويم</div></div>
+        <div class="overlay"><div class="mbox">
+          <div class="mtitle">📅 طلعة ١٨ أغسطس ٢٠٢٦</div>
+          <div class="info-r"><span class="muted">المضيف</span><span style="font-weight:700">فهد الوهابي</span></div>
+          <div class="chip-row"><div class="chip yes">✅ سامي</div><div class="chip yes">✅ فهد الوهابي</div><div class="chip">⏳ ali</div><div class="chip">⏳ فهد القحطاني</div></div>
+          <div class="muted" style="margin-bottom:10px">سيحضر: ٢ · بانتظار: ٢</div>
+          <button class="btn-p" style="font-size:11px">📋 عرض التفاصيل</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 7: Book -->
+    <div class="slide" id="s6">
+      <div style="height:100%;position:relative;background:#0f1923">
+        <div class="hdr" style="filter:blur(2px);opacity:.3"><div style="font-size:15px;font-weight:800;color:#d4a843">التقويم</div></div>
+        <div class="overlay"><div class="mbox">
+          <div class="mtitle">📅 طلعة ٢٧ أغسطس ٢٠٢٦</div>
+          <div class="avail-box"><div style="font-size:11px;color:#4a9a5a;font-weight:700">🟢 متاح للحجز</div><div class="muted">لا يوجد مضيف بعد</div></div>
+          <div class="info-r"><span class="muted">الهجري</span><span>٣ صفر ١٤٤٨</span></div>
+          <button class="btn-p" style="font-size:11px;animation:pb 1.5s infinite">🙋 احجز هذا الموعد</button>
+          <style>@keyframes pb{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}</style>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 8: Booking success -->
+    <div class="slide" id="s7">
+      <div class="success">
+        <div style="font-size:54px">🏕️</div>
+        <div style="font-size:18px;font-weight:800;color:#4a9a5a">تم الحجز بنجاح!</div>
+        <div class="muted" style="line-height:1.7">تم تسجيلك كمضيف لطلعة<br>٢٧ أغسطس ٢٠٢٦<br><span class="amber">أُرسل تنبيه للأعضاء 🔔</span></div>
+        <div style="background:#1a2530;border:1px solid #2a3540;border-radius:11px;padding:11px;width:100%;text-align:right">
+          <div class="info-r" style="font-size:11px"><span class="muted">التاريخ</span><span>٢٧ أغسطس ٢٠٢٦</span></div>
+          <div class="info-r" style="font-size:11px"><span class="muted">المضيف</span><span class="amber" style="font-weight:700">سامي ✅</span></div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item on"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- ══ الفصل الثاني: التبديل (9 شرائح) ══ -->
+
+    <!-- 9: سامي يرسل طلب -->
+    <div class="slide" id="s8">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div><div class="muted">سامي مسجّل دخول</div></div><span style="font-size:17px">🔔</span></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="hero-hij">٢٤ محرم ١٤٤٨</div>
+          <div class="muted" style="margin-bottom:9px">المضيف: <b>ali</b></div>
+          <div class="swap-box">
+            <div class="swap-lbl">🔁 طلب تبديل مع ali</div>
+            <div class="muted" style="margin-bottom:5px">اختر يومك للتبديل:</div>
+            <select class="fake"><option>١٥ سبتمبر ٢٠٢٦ (يومك)</option></select>
+            <button class="btn-p" style="animation:pul 1.5s infinite;font-size:11px">📤 إرسال طلب التبديل</button>
+            <style>@keyframes pul{0%,100%{transform:scale(1)}50%{transform:scale(1.02)}}</style>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 10: سامي ينتظر -->
+    <div class="slide" id="s9">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="muted" style="margin-bottom:7px">المضيف: <b>ali</b></div>
+          <div class="note">⏳ في انتظار رد <b>ali</b> على طلب التبديل<br><span class="muted">ينتهي تلقائياً بعد 24 ساعة</span></div>
+        </div>
+        <div style="padding:11px 15px"><div class="muted" style="text-align:center;margin-top:10px">🔒 لا يمكن إرسال طلب آخر أثناء الانتظار</div></div>
+      </div>
+      <div class="toast">✅ تم إرسال الطلب إلى ali</div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 11: ali يتلقى تنبيه -->
+    <div class="slide" id="s10">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div><div class="muted">ali مسجّل دخول</div></div><span style="font-size:17px;position:relative">🔔<span style="position:absolute;top:-3px;left:-3px;background:#d45a5a;border-radius:99px;font-size:8px;padding:1px 3px;color:#fff">1</span></span></div>
+        <div class="hero hero-b">
+          <div class="hero-lbl">⭐ طلعتك القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="muted">أنت المضيف</div>
+        </div>
+        <div class="notif">
+          <div style="font-size:9px;color:#d4a843;margin-bottom:3px">🔔 تنبيه جديد</div>
+          <div class="notif-t">🔁 سامي يريد تبديل موعدك</div>
+          <div class="notif-b">يعطيك ١٥ سبتمبر مقابل ١٨ أغسطس</div>
+          <div class="notif-btns"><button class="notif-go">📅 اذهب للطلعة</button><button class="notif-cl">إغلاق</button></div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 12: ali يرى الطلب -->
+    <div class="slide" id="s11">
+      <div style="height:100%;position:relative;background:#0f1923">
+        <div class="hdr" style="filter:blur(2px);opacity:.3"><div style="font-size:15px;font-weight:800;color:#d4a843">التقويم</div></div>
+        <div class="overlay"><div class="mbox">
+          <div class="who">👤 أنت: ali</div>
+          <div class="mtitle">📅 طلعتك — ١٨ أغسطس</div>
+          <div class="info-r"><span class="muted">المضيف</span><span style="font-weight:700;color:#d4a843">ali (أنت)</span></div>
+          <hr class="sep">
+          <div class="swap-box" style="border-color:#d4a84350">
+            <div class="swap-lbl">🔁 طلب تبديل من سامي</div>
+            <div style="font-size:11px;margin-bottom:7px">يعطيك <b>١٥ سبتمبر</b> مقابل <b>١٨ أغسطس</b></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-g" style="animation:gp 1.5s infinite">✅ أوافق</button>
+              <button class="btn-r">❌ أرفض</button>
+              <style>@keyframes gp{0%,100%{box-shadow:0 0 0 0 rgba(74,154,90,.3)}70%{box-shadow:0 0 0 7px rgba(74,154,90,0)}}</style>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 13: تم القبول -->
+    <div class="slide" id="s12">
+      <div style="height:100%;position:relative;background:#0f1923">
+        <div class="hdr" style="filter:blur(2px);opacity:.3"><div style="font-size:15px;font-weight:800;color:#d4a843">التقويم</div></div>
+        <div class="overlay"><div class="mbox">
+          <div class="who">👤 أنت: ali</div>
+          <div class="mtitle">✅ قبلت طلب التبديل</div>
+          <div style="background:#1a3020;border:1px solid #2a6a3a;border-radius:9px;padding:11px;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:800;color:#4a9a5a;margin-bottom:7px">تم التبديل بنجاح!</div>
+            <div class="info-r"><span class="muted">طلعتك الجديدة</span><span style="font-weight:700;color:#d4a843">١٥ سبتمبر ٢٠٢٦</span></div>
+            <div class="info-r"><span class="muted">طلعة سامي الجديدة</span><span>١٨ أغسطس ٢٠٢٦</span></div>
+          </div>
+          <div class="muted" style="text-align:center">تم إرسال تنبيه لكلاكما 🔔</div>
+          <button class="btn-p" style="margin-top:11px;font-size:11px">حسناً</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 14: سامي يستلم القبول -->
+    <div class="slide" id="s13">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div><div class="muted">سامي مسجّل دخول</div></div></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ طلعتك الجديدة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div style="font-size:11px;color:#4a9a5a;font-weight:700;margin-bottom:6px">🏠 أنت المضيف</div>
+        </div>
+        <div class="notif green">
+          <div style="font-size:9px;color:#4a9a5a;margin-bottom:3px">🔔 تنبيه</div>
+          <div class="notif-t green">✅ قُبل طلب التبديل!</div>
+          <div class="notif-b">صار لك يوم ١٨ أغسطس بدل ١٥ سبتمبر</div>
+          <div class="notif-btns"><button class="notif-go" style="background:#4a9a5a">📅 طلعتك الجديدة</button><button class="notif-cl">إغلاق</button></div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 15: سيناريو الرفض -->
+    <div class="slide" id="s14">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div><div class="muted">سامي مسجّل دخول</div></div></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="muted" style="margin-bottom:7px">المضيف: <b>ali</b></div>
+        </div>
+        <div class="notif red">
+          <div style="font-size:9px;color:#d45a5a;margin-bottom:3px">🔔 تنبيه</div>
+          <div class="notif-t red">❌ طلب التبديل رُفض</div>
+          <div class="notif-b">رفض ali الطلب — يمكنك المحاولة فوراً</div>
+          <div class="notif-btns"><button class="notif-go" style="background:#6a2a2a;color:#e8e8e8">📅 اذهب للطلعة</button><button class="notif-cl">إغلاق</button></div>
+        </div>
+        <div style="padding:10px 15px">
+          <div class="swap-box">
+            <div class="swap-lbl">🔁 أرسل طلب جديد</div>
+            <select class="fake"><option>١٥ سبتمبر ٢٠٢٦ (يومك)</option></select>
+            <button class="btn-p" style="font-size:11px">📤 إرسال طلب جديد</button>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+    <!-- 16: cooldown -->
+    <div class="slide" id="s15">
+      <div style="height:100%;padding-bottom:53px;overflow-y:auto;background:#0f1923">
+        <div class="hdr"><div style="font-size:15px;font-weight:800;color:#d4a843">دوريتنا 🏕️</div></div>
+        <div class="hero">
+          <div class="hero-lbl">⭐ الطلعة القادمة</div>
+          <div class="hero-date">١٨ أغسطس ٢٠٢٦</div>
+          <div class="muted" style="margin-bottom:7px">المضيف: <b>ali</b></div>
+          <div class="lock-note">🔒 انتظر <b>٦ ساعات</b> قبل إرسال طلب جديد لهذه الطلعة</div>
+        </div>
+        <div style="padding:12px 15px">
+          <div style="font-size:11px;font-weight:700;margin-bottom:9px;color:#d4a843">📋 قواعد التبديل</div>
+          <div style="display:flex;flex-direction:column;gap:7px;font-size:11px">
+            <div style="display:flex;gap:7px"><span style="color:#4a9a5a">✅</span>طلب واحد فقط في نفس الوقت</div>
+            <div style="display:flex;gap:7px"><span style="color:#4a9a5a">✅</span>إذا رُفض يمكنك الإرسال فوراً</div>
+            <div style="display:flex;gap:7px"><span class="amber">⏰</span>cooldown 7 ساعات لنفس الطلعة</div>
+            <div style="display:flex;gap:7px"><span class="amber">⏰</span>انتهاء تلقائي بعد 24 ساعة بلا رد</div>
+          </div>
+        </div>
+      </div>
+      <div class="nav-bar"><div class="nav-item on"><div class="nav-icon">🏠</div>الرئيسية</div><div class="nav-item"><div class="nav-icon">📅</div>التقويم</div><div class="nav-item"><div class="nav-icon">💰</div>الميزانية</div><div class="nav-item"><div class="nav-icon">⚙️</div>الإعدادات</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="progress"><div class="pf" id="pf" style="width:5.9%"></div></div>
+  <div class="step-box">
+    <div class="sn" id="sn">الخطوة ١ من ١٧</div>
+    <div class="st" id="st">شاشة البداية</div>
+    <div class="sd" id="sd">فتح تطبيق دوريتنا</div>
+  </div>
+  <div class="btn-row">
+    <button class="nbtn" id="pb" onclick="prev()" disabled>◀ السابق</button>
+    <button class="nbtn nxt" id="nb" onclick="next()">التالي ▶</button>
+  </div>
+</div>
+
+<script>
+const steps=[
+  // الأساسيات
+  {t:'شاشة البداية',d:'فتح تطبيق دوريتنا',s:'s0',ch:0},
+  {t:'تسجيل الدخول',d:'إدخال البريد وكلمة المرور أو الدخول بـ Google',s:'s1',ch:0},
+  {t:'الصفحة الرئيسية',d:'الطلعة القادمة + قائمة المواعيد في مكان واحد',s:'s2',ch:0},
+  {t:'تأكيد الحضور ✅',d:'ضغط "سأحضر" — يتغير الزر للأخضر فوراً ويُحفظ',s:'s3',ch:0},
+  {t:'التقويم الشهري',d:'الأصفر = محجوز · الأخضر = متاح للحجز · الإطار = اليوم',s:'s4',ch:0},
+  {t:'تفاصيل الطلعة',d:'الضغط على يوم مجدول يعرض المضيف وقائمة الحضور',s:'s5',ch:0},
+  {t:'حجز موعد متاح',d:'الضغط على "احجز" لتسجيل اسمك كمضيف للطلعة',s:'s6',ch:0},
+  {t:'✅ تم الحجز!',d:'أصبحت المضيف وأُرسل تنبيه فوري لجميع الأعضاء',s:'s7',ch:0},
+  // التبديل
+  {t:'سامي يطلب التبديل',d:'سامي يختار طلعته في سبتمبر ويرسل طلب لـ ali',s:'s8',ch:1},
+  {t:'الطلب أُرسل ✅',d:'سامي ينتظر — لا يمكن إرسال طلب آخر أثناء الانتظار',s:'s9',ch:1},
+  {t:'ali يستلم تنبيهاً',d:'وصل تنبيه فوري لـ ali بأن سامي يريد تبديل موعده',s:'s10',ch:1},
+  {t:'ali يرى الطلب',d:'ali يفتح طلعته ويرى زرَّي "أوافق" و"أرفض"',s:'s11',ch:1},
+  {t:'ali وافق ✅',d:'تم التبديل — ali أخذ سبتمبر وسامي أخذ أغسطس',s:'s12',ch:1},
+  {t:'سامي يستلم القبول',d:'وصل تنبيه بالقبول — طلعة سامي الجديدة أغسطس',s:'s13',ch:1},
+  {t:'سيناريو الرفض ❌',d:'إذا رفض ali — يصل تنبيه لسامي ويمكنه الإرسال فوراً',s:'s14',ch:1},
+  {t:'Cooldown (7 ساعات)',d:'بعد إرسال طلب لنفس الطلعة يوجد cooldown 7 ساعات',s:'s15',ch:1},
+];
+
+let cur=0;
+const TOTAL=steps.length;
+
+function show(i){
+  steps.forEach((s,j)=>{
+    const el=document.getElementById(s.s);
+    el.classList.remove('active','exit');
+    if(j===i)el.classList.add('active');
+    else if(j<i)el.classList.add('exit');
+  });
+  document.getElementById('sn').textContent='الخطوة '+(i+1)+' من '+TOTAL;
+  document.getElementById('st').textContent=steps[i].t;
+  document.getElementById('sd').textContent=steps[i].d;
+  document.getElementById('pf').style.width=((i+1)/TOTAL*100)+'%';
+  document.getElementById('pb').disabled=i===0;
+  document.getElementById('nb').textContent=i===TOTAL-1?'🔄 إعادة':'التالي ▶';
+  // Update chapter buttons
+  const ch=steps[i].ch;
+  document.getElementById('ch1').className='ch-btn'+(ch===0?' active':'');
+  document.getElementById('ch2').className='ch-btn'+(ch===1?' active':'');
+  if(i===1)typeAnim();
+}
+
+function next(){if(cur===TOTAL-1){cur=0;show(0);return;}cur++;show(cur);}
+function prev(){if(cur===0)return;cur--;show(cur);}
+function goChapter(ch){cur=steps.findIndex(s=>s.ch===ch);show(cur);}
+
+function typeAnim(){
+  const e=document.getElementById('et'),p=document.getElementById('pt');
+  if(!e||!p)return;
+  const em='sami@example.com';
+  e.textContent='';p.textContent='';
+  let i=0;
+  const t=setInterval(()=>{
+    if(i<em.length){e.textContent+=em[i++];}
+    else{clearInterval(t);setTimeout(()=>{p.textContent='●●●●●●●●';},350);}
+  },70);
+}
+
+show(0);
+</script>
+</body>
+</html>
