@@ -2718,6 +2718,7 @@ function renderTrips(){
             ${myProfile?.is_admin||myName()===poll.created_by?`<button class="btn btn-ghost btn-xs" onclick="A.deletePoll('${poll.id}')">حذف</button>`:''}
           </div>
         </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">📝 أنشأه: <b>${esc(poll.created_by||'')}</b></div>
         ${poll.closed?`<span style="font-size:10.5px;background:var(--danger-s);color:var(--danger);padding:2px 8px;border-radius:999px;">مغلق</span>`:''}
         <div>`;
       opts.forEach((op,i)=>{const cnt=pV.filter(v=>v.option_idx===i).length,pct=total?Math.round(cnt/total*100):0,vt=myV?.option_idx===i;h+=`<div class="poll-opt" onclick="${!myV&&!poll.closed?`A.vote('${poll.id}',${i})`:''}"><span class="opt-label" title="${esc(op)}">${esc(op)}</span><div class="opt-bar-wrap"><div class="opt-bar ${vt?'voted':''}" style="width:${pct}%"></div></div><span class="opt-count">${cnt}</span>${vt?'<span class="voted-badge">✓</span>':''}</div>`;});
