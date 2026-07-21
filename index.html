@@ -274,14 +274,18 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 /* ── poll ── */
 .poll-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px;margin-bottom:12px;}
 .poll-q{font-family:var(--fd);font-size:18px;margin-bottom:10px;}
-.poll-opt{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bsoft);cursor:pointer;}
-.poll-opt:last-of-type{border-bottom:none;}
-.opt-label{font-size:13px;font-weight:600;min-width:80px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.opt-bar-wrap{flex:1;background:var(--bg-el);border-radius:999px;height:6px;overflow:hidden;}
-.opt-bar{height:6px;background:var(--amber);border-radius:999px;transition:.4s;}
+.poll-opt{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rsm);cursor:pointer;margin-bottom:4px;border:1px solid var(--bsoft);transition:all .15s;}
+.poll-opt:hover{border-color:var(--amber)40;background:var(--bg-soft);}
+.poll-opt.selected{border-color:var(--sage);background:rgba(74,154,90,.08);}
+.poll-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.poll-opt.selected .poll-radio{border-color:var(--sage);background:var(--sage);}
+.poll-radio-dot{width:7px;height:7px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s;}
+.poll-opt.selected .poll-radio-dot{opacity:1;}
+.opt-label{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.opt-bar-wrap{flex:1;max-width:80px;background:var(--bg-el);border-radius:999px;height:5px;overflow:hidden;}
+.opt-bar{height:5px;background:var(--amber);border-radius:999px;transition:.4s;}
 .opt-bar.voted{background:var(--sage);}
-.opt-count{font-family:var(--fm);font-size:11px;color:var(--muted);min-width:24px;text-align:left;}
-.voted-badge{font-size:10px;color:var(--sage);background:var(--sage-s);padding:2px 6px;border-radius:999px;}
+.opt-count{font-size:11px;color:var(--muted);min-width:20px;text-align:left;}
 
 /* ── special / memories ── */
 .sp-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:13px 15px;margin-bottom:11px;}
@@ -1634,9 +1638,22 @@ async function toggleJoin(id){
 
 // polls
 async function vote(pollId,optIdx){
-  if(D.votes.find(v=>v.poll_id===pollId&&v.member_name===myName())){toast('صوّتت من قبل','error');return;}
+  // تحديث محلي فوري
+  const ex=D.votes.find(v=>v.poll_id===pollId&&v.member_name===myName());
+  if(ex) ex.option_idx=optIdx;
+  else D.votes.push({poll_id:pollId,member_name:myName(),option_idx:optIdx});
+  render();
   await sb.from('poll_votes').upsert({poll_id:pollId,member_name:myName(),option_idx:optIdx},{onConflict:'poll_id,member_name'});
-  await loadAll();render();toast('تم التصويت ✅');
+  loadAll().catch(()=>{});
+  toast('تم التصويت ✅');
+}
+async function unvote(pollId){
+  // إلغاء التصويت
+  D.votes=D.votes.filter(v=>!(v.poll_id===pollId&&v.member_name===myName()));
+  render();
+  await sb.from('poll_votes').delete().eq('poll_id',pollId).eq('member_name',myName());
+  loadAll().catch(()=>{});
+  toast('تم إلغاء التصويت');
 }
 async function closePoll(id){await sb.from('polls').update({closed:true}).eq('id',id);await loadAll();render();}
 async function deletePoll(id){await sb.from('polls').delete().eq('id',id);await loadAll();render();}
@@ -3097,11 +3114,13 @@ function renderMore(){
         <div>`;
       opts.forEach((op,i)=>{
         const cnt=pV.filter(v=>v.option_idx===i).length,pct=total?Math.round(cnt/total*100):0,vt=myV?.option_idx===i;
-        h+=`<div class="poll-opt" onclick="${!myV&&!poll.closed?`A.vote('${poll.id}',${i})`:''}">
-          <span class="opt-label" title="${esc(op)}">${esc(op)}</span>
+        const canVote=!poll.closed;
+        const action=canVote?(vt?`A.unvote('${poll.id}')`:`A.vote('${poll.id}',${i})`):'';
+        h+=`<div class="poll-opt ${vt?'selected':''}" onclick="${action}">
+          <div class="poll-radio"><div class="poll-radio-dot"></div></div>
+          <span class="opt-label">${esc(op)}</span>
           <div class="opt-bar-wrap"><div class="opt-bar ${vt?'voted':''}" style="width:${pct}%"></div></div>
           <span class="opt-count">${cnt}</span>
-          ${vt?'<span class="voted-badge">✓</span>':''}
         </div>`;
       });
       h+=`</div><div class="muted" style="font-size:10.5px;margin-top:6px;">${total} صوت</div></div>`;
@@ -3354,6 +3373,8 @@ function openEditUser(uid,name,phone,email){
 
 /* ════════════════ GLOBAL ACTIONS ════════════════ */
 window.A={
+  vote:(id,i)=>vote(id,i),
+  unvote:(id)=>unvote(id),
   togglePay:(slotId,name)=>togglePayment(slotId,name),
   book:bookSlot,rsvp:setRsvp,resolveSwap,adjHijri:adjustHijri,
   openSwap:openSwapModal,openNewSlot,
