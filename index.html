@@ -3000,9 +3000,8 @@ function renderMore(){
     else D.memories.forEach(m=>{
       h+=`<div class="mem-card">`;
       if(m.image_url){
-        // محاولة عرض الصورة مع fallback لرابط قابل للضغط
         h+=`<div style="position:relative;">
-          <img class="mem-img" src="${esc(m.image_url)}" 
+          <img class="mem-img" src="${esc(m.image_url)}"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
             onload="this.nextElementSibling.style.display='none';">
           <a href="${esc(m.image_url)}" target="_blank" style="display:none;background:var(--bg-soft);padding:14px;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--amber);font-size:12px;font-weight:700;">
@@ -3010,9 +3009,18 @@ function renderMore(){
           </a>
         </div>`;
       }
-      h+=`<div class="mem-body"><div style="font-size:13.5px;line-height:1.7;">${esc(m.caption)}</div>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:7px;font-family:var(--fm);">${esc(toGreg(m.date))} · ${esc(m.author_name||'')}
-      ${myName()&&(m.author_name===myName()||myProfile?.is_admin)?` <button class="btn btn-danger btn-xs" onclick="A.delMem('${m.id}')">حذف</button>`:''}</div></div></div>`;
+      const memDate=m.date?toGregShort(m.date):'';
+      h+=`<div class="mem-body">
+        <div style="font-size:14px;font-weight:500;line-height:1.7;font-family:var(--fm);">${esc(m.caption)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--amber);font-weight:700;">${esc(memDate)}</span>
+            <span style="color:var(--muted);font-size:10px;">·</span>
+            <span style="font-size:11px;color:var(--muted);">${esc(m.author_name||'')}</span>
+          </div>
+          ${myName()&&(m.author_name===myName()||myProfile?.is_admin)?`<button class="btn btn-danger btn-xs" onclick="A.delMem('${m.id}')">حذف</button>`:''}
+        </div>
+      </div></div>`;
     });
 
   } else if(_moreSubTab==='special'){
