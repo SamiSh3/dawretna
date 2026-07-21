@@ -2397,15 +2397,25 @@ async function openCalSlotModal(slot){
     ${chips?`<div class="attendees" style="margin-bottom:6px;">${chips}</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${D.team.length-yes-no}</div>`:''}
 
-    <!-- RSVP -->
-    ${!isPast&&slot.host_name?(
-      slot.host_name===myName()?
-      `<div class="note" style="color:var(--sage);text-align:center;margin-bottom:10px;border-color:var(--sage);">🏠 أنت المضيف — حضورك مؤكد</div>`:
-      `<div style="display:flex;gap:8px;margin-bottom:12px;">
-        <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','yes')">✅ سأحضر</button>
-        <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
-      </div>`
-    ):''}
+    <!-- RSVP - للطلعة القادمة فقط -->
+    ${(()=>{
+      const nextSlot=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      const isNextSlot=nextSlot&&nextSlot.id===slot.id;
+      if(!isPast&&slot.host_name&&isNextSlot){
+        return slot.host_name===myName()?
+          `<div class="note" style="color:var(--sage);text-align:center;margin-bottom:10px;border-color:var(--sage);">🏠 أنت المضيف — حضورك مؤكد</div>`:
+          `<div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button class="btn ${myRv?.status==='yes'?'btn-sage':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','yes')">✅ سأحضر</button>
+            <button class="btn ${myRv?.status==='no'?'btn-danger':'btn-ghost'} btn-sm btn-block" onclick="A.rsvpCal('${slot.id}','no')">🙅 أعتذر</button>
+          </div>`;
+      }
+      if(!isPast&&slot.host_name&&!isNextSlot){
+        return myRv?.status?
+          `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;">${myRv.status==='yes'?'✅ سجّلت حضورك سابقاً':'🙅 اعتذرت سابقاً'} — يُفتح التعديل عند اقتراب الموعد</div>`:
+          `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;text-align:center;">⏳ يُفتح تأكيد الحضور عند اقتراب الموعد</div>`;
+      }
+      return '';
+    })()}
 
     <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}',event.currentTarget)">🙋 احجز هذا الموعد</button>`:''}
