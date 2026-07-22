@@ -847,7 +847,11 @@ async function loadAll(){
 
   if(d){
     if(d.chalet) D.chalet=d.chalet;
-    D.team=d.team||[]; D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
+    // D.team يأتي من profiles مباشرة (اسم فقط، مرتب أبجدياً)
+    const _pR=await fetch(SB_URL+'/rest/v1/profiles?select=name&order=name',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)}});
+    const _profiles=_pR.ok?await _pR.json():[];
+    D.team=_profiles.filter(p=>p.name).map(p=>({name:p.name}));
+    D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
     D.specials=d.specials||[]; D.parts=d.parts||[];
     D.polls=d.polls||[]; D.votes=d.votes||[];
     D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
@@ -3311,19 +3315,14 @@ function renderSettings(){
     });
     h+=`</div>`;
   }
-  h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
-  // السوبر أدمن: يرى زر الحذف (مع منع حذف نفسه)
-  // الأدمن والمستخدم: يرون الأسماء فقط
+  h+=`<div class="card"><div class="h2">👥 الفريق (${D.team.length} عضو)</div>
+  <div style="margin:10px 0;">`;
   D.team.forEach(t=>{
-    const isMe=t.name===myName();
-    h+=`<span class="roster-chip">${esc(t.name)}${myProfile?.is_super_admin&&!isMe?`<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button>`:''}</span>`;
+    h+=`<span class="roster-chip">${esc(t.name)}</span>`;
   });
-  if(myProfile?.is_super_admin){
-    h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div>`;
-  } else {
-    h+=`</div>`;
-  }
-  h+=`</div>`;
+  h+=`</div>
+  <div style="font-size:11px;color:var(--muted);">الفريق يتكون من المستخدمين المسجلين في التطبيق</div>
+  </div>`;
   h+=`<div class="note">البيانات محفوظة في Supabase.</div>`;
   document.getElementById('content').innerHTML=h;
 }
