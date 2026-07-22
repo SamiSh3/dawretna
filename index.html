@@ -3565,8 +3565,6 @@ window.A={
         body:JSON.stringify({slot_id:slotId,member_name:mn,status})
       }).catch(()=>{});
     }
-    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
   },
   async bookCal(id){
     await bookSlot(id);
