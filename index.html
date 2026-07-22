@@ -2806,9 +2806,9 @@ async function togglePayment(slotId,memberName){
   toast(newPaid?'✅ تم تسجيل الدفع':'↩️ تم إلغاء الدفع');
 
   try{
-    // upsert بدل POST/PATCH لتجنب مشاكل الـ unique constraint
+    // upsert مع تحديد الـ constraint بشكل صريح
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    const r=await fetch(SB_URL+'/rest/v1/budget_payments',{
+    const r=await fetch(SB_URL+'/rest/v1/budget_payments?on_conflict=slot_id,member_name',{
       method:'POST',headers:H,
       body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
     });
