@@ -1548,17 +1548,18 @@ async function setRsvp(slotId,status){
   const H=apiHeaders();
   try{
     let r;
-    if(existing){
-      // تحديث السجل الموجود بـ PATCH
-      r=await fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(mn),{
+    if(existing?.id){
+      // تحديث بـ id الصف (أدق وأضمن)
+      r=await fetch(SB_URL+'/rest/v1/rsvps?id=eq.'+existing.id,{
         method:'PATCH',headers:H,body:JSON.stringify({status})
       });
     } else {
-      // إنشاء سجل جديد بـ POST
+      // إنشاء سجل جديد
       r=await fetch(SB_URL+'/rest/v1/rsvps',{
-        method:'POST',headers:{...H,'Prefer':'return=minimal'},
+        method:'POST',headers:{...H,'Prefer':'return=representation'},
         body:JSON.stringify({slot_id:slotId,member_name:mn,status})
       });
+      if(r.ok){const[row]=await r.json();if(row?.id&&existing)existing.id=row.id;else if(row?.id)D.rsvps[D.rsvps.length-1].id=row.id;}
     }
     if(!r.ok){
       const e=await r.text();
