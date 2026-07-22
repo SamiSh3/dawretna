@@ -1348,11 +1348,11 @@ function toHijriParts(date,offset){
 }
 function toGreg(date){
   const d=new Date(date+'T00:00:00');
-  try{return d.toLocaleDateString('ar-SA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
+  try{return d.toLocaleDateString('ar-SA-u-ca-gregory',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
 }
 function toGregShort(date){
   const d=new Date(date+'T00:00:00');
-  try{return d.toLocaleDateString('ar-SA',{day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
+  try{return d.toLocaleDateString('ar-SA-u-ca-gregory',{day:'numeric',month:'long',year:'numeric'});}catch(e){return date;}
 }
 
 function timeAgo(iso){
@@ -2303,7 +2303,7 @@ function renderCalendar(){
 
   for(let m=0;m<12;m++){
     const firstD=new Date(calYear,m,1);
-    const gregMonthName=firstD.toLocaleDateString('ar-SA',{month:'long'});
+    const gregMonthName=firstD.toLocaleDateString('ar-SA-u-ca-gregory',{month:'long'});
     const hijriMonthYear=getHijriMonthsInGreg(calYear,m);
     const firstDay=firstD.getDay(); // 0=أحد, 1=إثنين ... 6=سبت
     const daysInMonth=new Date(calYear,m+1,0).getDate();
