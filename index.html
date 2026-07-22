@@ -1547,10 +1547,11 @@ async function setRsvp(slotId,status){
   // حفظ في DB في الخلفية
   const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
   try{
-    await fetch(SB_URL+'/rest/v1/rsvps',{
+    const r=await fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{
       method:'POST',headers:H,
       body:JSON.stringify({slot_id:slotId,member_name:mn,status})
     });
+    if(!r.ok){const e=await r.text();console.error('rsvp error:',e);}
     const slot=D.slots.find(s=>s.id===slotId);
     if(slot?.host_name&&slot.host_name!==mn){
       await notify(slot.host_name,'rsvp',
@@ -3535,7 +3536,7 @@ window.A={
     if(s) openCalSlotModal(s);
     toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
+    fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
   },
   async bookCal(id){
     await bookSlot(id);
@@ -3726,7 +3727,7 @@ window.A={
       await fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{method:'DELETE',headers:H});
       D.rsvps=D.rsvps.filter(r=>!(r.slot_id===slotId&&r.member_name===memberName));
     } else {
-      await fetch(SB_URL+'/rest/v1/rsvps',{method:'POST',headers:H,
+      await fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,
         body:JSON.stringify({slot_id:slotId,member_name:memberName,status})});
       const ex=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===memberName);
       if(ex) ex.status=status;
