@@ -3635,9 +3635,11 @@ window.A={
   async deleteUser(uid,name){
     if(!myProfile?.is_super_admin){toast('السوبر أدمن فقط','error');return;}
     if(uid===session?.user?.id){toast('لا يمكنك حذف نفسك','error');return;}
-    if(!confirm(`حذف مستخدم "${name}"؟ لا يمكن التراجع.`))return;
-    await sb.from('profiles').delete().eq('id',uid);
-    toast('🗑️ تم الحذف');renderAdmin();
+    if(!confirm(`حذف مستخدم "${name}"؟\nسيُزال من التطبيق ولا يمكن التراجع.`))return;
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
+    const r=await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+uid,{method:'DELETE',headers:H});
+    if(r.ok){toast('🗑️ تم حذف '+name);renderAdmin();}
+    else{const e=await r.text();toast('خطأ: '+e,'error');}
   },
   async adminSetHost(slotId){
     if(!sel)return;
