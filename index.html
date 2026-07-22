@@ -2806,32 +2806,30 @@ async function togglePayment(slotId,memberName){
   toast(newPaid?'✅ تم تسجيل الدفع':'↩️ تم إلغاء الدفع');
 
   try{
-    const H={...apiHeaders(),'Prefer':'return=minimal'};
-    if(existing){
-      // حدّث السجل الموجود
-      await fetch(SB_URL+'/rest/v1/budget_payments?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{
-        method:'PATCH',headers:H,body:JSON.stringify({paid:newPaid,amount:share,updated_by:myName()})
-      });
-    } else {
-      // أنشئ سجل جديد
-      await fetch(SB_URL+'/rest/v1/budget_payments',{
-        method:'POST',headers:{...H,'Prefer':'return=minimal'},
-        body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
-      });
+    // upsert بدل POST/PATCH لتجنب مشاكل الـ unique constraint
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+    const r=await fetch(SB_URL+'/rest/v1/budget_payments',{
+      method:'POST',headers:H,
+      body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
+    });
+    if(!r.ok){
+      const err=await r.text();
+      toast('خطأ في الحفظ: '+err.slice(0,50),'error');
+      // التراجع عن الـ optimistic update
+      if(existing) existing.paid=!newPaid;
+      else D.payments=D.payments.filter(p=>!(p.slot_id===slotId&&p.member_name===memberName));
+      renderBudget();
+      return;
     }
-    if(slot){
-      if(newPaid){
-        // تنبيه للعضو بتسجيل دفعته
-        if(memberName!==myName())
-          await notify(memberName,'general','تم تسجيل دفعتك ✅',
-            `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
-        // تنبيه للمشرف إذا كان العضو يدفع لنفسه
-        else
-          await notifyAdmins('general',`${esc(memberName)} دفع حصته 💰`,
-            `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
-      }
+    if(slot&&newPaid){
+      if(memberName!==myName())
+        await notify(memberName,'general','تم تسجيل دفعتك ✅',
+          `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
+      else
+        await notifyAdmins('general',`${esc(memberName)} دفع حصته 💰`,
+          `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
     }
-  }catch(e){console.error('togglePay:',e);}
+  }catch(e){toast('خطأ: '+e.message,'error');}
   loadAll().catch(()=>{});
 }
 
