@@ -271,7 +271,15 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 .roster-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg-el);border:1px solid var(--border);border-radius:999px;padding:4px 5px 4px 11px;font-size:12px;margin:0 3px 7px 0;}
 .roster-chip button{background:none;border:none;color:var(--muted);cursor:pointer;width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;}
 
-/* ── poll ── */
+/* ── suggestions ── */
+.sug-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px;margin-bottom:10px;}
+.sug-title{font-size:15px;font-weight:700;margin-bottom:5px;}
+.sug-body{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:8px;}
+.sug-meta{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--muted);}
+.sug-cat{display:inline-block;background:var(--bg-soft);border:1px solid var(--border);border-radius:99px;padding:2px 8px;font-size:10px;margin-bottom:6px;}
+.sug-cat.idea{border-color:#d4a84360;color:var(--amber);}
+.sug-cat.issue{border-color:#d45a5a60;color:var(--danger);}
+.sug-cat.request{border-color:#4a9a5a60;color:var(--sage);}
 .poll-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px;margin-bottom:12px;}
 .poll-q{font-family:var(--fd);font-size:18px;margin-bottom:10px;}
 .poll-opt{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--rsm);cursor:pointer;margin-bottom:4px;border:1px solid var(--bsoft);transition:all .15s;}
@@ -454,6 +462,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       </button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
+      <button class="nav-item" data-tab="suggestions"><span class="nav-icon">💡</span>مقترحات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
     </div>
   </nav>
@@ -610,7 +619,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab=sessionStorage.getItem('lastTab')||'home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[]};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[],suggestions:[]};
 let _dataLoaded=false; // هل اكتمل تحميل البيانات الأساسية؟
 
 /* ════════════════ AUTH ════════════════ */
@@ -863,12 +872,13 @@ async function loadAll(){
   }
 
   // باقي البيانات بالتوازي مع timeout
-  const [memories,reminders,notifications]= await Promise.all([
+  const [memories,reminders,notifications,suggestions]= await Promise.all([
     fetchWithTimeout(SB_URL+'/rest/v1/memories?select=*&order=created_at.desc'),
     fetchWithTimeout(SB_URL+'/rest/v1/reminders?select=*'),
     session?fetchWithTimeout(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50'):Promise.resolve([]),
+    fetchWithTimeout(SB_URL+'/rest/v1/suggestions?select=*&order=created_at.desc'),
   ]);
-  D.memories=memories||[]; D.reminders=reminders||[];
+  D.memories=memories||[]; D.reminders=reminders||[]; D.suggestions=suggestions||[];
   if(session){
     const prev=D.notifications.map(n=>n.id);
     D.notifications=notifications||[];
@@ -2008,6 +2018,7 @@ function render(){
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
   else if(tab==='settings')renderSettings();
+  else if(tab==='suggestions')renderSuggestions();
   else if(tab==='more')renderMore();
   else if(tab==='admin')renderAdmin();
 }
@@ -3032,6 +3043,54 @@ function renderBudget(){
   document.getElementById('content').innerHTML=h;
 }
 
+function renderSuggestions(){
+  const main=document.getElementById('mainContent');
+  const cats={idea:'💡 فكرة',issue:'⚠️ مشكلة',request:'🙏 طلب',general:'💬 عام'};
+  let h=`<div class="page-wrap">
+  <div class="page-hdr"><div class="page-title">💡 المقترحات</div></div>
+
+  <!-- نموذج الإضافة -->
+  <div class="card">
+    <div class="h2">اقتراح جديد</div>
+    <div class="field"><label>العنوان</label><input type="text" id="sugTitle" placeholder="عنوان الاقتراح..."></div>
+    <div class="field"><label>التفاصيل (اختياري)</label><textarea id="sugBody" placeholder="شرح التفاصيل..." rows="3"></textarea></div>
+    <div class="field"><label>التصنيف</label>
+      <select id="sugCat" style="width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;">
+        <option value="idea">💡 فكرة</option>
+        <option value="request">🙏 طلب</option>
+        <option value="issue">⚠️ مشكلة</option>
+        <option value="general">💬 عام</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="A.addSuggestion()">📤 إرسال الاقتراح</button>
+  </div>
+
+  <!-- قائمة المقترحات -->
+  ${!D.suggestions.length?`<div class="empty"><span class="ei">💡</span>لا توجد مقترحات — كن الأول!</div>`:''}`;
+
+  D.suggestions.forEach(s=>{
+    const catLabel=cats[s.category]||cats.general;
+    const catCls=s.category||'general';
+    const isAdmin=myProfile?.is_admin;
+    const isAuthor=s.author_name===myName();
+    h+=`<div class="sug-card" id="sug-${s.id}">
+      <span class="sug-cat ${catCls}">${catLabel}</span>
+      <div class="sug-title">${esc(s.title)}</div>
+      ${s.body?`<div class="sug-body">${esc(s.body).replace(/\n/g,'<br>')}</div>`:''}
+      <div class="sug-meta">
+        <span>✍️ ${esc(s.author_name||'')} · ${toGregShort(s.created_at?.slice(0,10)||'')}</span>
+        <div style="display:flex;gap:5px;">
+          ${isAdmin?`<button class="btn btn-ghost btn-xs" onclick="A.editSuggestion('${s.id}')">✏️</button>`:''}
+          ${isAdmin?`<button class="btn btn-danger btn-xs" onclick="A.delSuggestion('${s.id}')">🗑️</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  h+=`</div>`;
+  main.innerHTML=h;
+}
+
 function renderMore(){
   let h=`<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
     <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
@@ -3663,6 +3722,38 @@ window.A={
     closeModal('calSlotModal');
     render();
     toast('🗑️ تم حذف الطلعة');
+  },
+  async addSuggestion(){
+    const title=document.getElementById('sugTitle')?.value.trim();
+    const body=document.getElementById('sugBody')?.value.trim();
+    const category=document.getElementById('sugCat')?.value||'general';
+    if(!title){toast('أدخل العنوان','error');return;}
+    const H={...apiHeaders(),'Prefer':'return=representation'};
+    const r=await fetch(SB_URL+'/rest/v1/suggestions',{method:'POST',headers:H,
+      body:JSON.stringify({title,body:body||null,category,author_name:myName()})});
+    if(r.ok){
+      const [row]=await r.json();
+      D.suggestions.unshift(row);
+      renderSuggestions();
+      toast('✅ تم إرسال الاقتراح');
+    }else toast('خطأ','error');
+  },
+  async delSuggestion(id){
+    if(!confirm('حذف هذا الاقتراح؟'))return;
+    const H=apiHeaders();
+    await fetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'DELETE',headers:H});
+    D.suggestions=D.suggestions.filter(s=>s.id!==id);
+    renderSuggestions();toast('🗑️ تم الحذف');
+  },
+  async editSuggestion(id){
+    const s=D.suggestions.find(x=>x.id===id);if(!s)return;
+    const newTitle=prompt('العنوان:',s.title);if(!newTitle?.trim())return;
+    const newBody=prompt('التفاصيل:',s.body||'');
+    const H=apiHeaders();
+    await fetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'PATCH',headers:H,
+      body:JSON.stringify({title:newTitle.trim(),body:newBody||null})});
+    s.title=newTitle.trim();s.body=newBody||null;
+    renderSuggestions();toast('✅ تم التعديل');
   },
   async toggleAnnualPay(name,year,currentPaid){
     const newPaid=!currentPaid;
