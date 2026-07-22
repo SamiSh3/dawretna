@@ -609,7 +609,7 @@ const SB_URL='https://ncljmdpwdeznyytbnrgz.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5jbGptZHB3ZGV6bnl5dGJucmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwODU1NTIsImV4cCI6MjA5NzY2MTU1Mn0.tJC_gXgW-KuiFN_j8EoQeeXcuWtR9H9mKeZ7MoT-qI0';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
-let session=null,myProfile=null,tab='home';
+let session=null,myProfile=null,tab=sessionStorage.getItem('lastTab')||'home';
 let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[]};
 let _dataLoaded=false; // هل اكتمل تحميل البيانات الأساسية؟
 
@@ -1974,7 +1974,7 @@ document.getElementById('clearAllNotifsBtn')?.addEventListener('click',async(e)=
 document.getElementById('notifBtn').onclick=openNotifPopup;
 
 /* ════════════════ RENDER FUNCTIONS ════════════════ */
-function setTab(t){tab=t;render();}
+function setTab(t){tab=t;sessionStorage.setItem('lastTab',t);render();}
 
 function render(){
   document.getElementById('chaletTitle').textContent='دوريتنا';
