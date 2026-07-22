@@ -3312,8 +3312,13 @@ function renderSettings(){
     h+=`</div>`;
   }
   h+=`<div class="card"><div class="h2">👥 الفريق</div><div style="margin:10px 0;">`;
-  D.team.forEach(t=>h+=`<span class="roster-chip">${esc(t.name)}${myProfile?.is_admin?`<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button>`:''}</span>`);
-  if(myProfile?.is_admin){
+  // السوبر أدمن: يرى زر الحذف (مع منع حذف نفسه)
+  // الأدمن والمستخدم: يرون الأسماء فقط
+  D.team.forEach(t=>{
+    const isMe=t.name===myName();
+    h+=`<span class="roster-chip">${esc(t.name)}${myProfile?.is_super_admin&&!isMe?`<button onclick="A.removeMember('${esc(t.name).replace(/'/g,"\\'")}')">✕</button>`:''}</span>`;
+  });
+  if(myProfile?.is_super_admin){
     h+=`</div><div class="row"><input type="text" id="nM" placeholder="اسم عضو" style="flex:2;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;"><button class="btn btn-ghost" onclick="A.addMember()">إضافة</button></div>`;
   } else {
     h+=`</div>`;
@@ -3347,16 +3352,21 @@ async function renderAdmin(){
   h+=`<div class="card"><div class="h2">👥 المستخدمون (${(profiles||[]).length})</div>`;
   (profiles||[]).forEach(p=>{
     const isMe=p.id===session?.user?.id;
+    const isSuperAdmin=myProfile?.is_super_admin;
     const av=p.avatar_url?`<img src="${esc(p.avatar_url)}">`:`<span>${(p.name||'?')[0]}</span>`;
     h+=`<div class="user-row">
       <div class="user-av">${av}</div>
       <div class="user-info">
-        <div class="user-name">${esc(p.name||'—')} ${p.is_admin?'<span class="badge-admin">مشرف</span>':''} ${isMe?'<span class="badge-you">أنت</span>':''}</div>
+        <div class="user-name">${esc(p.name||'—')} 
+          ${p.is_super_admin?'<span class="badge-admin" style="background:#b8860b;">⭐ سوبر أدمن</span>':p.is_admin?'<span class="badge-admin">مشرف</span>':''}
+          ${isMe?'<span class="badge-you">أنت</span>':''}
+        </div>
         <div class="user-email">${esc(p.email||'')}${p.phone_wa?' · 📱'+esc(p.phone_wa):''}</div>
       </div>
       <div style="display:flex;gap:4px;">
-        <button class="btn btn-blue btn-xs" onclick="A.openEditUser('${p.id}','${esc(p.name||'')}','${esc(p.phone_wa||'')}','${esc(p.email||'')}')">✏️</button>
-        ${!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-ghost'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin})">${p.is_admin?'إلغاء':'مشرف'}</button>`:''}
+        ${isSuperAdmin?`<button class="btn btn-blue btn-xs" onclick="A.openEditUser('${p.id}','${esc(p.name||'')}','${esc(p.phone_wa||'')}','${esc(p.email||'')}')">✏️</button>`:''}
+        ${isSuperAdmin&&!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-ghost'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin})">${p.is_admin?'إلغاء مشرف':'مشرف'}</button>`:''}
+        ${isSuperAdmin&&!isMe&&!p.is_super_admin?`<button class="btn btn-danger btn-xs" onclick="A.deleteUser('${p.id}','${esc(p.name||'')}')">🗑️</button>`:''}
       </div>
     </div>`;
   });
@@ -3623,7 +3633,13 @@ window.A={
     if(s) openCalSlotModal(s);
     toast(status==='clear'?'تم المسح':status==='yes'?'✅ سُجّل الحضور':'🙅 سُجّل الاعتذار');
   },
-  async adminSetHost(slotId){
+  async deleteUser(uid,name){
+    if(!myProfile?.is_super_admin){toast('السوبر أدمن فقط','error');return;}
+    if(uid===session?.user?.id){toast('لا يمكنك حذف نفسك','error');return;}
+    if(!confirm(`حذف مستخدم "${name}"؟ لا يمكن التراجع.`))return;
+    await sb.from('profiles').delete().eq('id',uid);
+    toast('🗑️ تم الحذف');renderAdmin();
+  },
     const sel=document.getElementById('adminHostSel_'+slotId);
     if(!sel)return;
     const newHost=sel.value||null;
