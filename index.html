@@ -847,11 +847,14 @@ async function loadAll(){
 
   if(d){
     if(d.chalet) D.chalet=d.chalet;
-    // D.team يأتي من profiles مباشرة (اسم فقط، مرتب أبجدياً)
-    const _pR=await fetch(SB_URL+'/rest/v1/profiles?select=name&order=name',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)}});
-    const _profiles=_pR.ok?await _pR.json():[];
-    D.team=_profiles.filter(p=>p.name).map(p=>({name:p.name}));
+    // البيانات الأساسية أولاً (مهم - لا تتأخر)
     D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
+    // D.team من profiles (في الخلفية مع try-catch)
+    try{
+      const _pR=await fetch(SB_URL+'/rest/v1/profiles?select=name&order=name',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)}});
+      const _profiles=_pR.ok?await _pR.json():[];
+      if(_profiles.length) D.team=_profiles.filter(p=>p.name).map(p=>({name:p.name}));
+    }catch(e){}
     D.specials=d.specials||[]; D.parts=d.parts||[];
     D.polls=d.polls||[]; D.votes=d.votes||[];
     D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
