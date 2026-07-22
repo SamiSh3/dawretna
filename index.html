@@ -3640,7 +3640,7 @@ window.A={
     await sb.from('profiles').delete().eq('id',uid);
     toast('🗑️ تم الحذف');renderAdmin();
   },
-    const sel=document.getElementById('adminHostSel_'+slotId);
+  async adminSetHost(slotId){
     if(!sel)return;
     const newHost=sel.value||null;
     const slot=D.slots.find(s=>s.id===slotId);
