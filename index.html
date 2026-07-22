@@ -1544,14 +1544,32 @@ async function setRsvp(slotId,status){
   render();
   toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
 
-  // حفظ في DB في الخلفية
-  const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
+  // حفظ في DB
+  const H=apiHeaders();
   try{
-    const r=await fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{
-      method:'POST',headers:H,
-      body:JSON.stringify({slot_id:slotId,member_name:mn,status})
-    });
-    if(!r.ok){const e=await r.text();console.error('rsvp error:',e);}
+    let r;
+    if(existing){
+      // تحديث السجل الموجود بـ PATCH
+      r=await fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(mn),{
+        method:'PATCH',headers:H,body:JSON.stringify({status})
+      });
+    } else {
+      // إنشاء سجل جديد بـ POST
+      r=await fetch(SB_URL+'/rest/v1/rsvps',{
+        method:'POST',headers:{...H,'Prefer':'return=minimal'},
+        body:JSON.stringify({slot_id:slotId,member_name:mn,status})
+      });
+    }
+    if(!r.ok){
+      const e=await r.text();
+      console.error('rsvp DB error:',e);
+      // التراجع عن الـ optimistic update
+      if(existing) existing.status=status==='yes'?'no':'yes';
+      else D.rsvps=D.rsvps.filter(r=>!(r.slot_id===slotId&&r.member_name===mn));
+      render();
+      toast('خطأ في الحفظ','error');
+      return;
+    }
     const slot=D.slots.find(s=>s.id===slotId);
     if(slot?.host_name&&slot.host_name!==mn){
       await notify(slot.host_name,'rsvp',
@@ -3535,6 +3553,18 @@ window.A={
     const s=D.slots.find(x=>x.id===slotId);
     if(s) openCalSlotModal(s);
     toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+    // حفظ في DB
+    const H=apiHeaders();
+    if(ex){
+      fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(mn),{
+        method:'PATCH',headers:H,body:JSON.stringify({status})
+      }).catch(()=>{});
+    } else {
+      fetch(SB_URL+'/rest/v1/rsvps',{
+        method:'POST',headers:{...H,'Prefer':'return=minimal'},
+        body:JSON.stringify({slot_id:slotId,member_name:mn,status})
+      }).catch(()=>{});
+    }
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,body:JSON.stringify({slot_id:slotId,member_name:mn,status})}).catch(()=>{});
   },
