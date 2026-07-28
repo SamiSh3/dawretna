@@ -3181,9 +3181,7 @@ function moreTabsHtml(){
 function renderSuggestions(){
   const main=document.getElementById('content');
   const cats={idea:'💡 فكرة',issue:'⚠️ مشكلة',request:'🙏 طلب',general:'💬 عام'};
-  let h=`${moreTabsHtml()}<div class="page-wrap">
-  <div class="page-hdr"><div class="page-title">💡 المقترحات</div></div>
-
+  let h=`${moreTabsHtml()}
   <!-- نموذج الإضافة -->
   <div class="card">
     <div class="h2">اقتراح جديد</div>
@@ -3222,7 +3220,6 @@ function renderSuggestions(){
     </div>`;
   });
 
-  h+=`</div>`;
   main.innerHTML=h;
 }
 
