@@ -713,6 +713,8 @@ async function afterLogin(){
   _dataLoaded=true;
   render(); // يظهر البيانات الحقيقية
   checkAutoReminders().catch(()=>{});
+  // إظهار ما الجديد للمستخدم
+  setTimeout(showWhatsNew, 800);
   // فحص تنبيهات جديدة كل 30 ثانية
   setInterval(pollNotifications,8000);
   // تحقق من انتهاء صلاحية طلبات التبديل كل دقيقة
@@ -2042,7 +2044,59 @@ document.getElementById('notifBtn').onclick=openNotifPopup;
 /* ════════════════ RENDER FUNCTIONS ════════════════ */
 function setTab(t){tab=t;sessionStorage.setItem('lastTab',t);render();}
 
-// ── تحديث الصفحة ──
+// ── ما الجديد ──
+const APP_VERSION='2.0';
+const WHATS_NEW=[
+  {icon:'🧠',title:'المسابقة الثقافية',desc:'60 سؤال صعب متنوع — نقاط ولوحة متصدرين للجميع'},
+  {icon:'💡',title:'المقترحات',desc:'أرسل مقترحاتك وأفكارك لتحسين الطلعات'},
+  {icon:'📋',title:'متطلبات الطلعة',desc:'قائمة بكل ما تحتاجه الطلعة — من يجيب وش'},
+  {icon:'🔁',title:'نظام التبديل المحسّن',desc:'طلب واحد فقط · إذا رُفض يمكنك الإعادة فوراً'},
+  {icon:'↻',title:'زر التحديث',desc:'اسحب للأسفل على الجوال أو اضغط ↻ في الأعلى'},
+  {icon:'🏠',title:'حفظ الصفحة',desc:'يذكرك أين كنت عند تحديث التطبيق'},
+];
+
+function showWhatsNew(){
+  const lastV=localStorage.getItem('dawretna_version');
+  if(lastV===APP_VERSION)return; // رآها من قبل
+
+  const overlay=document.createElement('div');
+  overlay.id='whatsNewOverlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;backdrop-filter:blur(4px);';
+
+  overlay.innerHTML=`
+    <div style="background:var(--bg-card);border-radius:22px 22px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 18px 30px;">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 18px;"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:26px;">🎉</span>
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--amber);">ما الجديد في التطبيق</div>
+          <div style="font-size:11px;color:var(--muted);">الإصدار ${APP_VERSION}</div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+        ${WHATS_NEW.map(f=>`
+          <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:var(--bg-soft);border-radius:12px;border:1px solid var(--border);">
+            <span style="font-size:22px;flex-shrink:0;">${f.icon}</span>
+            <div>
+              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${f.title}</div>
+              <div style="font-size:11px;color:var(--muted);">${f.desc}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <button onclick="closeWhatsNew()" class="btn btn-primary btn-block" style="margin-top:18px;font-size:14px;padding:13px;">
+        رائع! فهمت ✓
+      </button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeWhatsNew();});
+}
+
+function closeWhatsNew(){
+  document.getElementById('whatsNewOverlay')?.remove();
+  localStorage.setItem('dawretna_version',APP_VERSION);
+}
+window.closeWhatsNew=closeWhatsNew;
 async function refreshApp(){
   const btn=document.getElementById('refreshBtn');
   const bar=document.getElementById('ptrBar');
