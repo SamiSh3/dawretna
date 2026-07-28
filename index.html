@@ -495,8 +495,6 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       </button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
-      <button class="nav-item" data-tab="suggestions"><span class="nav-icon">💡</span>مقترحات</button>
-      <button class="nav-item" data-tab="quiz"><span class="nav-icon">🧠</span>مسابقة</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
     </div>
   </nav>
@@ -2109,10 +2107,8 @@ function render(){
   else if(tab==='trips')renderTrips();
   else if(tab==='budget')renderBudget();
   else if(tab==='settings')renderSettings();
-  else if(tab==='quiz'){
-    renderQuizSection();
-  }
-  else if(tab==='suggestions')renderSuggestions();
+  else if(tab==='suggestions'){setTab('more');_moreSubTab='suggestions';renderMore();return;}
+  else if(tab==='quiz'){setTab('more');_moreSubTab='quiz';renderMore();return;}
   else if(tab==='more')renderMore();
   else if(tab==='admin')renderAdmin();
 }
@@ -3239,6 +3235,8 @@ function renderMore(){
     <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
     <button class="btn ${_moreSubTab==='special'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('special')">🔥 خاصة</button>
     <button class="btn ${_moreSubTab==='polls'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('polls')">📊 استطلاع</button>
+    <button class="btn ${_moreSubTab==='suggestions'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('suggestions')">💡 مقترحات</button>
+    <button class="btn ${_moreSubTab==='quiz'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('quiz')">🧠 مسابقة</button>
 
   </div>`;
 
@@ -3337,6 +3335,8 @@ function renderMore(){
       h+=`</div><div class="muted" style="font-size:10.5px;margin-top:6px;">${total} صوت</div></div>`;
     });
   }
+  if(_moreSubTab==='suggestions'){renderSuggestions();return;}
+  if(_moreSubTab==='quiz'){renderQuizSection();return;}
   document.getElementById('content').innerHTML=h;
 }
 let _moreSubTab='memories';
