@@ -3167,10 +3167,21 @@ function renderBudget(){
   document.getElementById('content').innerHTML=h;
 }
 
+function moreTabsHtml(){
+  const tabs=[
+    {k:'memories',l:'📸 ذكريات'},{k:'special',l:'🔥 خاصة'},
+    {k:'polls',l:'📊 استطلاع'},{k:'suggestions',l:'💡 مقترحات'},
+    {k:'quiz',l:'🧠 مسابقة'}
+  ];
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--bsoft);background:var(--bg-card);position:sticky;top:0;z-index:5;">
+    ${tabs.map(t=>`<button class="btn ${_moreSubTab===t.k?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('${t.k}')">${t.l}</button>`).join('')}
+  </div>`;
+}
+
 function renderSuggestions(){
   const main=document.getElementById('content');
   const cats={idea:'💡 فكرة',issue:'⚠️ مشكلة',request:'🙏 طلب',general:'💬 عام'};
-  let h=`<div class="page-wrap">
+  let h=`${moreTabsHtml()}<div class="page-wrap">
   <div class="page-hdr"><div class="page-title">💡 المقترحات</div></div>
 
   <!-- نموذج الإضافة -->
@@ -3346,7 +3357,7 @@ let _quizState={active:false,qIdx:0,questions:[],selected:null,revealed:false,ti
 
 function renderQuizSection(){
   const el=document.getElementById('content');
-  el.innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);">⏳ جاري التحميل...</div>`;
+  el.innerHTML=`${moreTabsHtml()}<div style="padding:20px;text-align:center;color:var(--muted);">⏳ جاري التحميل...</div>`;
 
   Promise.all([
     fetch(SB_URL+'/rest/v1/quiz_questions?select=*&order=random()',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
@@ -3449,7 +3460,7 @@ function buildQuizUI(el){
     </div>
   </div>`:''}`;
 
-  el.innerHTML=h;
+  el.innerHTML=moreTabsHtml()+h;
 }
 
 function renderQuizQuestion(){
