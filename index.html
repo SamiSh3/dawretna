@@ -277,6 +277,23 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ptr-indicator{position:fixed;top:0;left:0;right:0;height:3px;background:var(--amber);transform:scaleX(0);transform-origin:right;transition:transform .3s;z-index:999;}
 .ptr-indicator.show{transform:scaleX(1);}
+/* ── quiz ── */
+.quiz-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;transition:all .2s;font-size:14px;}
+.quiz-opt:hover{border-color:var(--amber);background:var(--bg-soft);}
+.quiz-opt.selected{border-color:var(--amber);background:rgba(212,168,67,.1);}
+.quiz-opt.correct{border-color:var(--sage);background:rgba(74,154,90,.15);color:var(--sage);}
+.quiz-opt.wrong{border-color:var(--danger);background:rgba(212,90,90,.1);color:var(--danger);}
+.quiz-opt.reveal-correct{border-color:var(--sage);background:rgba(74,154,90,.1);}
+.opt-letter{width:28px;height:28px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+.quiz-timer{height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:16px;}
+.quiz-timer-fill{height:100%;background:var(--amber);border-radius:99px;transition:width 1s linear;}
+.quiz-timer-fill.danger{background:var(--danger);}
+.lb-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;background:var(--bg-card);}
+.lb-rank{font-size:18px;width:30px;text-align:center;flex-shrink:0;}
+.lb-name{flex:1;font-size:13px;font-weight:700;}
+.lb-pts{font-size:15px;font-weight:800;color:var(--amber);}
+.lb-row.me{border:1px solid var(--amber);}
+.cat-badge{display:inline-block;background:var(--bg-soft);border:1px solid var(--border);border-radius:99px;padding:2px 8px;font-size:10px;color:var(--muted);}
 /* ── requirements ── */
 .req-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bsoft);}
 .req-item:last-child{border-bottom:none;}
@@ -635,7 +652,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab=sessionStorage.getItem('lastTab')||'home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[],suggestions:[],requirements:[]};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[],suggestions:[],requirements:[],quizQ:[],quizScores:[],quizAnswers:[]};
 let _dataLoaded=false; // هل اكتمل تحميل البيانات الأساسية؟
 
 /* ════════════════ AUTH ════════════════ */
@@ -3198,11 +3215,27 @@ function renderSuggestions(){
   main.innerHTML=h;
 }
 
+async function updateQuizScore(correct,total,pts){
+  try{
+    const ex=D.quizScores.find(s=>s.user_id===session?.user?.id);
+    const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'};
+    const payload={
+      user_id:session?.user?.id,
+      member_name:myName(),
+      total_points:(ex?.total_points||0)+pts,
+      correct_count:(ex?.correct_count||0)+correct,
+      total_answered:(ex?.total_answered||0)+total,
+      updated_at:new Date().toISOString()
+    };
+    await fetch(SB_URL+'/rest/v1/quiz_scores?on_conflict=user_id',{method:'POST',headers:H,body:JSON.stringify(payload)});
+  }catch(e){}
+}
 function renderMore(){
   let h=`<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
     <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
     <button class="btn ${_moreSubTab==='special'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('special')">🔥 خاصة</button>
     <button class="btn ${_moreSubTab==='polls'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('polls')">📊 استطلاع</button>
+    <button class="btn ${_moreSubTab==='quiz'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('quiz')">🧠 مسابقة</button>
   </div>`;
 
   if(_moreSubTab==='memories'){
@@ -3300,9 +3333,185 @@ function renderMore(){
       h+=`</div><div class="muted" style="font-size:10.5px;margin-top:6px;">${total} صوت</div></div>`;
     });
   }
-  document.getElementById('content').innerHTML=h;
+  if(_moreSubTab==='quiz') renderQuizSection(h);
+  else document.getElementById('content').innerHTML=h;
 }
 let _moreSubTab='memories';
+
+// ── برنامج المسابقة ──
+let _quizState={active:false,qIdx:0,questions:[],selected:null,revealed:false,timer:null,timeLeft:20};
+
+function renderQuizSection(headerHtml){
+  const el=document.getElementById('content');
+  el.innerHTML=headerHtml;
+
+  // جلب البيانات
+  Promise.all([
+    fetch(SB_URL+'/rest/v1/quiz_questions?select=*&order=random()',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
+    fetch(SB_URL+'/rest/v1/quiz_scores?select=*&order=total_points.desc',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
+    fetch(SB_URL+'/rest/v1/quiz_answers?select=*&user_id=eq.'+(session?.user?.id||''),{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
+  ]).then(([questions,scores,myAnswers])=>{
+    D.quizQ=questions||[];
+    D.quizScores=scores||[];
+    D.quizAnswers=myAnswers||[];
+    buildQuizUI(el);
+  }).catch(()=>{ el.innerHTML+='<div class="empty">خطأ في التحميل</div>'; });
+}
+
+function buildQuizUI(el){
+  const myScore=D.quizScores.find(s=>s.user_id===session?.user?.id);
+  const unanswered=D.quizQ.filter(q=>!D.quizAnswers.find(a=>a.question_id===q.id));
+
+  let h=`
+  <!-- لوحة النتائج -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="h2">🏆 لوحة المتصدرين</div>
+      <div style="font-size:12px;color:var(--muted);">${D.quizQ.length} سؤال في البنك</div>
+    </div>
+    ${D.quizScores.length===0?'<div class="muted" style="text-align:center;padding:10px;">لا توجد نتائج بعد — كن الأول!</div>':''}
+    ${D.quizScores.slice(0,10).map((s,i)=>{
+      const medals=['🥇','🥈','🥉'];
+      const isMe=s.user_id===session?.user?.id;
+      const acc=s.total_answered?Math.round(s.correct_count/s.total_answered*100):0;
+      return `<div class="lb-row ${isMe?'me':''}">
+        <div class="lb-rank">${medals[i]||'#'+(i+1)}</div>
+        <div class="lb-name">${esc(s.member_name)} ${isMe?'<span style="font-size:10px;color:var(--amber);">(أنت)</span>':''}</div>
+        <div style="text-align:left;">
+          <div class="lb-pts">${s.total_points} نقطة</div>
+          <div style="font-size:10px;color:var(--muted);">${acc}% دقة · ${s.total_answered} إجابة</div>
+        </div>
+      </div>`;
+    }).join('')}
+    ${myScore?`<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px;">نقاطك: <b style="color:var(--amber);">${myScore.total_points}</b> · أجبت ${myScore.total_answered} سؤال</div>`:''}
+  </div>
+
+  <!-- المسابقة -->
+  <div class="card" id="quizCard">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <span style="font-size:22px;">🧠</span>
+      <div>
+        <div class="h2" style="margin:0;">المسابقة الثقافية</div>
+        <div class="muted">${unanswered.length} سؤال لم تُجِب عليه</div>
+      </div>
+    </div>
+    ${unanswered.length===0?
+      `<div style="text-align:center;padding:20px;">
+        <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+        <div style="font-size:15px;font-weight:700;">أجبت على جميع الأسئلة!</div>
+        <div class="muted" style="margin-top:4px;">انتظر إضافة أسئلة جديدة</div>
+      </div>`:
+      `<button class="btn btn-primary btn-block" onclick="A.startQuiz()" style="font-size:15px;padding:14px;">
+        🚀 ابدأ المسابقة
+      </button>`
+    }
+  </div>
+
+  <!-- بنك الأسئلة (سوبر أدمن فقط) -->
+  ${myProfile?.is_super_admin?`
+  <div class="card">
+    <div class="h2">📚 بنك الأسئلة (${D.quizQ.length} سؤال)</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;">
+      <div class="field"><label>السؤال</label><textarea id="qQ" rows="2" placeholder="اكتب السؤال..."></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="field"><label>أ</label><input id="qA" placeholder="الخيار أ"></div>
+        <div class="field"><label>ب</label><input id="qB" placeholder="الخيار ب"></div>
+        <div class="field"><label>ج</label><input id="qC" placeholder="الخيار ج"></div>
+        <div class="field"><label>د</label><input id="qD" placeholder="الخيار د"></div>
+      </div>
+      <div class="field"><label>الإجابة الصحيحة</label>
+        <select id="qAns" style="width:100%;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:9px 11px;font-size:13px;">
+          <option value="a">أ</option><option value="b">ب</option>
+          <option value="c">ج</option><option value="d">د</option>
+        </select>
+      </div>
+      <div class="field"><label>التصنيف</label><input id="qCat" placeholder="علوم / تاريخ / جغرافيا..."></div>
+      <button class="btn btn-primary btn-block" onclick="A.addQuestion()">➕ إضافة سؤال</button>
+    </div>
+    <div style="max-height:300px;overflow-y:auto;">
+      ${D.quizQ.map(q=>`
+      <div style="background:var(--bg-soft);border-radius:var(--rsm);padding:10px;margin-bottom:6px;display:flex;align-items:flex-start;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:700;">${esc(q.question)}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px;">
+            أ: ${esc(q.option_a)} · ب: ${esc(q.option_b)} · ج: ${esc(q.option_c)} · د: ${esc(q.option_d)}
+            <span style="color:var(--sage);font-weight:700;"> ✓ ${q.correct_answer==='a'?q.option_a:q.correct_answer==='b'?q.option_b:q.correct_answer==='c'?q.option_c:q.option_d}</span>
+            <span class="cat-badge" style="margin-right:4px;">${esc(q.category||'عام')}</span>
+          </div>
+        </div>
+        <button class="btn btn-danger btn-xs" onclick="A.delQuestion('${q.id}')">🗑️</button>
+      </div>`).join('')}
+    </div>
+  </div>`:''}`;
+
+  el.innerHTML+=h;
+}
+
+function renderQuizQuestion(){
+  const q=_quizState.questions[_quizState.qIdx];
+  if(!q) return endQuiz();
+  const total=_quizState.questions.length;
+  const opts=[
+    {k:'a',txt:q.option_a},{k:'b',txt:q.option_b},
+    {k:'c',txt:q.option_c},{k:'d',txt:q.option_d}
+  ];
+  const letters={a:'أ',b:'ب',c:'ج',d:'د'};
+  const card=document.getElementById('quizCard');
+  if(!card)return;
+
+  card.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--muted);">سؤال ${_quizState.qIdx+1} من ${total}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="cat-badge">${esc(q.category||'عام')}</span>
+        <span id="quizTimerNum" style="font-size:14px;font-weight:800;color:var(--amber);">20</span>
+        <span style="font-size:11px;color:var(--muted);">ثانية</span>
+      </div>
+    </div>
+    <div class="quiz-timer"><div class="quiz-timer-fill" id="quizTimerBar" style="width:100%"></div></div>
+    <div style="font-size:16px;font-weight:700;line-height:1.6;margin-bottom:16px;">${esc(q.question)}</div>
+    ${opts.map(o=>`
+      <div class="quiz-opt" id="opt-${o.k}" onclick="A.selectQuizOpt('${o.k}')">
+        <div class="opt-letter">${letters[o.k]}</div>
+        <div style="flex:1">${esc(o.txt)}</div>
+      </div>`).join('')}
+    <button id="quizConfirmBtn" class="btn btn-primary btn-block" style="margin-top:12px;display:none;" onclick="A.confirmQuizOpt()">تأكيد الإجابة ✓</button>
+  `;
+  startQuizTimer();
+}
+
+function startQuizTimer(){
+  clearInterval(_quizState.timer);
+  _quizState.timeLeft=20;
+  _quizState.timer=setInterval(()=>{
+    _quizState.timeLeft--;
+    const bar=document.getElementById('quizTimerBar');
+    const num=document.getElementById('quizTimerNum');
+    if(bar) bar.style.width=(_quizState.timeLeft/20*100)+'%';
+    if(bar&&_quizState.timeLeft<=5) bar.classList.add('danger');
+    if(num) num.textContent=_quizState.timeLeft;
+    if(_quizState.timeLeft<=0){clearInterval(_quizState.timer);A.confirmQuizOpt(true);}
+  },1000);
+}
+
+async function endQuiz(){
+  clearInterval(_quizState.timer);
+  _quizState.active=false;
+  const card=document.getElementById('quizCard');
+  if(!card)return;
+  const correct=_quizState.questions.filter((q,i)=>_quizState.answers?.[i]===q.correct_answer).length;
+  const pts=correct*10;
+  card.innerHTML=`
+    <div style="text-align:center;padding:20px;">
+      <div style="font-size:50px;margin-bottom:10px;">${correct>=_quizState.questions.length*0.7?'🎉':'💪'}</div>
+      <div style="font-size:20px;font-weight:800;">انتهت المسابقة!</div>
+      <div style="font-size:14px;color:var(--muted);margin:8px 0;">أصبت في ${correct} من ${_quizState.questions.length} سؤال</div>
+      <div style="font-size:28px;font-weight:800;color:var(--amber);margin:10px 0;">+${pts} نقطة</div>
+      <button class="btn btn-primary" onclick="A.setMoreTab('quiz')" style="margin-top:10px;">عرض النتائج</button>
+    </div>`;
+  // تحديث النقاط
+  await updateQuizScore(correct,_quizState.questions.length,pts);
+}
 
 /* ── Settings ── */
 function renderSettings(){
@@ -3884,6 +4093,69 @@ window.A={
     await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
     const sl=D.slots.find(x=>x.id===slotId);
     if(sl) openCalSlotModal(sl);
+  },
+  startQuiz(){
+    const unanswered=D.quizQ.filter(q=>!D.quizAnswers.find(a=>a.question_id===q.id));
+    if(!unanswered.length){toast('أجبت على كل الأسئلة!');return;}
+    const shuffled=[...unanswered].sort(()=>Math.random()-.5).slice(0,Math.min(10,unanswered.length));
+    _quizState={active:true,qIdx:0,questions:shuffled,selected:null,revealed:false,timer:null,timeLeft:20,answers:{}};
+    renderQuizQuestion();
+  },
+  selectQuizOpt(key){
+    if(_quizState.revealed)return;
+    _quizState.selected=key;
+    document.querySelectorAll('.quiz-opt').forEach(el=>el.classList.remove('selected'));
+    document.getElementById('opt-'+key)?.classList.add('selected');
+    const btn=document.getElementById('quizConfirmBtn');
+    if(btn)btn.style.display='block';
+  },
+  async confirmQuizOpt(timeout=false){
+    if(_quizState.revealed)return;
+    clearInterval(_quizState.timer);
+    _quizState.revealed=true;
+    const q=_quizState.questions[_quizState.qIdx];
+    const sel=timeout?null:_quizState.selected;
+    const isCorrect=sel===q.correct_answer;
+    _quizState.answers[_quizState.qIdx]=sel;
+    document.querySelectorAll('.quiz-opt').forEach(el=>el.classList.remove('selected'));
+    document.getElementById('opt-'+q.correct_answer)?.classList.add('correct');
+    if(sel&&!isCorrect)document.getElementById('opt-'+sel)?.classList.add('wrong');
+    const btn=document.getElementById('quizConfirmBtn');
+    if(btn){
+      btn.textContent=timeout?'⏰ انتهى الوقت — التالي':isCorrect?'✅ صحيح! +10 نقطة — التالي':'❌ خطأ — التالي';
+      btn.style.display='block';btn.onclick=()=>A.nextQuizQ();
+    }
+    try{
+      await fetch(SB_URL+'/rest/v1/quiz_answers',{method:'POST',
+        headers:{...apiHeaders(),'Prefer':'return=minimal'},
+        body:JSON.stringify({question_id:q.id,user_id:session?.user?.id,member_name:myName(),answer:sel||'',is_correct:isCorrect,points:isCorrect?10:0})});
+      D.quizAnswers.push({question_id:q.id,is_correct:isCorrect});
+    }catch(e){}
+  },
+  nextQuizQ(){
+    _quizState.qIdx++;_quizState.selected=null;_quizState.revealed=false;
+    if(_quizState.qIdx>=_quizState.questions.length)endQuiz();
+    else renderQuizQuestion();
+  },
+  async addQuestion(){
+    const q=document.getElementById('qQ')?.value.trim();
+    const a=document.getElementById('qA')?.value.trim();
+    const b=document.getElementById('qB')?.value.trim();
+    const c=document.getElementById('qC')?.value.trim();
+    const d=document.getElementById('qD')?.value.trim();
+    const ans=document.getElementById('qAns')?.value;
+    const cat=document.getElementById('qCat')?.value.trim()||'عام';
+    if(!q||!a||!b||!c||!d){toast('أكمل جميع الحقول','error');return;}
+    const H={...apiHeaders(),'Prefer':'return=representation'};
+    const r=await fetch(SB_URL+'/rest/v1/quiz_questions',{method:'POST',headers:H,
+      body:JSON.stringify({question:q,option_a:a,option_b:b,option_c:c,option_d:d,correct_answer:ans,category:cat,created_by:myName()})});
+    if(r.ok){const[row]=await r.json();D.quizQ.unshift(row);A.setMoreTab('quiz');toast('✅ تمت الإضافة');}
+    else toast('خطأ','error');
+  },
+  async delQuestion(id){
+    if(!confirm('حذف هذا السؤال؟'))return;
+    await fetch(SB_URL+'/rest/v1/quiz_questions?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+    D.quizQ=D.quizQ.filter(q=>q.id!==id);A.setMoreTab('quiz');toast('🗑️ تم الحذف');
   },
   async addSuggestion(){
     const body=document.getElementById('sugBody')?.value.trim();
