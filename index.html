@@ -3840,6 +3840,26 @@ async function renderAdmin(){
     </div>`;
   });
   h+=`</div><div class="note">لإضافة عضو: يفتح الرابط ويسجل دخول بجوجل — يُضاف تلقائياً.</div>`;
+
+  if(myProfile?.is_super_admin){
+    h+=`<div class="card" style="margin-top:14px;">
+      <div class="h2">📧 إرسال إيميل التحديثات</div>
+      <div class="muted" style="margin-bottom:12px;">يُرسل لجميع الأعضاء المسجلين (${(profiles||[]).length} عضو)</div>
+      <div class="field"><label>عنوان الإيميل</label>
+        <input type="text" id="emailSubject" value="تحديثات جديدة في دوريتنا 🏕️">
+      </div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">الميزات التي ستُرسل:</div>
+        ${WHATS_NEW.map((f,i)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <input type="checkbox" id="feat${i}" checked style="width:16px;height:16px;cursor:pointer;">
+          <label for="feat${i}" style="font-size:12px;cursor:pointer;">${f.icon} ${f.title}</label>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-primary btn-block" onclick="A.sendUpdateEmail()">📧 إرسال للجميع</button>
+      <div id="emailResult" style="font-size:12px;color:var(--sage);margin-top:8px;text-align:center;display:none;"></div>
+    </div>`;
+  }
+
   document.getElementById('content').innerHTML=h;
 }
 
@@ -4112,7 +4132,26 @@ window.A={
     if(s) openCalSlotModal(s);
     toast(status==='clear'?'تم المسح':status==='yes'?'✅ سُجّل الحضور':'🙅 سُجّل الاعتذار');
   },
-  async deleteUser(uid,name){
+  async sendUpdateEmail(){
+    const subject=document.getElementById('emailSubject')?.value.trim();
+    if(!subject){toast('أدخل عنوان الإيميل','error');return;}
+    const selected=WHATS_NEW.filter((_,i)=>document.getElementById('feat'+i)?.checked);
+    if(!selected.length){toast('اختر ميزة واحدة على الأقل','error');return;}
+    const btn=document.querySelector('[onclick="A.sendUpdateEmail()"]');
+    if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
+    try{
+      const r=await fetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-update-email',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},
+        body:JSON.stringify({subject,features:selected})
+      });
+      const data=await r.json();
+      const res=document.getElementById('emailResult');
+      if(res){res.style.display='block';res.textContent=`✅ تم الإرسال لـ ${data.sent} من ${data.total} عضو`;}
+      toast(`✅ أُرسل لـ ${data.sent} عضو`);
+    }catch(e){toast('خطأ: '+e.message,'error');}
+    if(btn){btn.disabled=false;btn.textContent='📧 إرسال للجميع';}
+  },
     if(!myProfile?.is_super_admin){toast('السوبر أدمن فقط','error');return;}
     if(uid===session?.user?.id){toast('لا يمكنك حذف نفسك','error');return;}
     if(!confirm(`حذف مستخدم "${name}"؟\nسيُزال من التطبيق ولا يمكن التراجع.`))return;
