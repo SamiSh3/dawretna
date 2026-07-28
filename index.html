@@ -3404,7 +3404,7 @@ function renderQuizSection(){
   el.innerHTML=`${moreTabsHtml()}<div style="padding:20px;text-align:center;color:var(--muted);">⏳ جاري التحميل...</div>`;
 
   Promise.all([
-    fetch(SB_URL+'/rest/v1/quiz_questions?select=*&order=random()',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
+    fetch(SB_URL+'/rest/v1/quiz_questions?select=*&order=created_at.desc',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
     fetch(SB_URL+'/rest/v1/quiz_scores?select=*&order=total_points.desc',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
     fetch(SB_URL+'/rest/v1/quiz_answers?select=*&user_id=eq.'+(session?.user?.id||''),{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
   ]).then(([questions,scores,myAnswers])=>{
