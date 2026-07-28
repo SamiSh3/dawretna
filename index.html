@@ -3354,13 +3354,13 @@ function renderQuizSection(){
     fetch(SB_URL+'/rest/v1/quiz_scores?select=*&order=total_points.desc',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
     fetch(SB_URL+'/rest/v1/quiz_answers?select=*&user_id=eq.'+(session?.user?.id||''),{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
   ]).then(([questions,scores,myAnswers])=>{
-    if(tab!=='quiz')return; // تجاهل إذا تغيّر التبويب أثناء التحميل
+    if(_moreSubTab!=='quiz')return; // تجاهل إذا تغيّر التبويب أثناء التحميل
     D.quizQ=questions||[];
     D.quizScores=scores||[];
     D.quizAnswers=myAnswers||[];
     buildQuizUI(document.getElementById('content'));
   }).catch(()=>{
-    if(tab==='quiz') document.getElementById('content').innerHTML='<div class="empty">خطأ في التحميل</div>';
+    if(_moreSubTab==='quiz') document.getElementById('content').innerHTML=moreTabsHtml()+'<div class="empty">خطأ في التحميل</div>';
   });
 }
 
