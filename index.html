@@ -3877,12 +3877,13 @@ window.A={
     toast('👤 سجّلت نفسك لتجهيز هذا البند');
   },
   async delReq(id){
+    const req=D.requirements.find(r=>r.id===id);
+    if(!req)return;
+    const slotId=req.slot_id;
     D.requirements=D.requirements.filter(r=>r.id!==id);
     await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
-    const s=D.slots.find(x=>x.id===D.requirements[0]?.slot_id||'');
-    // re-render current modal
-    const openSlotId=document.getElementById('calSlotModal')?.dataset?.slotId;
-    if(openSlotId){const sl=D.slots.find(x=>x.id===openSlotId);if(sl)openCalSlotModal(sl);}
+    const sl=D.slots.find(x=>x.id===slotId);
+    if(sl) openCalSlotModal(sl);
   },
   async addSuggestion(){
     const body=document.getElementById('sugBody')?.value.trim();
