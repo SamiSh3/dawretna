@@ -3784,6 +3784,15 @@ function renderSettings(){
   <div style="font-size:11px;color:var(--muted);">الفريق يتكون من المستخدمين المسجلين في التطبيق</div>
   </div>`;
   h+=`<div class="note">البيانات محفوظة في Supabase.</div>`;
+
+  <!-- النسخة -->
+  h+=`<div style="text-align:center;padding:16px 0;margin-top:4px;">
+    <div style="font-size:22px;margin-bottom:4px;">🏕️</div>
+    <div style="font-size:15px;font-weight:800;color:var(--amber);">دوريتنا</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:2px;">الإصدار ${APP_VERSION} · ${APP_BUILD_DATE}</div>
+    <button onclick="localStorage.removeItem('dawretna_version');showWhatsNew();" style="background:none;border:none;color:var(--amber);font-size:11px;cursor:pointer;margin-top:6px;text-decoration:underline;">عرض ما الجديد</button>
+  </div>`;
+
   document.getElementById('content').innerHTML=h;
 }
 
