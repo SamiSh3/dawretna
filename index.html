@@ -3884,7 +3884,7 @@ window.A={
     const openSlotId=document.getElementById('calSlotModal')?.dataset?.slotId;
     if(openSlotId){const sl=D.slots.find(x=>x.id===openSlotId);if(sl)openCalSlotModal(sl);}
   },
-    const title=document.getElementById('sugTitle')?.value.trim();
+  async addSuggestion(){
     const body=document.getElementById('sugBody')?.value.trim();
     const category=document.getElementById('sugCat')?.value||'general';
     if(!title){toast('أدخل العنوان','error');return;}
