@@ -277,6 +277,14 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ptr-indicator{position:fixed;top:0;left:0;right:0;height:3px;background:var(--amber);transform:scaleX(0);transform-origin:right;transition:transform .3s;z-index:999;}
 .ptr-indicator.show{transform:scaleX(1);}
+/* ── requirements ── */
+.req-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bsoft);}
+.req-item:last-child{border-bottom:none;}
+.req-check{width:22px;height:22px;border-radius:6px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:13px;}
+.req-check.done{background:var(--sage);border-color:var(--sage);color:#fff;}
+.req-name{flex:1;font-size:13px;}
+.req-name.done{text-decoration:line-through;color:var(--muted);}
+.req-assignee{font-size:11px;color:var(--amber);flex-shrink:0;}
 /* ── suggestions ── */
 .sug-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:14px;margin-bottom:10px;}
 .sug-title{font-size:15px;font-weight:700;margin-bottom:5px;}
@@ -627,7 +635,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 
 let session=null,myProfile=null,tab=sessionStorage.getItem('lastTab')||'home';
-let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[],suggestions:[]};
+let D={chalet:{name:'دوريتنا',address:'',map_url:'',lat:null,lng:null},team:[],slots:[],rsvps:[],swaps:[],reminders:[],specials:[],parts:[],memories:[],polls:[],votes:[],notifications:[],payments:[],annualPayments:[],settings:{},locations:[],suggestions:[],requirements:[]};
 let _dataLoaded=false; // هل اكتمل تحميل البيانات الأساسية؟
 
 /* ════════════════ AUTH ════════════════ */
@@ -880,13 +888,14 @@ async function loadAll(){
   }
 
   // باقي البيانات بالتوازي مع timeout
-  const [memories,reminders,notifications,suggestions]= await Promise.all([
+  const [memories,reminders,notifications,suggestions,requirements]= await Promise.all([
     fetchWithTimeout(SB_URL+'/rest/v1/memories?select=*&order=created_at.desc'),
     fetchWithTimeout(SB_URL+'/rest/v1/reminders?select=*'),
     session?fetchWithTimeout(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=50'):Promise.resolve([]),
     fetchWithTimeout(SB_URL+'/rest/v1/suggestions?select=*&order=created_at.desc'),
+    fetchWithTimeout(SB_URL+'/rest/v1/trip_requirements?select=*&order=created_at.asc'),
   ]);
-  D.memories=memories||[]; D.reminders=reminders||[]; D.suggestions=suggestions||[];
+  D.memories=memories||[]; D.reminders=reminders||[]; D.suggestions=suggestions||[]; D.requirements=requirements||[];
   if(session){
     const prev=D.notifications.map(n=>n.id);
     D.notifications=notifications||[];
@@ -2516,6 +2525,42 @@ async function openCalSlotModal(slot){
       return '';
     })()}
 
+    <!-- متطلبات الطلعة -->
+    ${!isPast?`
+    <hr class="sep">
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 متطلبات الطلعة</div>
+    ${(()=>{
+      const reqs=D.requirements.filter(r=>r.slot_id===slot.id);
+      let h='';
+      if(!reqs.length) h+=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">لا توجد متطلبات — أضف أول عنصر</div>`;
+      reqs.forEach(r=>{
+        const isDone=r.is_ready;
+        h+=`<div class="req-item">
+          <div class="req-check ${isDone?'done':''}" onclick="A.toggleReq('${r.id}',${isDone})">
+            ${isDone?'✓':''}
+          </div>
+          <div class="req-name ${isDone?'done':''}">${esc(r.name)}</div>
+          <div class="req-assignee">${r.assigned_to?'👤 '+esc(r.assigned_to):
+            `<button style="background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;" onclick="A.claimReq('${r.id}')">أنا أجيبه</button>`
+          }</div>
+          ${myProfile?.is_admin?`<button class="btn btn-danger btn-xs" onclick="A.delReq('${r.id}')">✕</button>`:''}
+        </div>`;
+      });
+      // إضافة متطلب جديد
+      const presets=['☕ قهوة','🍵 شاي','🍬 حلى','💧 ماء','🍽️ عشاء','🪔 بخور','🔥 فحم','🥩 لحم','🍞 خبز','🧂 توابل'];
+      h+=`<div style="margin-top:10px;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input id="reqInput_${slot.id}" type="text" placeholder="اسم المتطلب..." style="flex:1;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);padding:7px 10px;font-size:12px;">
+          <button class="btn btn-primary btn-sm" onclick="A.addReq('${slot.id}')">+</button>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          ${presets.map(p=>`<button onclick="A.addReqPreset('${slot.id}','${p}')" style="background:var(--bg-soft);border:1px solid var(--border);border-radius:99px;padding:3px 8px;font-size:11px;cursor:pointer;">${p}</button>`).join('')}
+        </div>
+      </div>`;
+      return h;
+    })()}
+    `:''}
+
     <!-- حجز / إلغاء -->
     ${!slot.host_name&&!isPast?`<button class="btn btn-primary btn-block btn-sm" style="margin-bottom:10px;" onclick="A.bookCal('${slot.id}',event.currentTarget)">🙋 احجز هذا الموعد</button>`:''}
     ${slot.host_name&&!isPast&&slot.host_name===myName()?`<button class="btn btn-danger btn-sm btn-block" style="margin-bottom:10px;" onclick="cancelBookSlot('${slot.id}',event.currentTarget)">↩️ إلغاء الحجز</button>`:''}
@@ -3795,7 +3840,50 @@ window.A={
     render();
     toast('🗑️ تم حذف الطلعة');
   },
-  async addSuggestion(){
+  async addReq(slotId){
+    const inp=document.getElementById('reqInput_'+slotId);
+    const name=inp?.value.trim();
+    if(!name){toast('أدخل اسم المتطلب','error');return;}
+    const H={...apiHeaders(),'Prefer':'return=representation'};
+    const r=await fetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
+      body:JSON.stringify({slot_id:slotId,name,created_by:myName()})});
+    if(r.ok){const[row]=await r.json();D.requirements.push(row);if(inp)inp.value='';
+      const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);}
+    else toast('خطأ','error');
+  },
+  async addReqPreset(slotId,name){
+    const H={...apiHeaders(),'Prefer':'return=representation'};
+    const r=await fetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
+      body:JSON.stringify({slot_id:slotId,name,created_by:myName()})});
+    if(r.ok){const[row]=await r.json();D.requirements.push(row);
+      const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);}
+  },
+  async toggleReq(id,isDone){
+    const req=D.requirements.find(r=>r.id===id);
+    if(!req)return;
+    req.is_ready=!isDone;
+    if(!req.assigned_to&&!isDone) req.assigned_to=myName();
+    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
+      body:JSON.stringify({is_ready:!isDone,assigned_to:req.assigned_to})});
+    const s=D.slots.find(x=>x.id===req.slot_id);if(s)openCalSlotModal(s);
+    toast(!isDone?'✅ تم التجهيز':'↩️ تم الإلغاء');
+  },
+  async claimReq(id){
+    const req=D.requirements.find(r=>r.id===id);if(!req)return;
+    req.assigned_to=myName();
+    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
+      body:JSON.stringify({assigned_to:myName()})});
+    const s=D.slots.find(x=>x.id===req.slot_id);if(s)openCalSlotModal(s);
+    toast('👤 سجّلت نفسك لتجهيز هذا البند');
+  },
+  async delReq(id){
+    D.requirements=D.requirements.filter(r=>r.id!==id);
+    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+    const s=D.slots.find(x=>x.id===D.requirements[0]?.slot_id||'');
+    // re-render current modal
+    const openSlotId=document.getElementById('calSlotModal')?.dataset?.slotId;
+    if(openSlotId){const sl=D.slots.find(x=>x.id===openSlotId);if(sl)openCalSlotModal(sl);}
+  },
     const title=document.getElementById('sugTitle')?.value.trim();
     const body=document.getElementById('sugBody')?.value.trim();
     const category=document.getElementById('sugCat')?.value||'general';
