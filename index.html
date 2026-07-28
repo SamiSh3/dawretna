@@ -3173,7 +3173,7 @@ function moreTabsHtml(){
     {k:'polls',l:'📊 استطلاع'},{k:'suggestions',l:'💡 مقترحات'},
     {k:'quiz',l:'🧠 مسابقة'}
   ];
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--bsoft);background:var(--bg-card);position:sticky;top:0;z-index:5;">
+  return `<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
     ${tabs.map(t=>`<button class="btn ${_moreSubTab===t.k?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('${t.k}')">${t.l}</button>`).join('')}
   </div>`;
 }
@@ -3242,14 +3242,7 @@ async function updateQuizScore(correct,total,pts){
   }catch(e){}
 }
 function renderMore(){
-  let h=`<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
-    <button class="btn ${_moreSubTab==='memories'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('memories')">📸 ذكريات</button>
-    <button class="btn ${_moreSubTab==='special'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('special')">🔥 خاصة</button>
-    <button class="btn ${_moreSubTab==='polls'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('polls')">📊 استطلاع</button>
-    <button class="btn ${_moreSubTab==='suggestions'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('suggestions')">💡 مقترحات</button>
-    <button class="btn ${_moreSubTab==='quiz'?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('quiz')">🧠 مسابقة</button>
-
-  </div>`;
+  let h=moreTabsHtml();
 
   if(_moreSubTab==='memories'){
     h+=`<div class="card"><div class="h2">📸 ذكرى جديدة</div>
