@@ -3227,9 +3227,23 @@ function moreTabsHtml(){
     {k:'polls',l:'📊 استطلاع'},{k:'suggestions',l:'💡 مقترحات'},
     {k:'quiz',l:'🧠 مسابقة'}
   ];
-  return `<div style="display:flex;gap:5px;background:var(--bg-el);border-radius:999px;padding:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;">
-    ${tabs.map(t=>`<button class="btn ${_moreSubTab===t.k?'btn-primary':'btn-ghost'} btn-sm" style="flex:1;min-width:fit-content;justify-content:center;" onclick="A.setMoreTab('${t.k}')">${t.l}</button>`).join('')}
-  </div>`;
+  return `<div style="position:relative;margin-bottom:14px;">
+    <div id="moreTabs" style="display:flex;gap:5px;overflow-x:auto;padding:4px;background:var(--bg-el);border-radius:999px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;">
+      ${tabs.map(t=>`<button class="btn ${_moreSubTab===t.k?'btn-primary':'btn-ghost'} btn-sm" 
+        style="flex-shrink:0;white-space:nowrap;scroll-snap-align:start;${_moreSubTab===t.k?'':'opacity:.75'}" 
+        onclick="A.setMoreTab('${t.k}');document.getElementById('moreTabs2')&&document.getElementById('moreTabs2').querySelectorAll('button').forEach(b=>b.style.opacity='.75');this.style.opacity='1';"
+        >${t.l}</button>`).join('')}
+    </div>
+    <div style="position:absolute;left:0;top:0;bottom:0;width:20px;background:linear-gradient(to right,var(--bg-el),transparent);border-radius:999px 0 0 999px;pointer-events:none;"></div>
+    <div style="position:absolute;right:0;top:0;bottom:0;width:28px;background:linear-gradient(to left,var(--bg-el),transparent);border-radius:0 999px 999px 0;pointer-events:none;display:flex;align-items:center;justify-content:flex-end;padding-left:4px;">
+      <span style="font-size:14px;color:var(--muted);animation:bounce-right 1.5s infinite;">›</span>
+    </div>
+  </div>
+  <style>
+    #moreTabs::-webkit-scrollbar{display:none;}
+    #moreTabs{-ms-overflow-style:none;}
+    @keyframes bounce-right{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+  </style>`;
 }
 
 function renderSuggestions(){
