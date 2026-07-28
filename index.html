@@ -4147,8 +4147,13 @@ window.A={
       });
       const data=await r.json();
       const res=document.getElementById('emailResult');
-      if(res){res.style.display='block';res.textContent=`✅ تم الإرسال لـ ${data.sent} من ${data.total} عضو`;}
-      toast(`✅ أُرسل لـ ${data.sent} عضو`);
+      if(data.error){
+        if(res){res.style.display='block';res.style.color='var(--danger)';res.textContent='❌ خطأ: '+data.error;}
+        toast('خطأ: '+data.error,'error');
+      } else {
+        if(res){res.style.display='block';res.style.color='var(--sage)';res.textContent=`✅ تم الإرسال لـ ${data.sent} من ${data.total||data.sent} عضو`;}
+        toast(`✅ أُرسل لـ ${data.sent} عضو`);
+      }
     }catch(e){toast('خطأ: '+e.message,'error');}
     if(btn){btn.disabled=false;btn.textContent='📧 إرسال للجميع';}
   },
