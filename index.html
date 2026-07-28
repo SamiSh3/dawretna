@@ -2046,13 +2046,13 @@ function setTab(t){tab=t;sessionStorage.setItem('lastTab',t);render();}
 
 // ── ما الجديد ──
 const APP_VERSION='2.0';
+const APP_BUILD_DATE='يوليو 2026';
 const WHATS_NEW=[
-  {icon:'🧠',title:'المسابقة الثقافية',desc:'60 سؤال صعب متنوع — نقاط ولوحة متصدرين للجميع'},
-  {icon:'💡',title:'المقترحات',desc:'أرسل مقترحاتك وأفكارك لتحسين الطلعات'},
-  {icon:'📋',title:'متطلبات الطلعة',desc:'قائمة بكل ما تحتاجه الطلعة — من يجيب وش'},
-  {icon:'🔁',title:'نظام التبديل المحسّن',desc:'طلب واحد فقط · إذا رُفض يمكنك الإعادة فوراً'},
-  {icon:'↻',title:'زر التحديث',desc:'اسحب للأسفل على الجوال أو اضغط ↻ في الأعلى'},
-  {icon:'🏠',title:'حفظ الصفحة',desc:'يذكرك أين كنت عند تحديث التطبيق'},
+  {icon:'🧠',title:'المسابقة الثقافية',desc:'60 سؤال صعب في علوم وتاريخ وأدب وجغرافيا — تجمع نقاط وتتنافس مع الأعضاء'},
+  {icon:'🏆',title:'لوحة المتصدرين',desc:'تابع ترتيبك بين الأعضاء في المسابقة بالوقت الحقيقي'},
+  {icon:'💡',title:'المقترحات',desc:'اقترح أفكاراً لتحسين الطلعات وشاهد مقترحات الآخرين'},
+  {icon:'📋',title:'قائمة متطلبات الطلعة',desc:'اعرف وش تحتاج كل طلعة — شاي، قهوة، بخور... وسجّل اسمك لتجيب أي بند'},
+  {icon:'🔔',title:'تذكير تلقائي',desc:'يصلك تنبيه 5 أيام قبل كل طلعة حتى لو التطبيق مغلق'},
 ];
 
 function showWhatsNew(){
@@ -2064,29 +2064,37 @@ function showWhatsNew(){
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:flex-end;backdrop-filter:blur(4px);';
 
   overlay.innerHTML=`
-    <div style="background:var(--bg-card);border-radius:22px 22px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 18px 30px;">
-      <div style="width:40px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 18px;"></div>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-        <span style="font-size:26px;">🎉</span>
-        <div>
-          <div style="font-size:18px;font-weight:800;color:var(--amber);">ما الجديد في التطبيق</div>
-          <div style="font-size:11px;color:var(--muted);">الإصدار ${APP_VERSION}</div>
+    <div style="background:var(--bg-card);border-radius:22px 22px 0 0;width:100%;max-height:88vh;overflow-y:auto;padding-bottom:30px;">
+      <!-- رأس -->
+      <div style="background:linear-gradient(135deg,#1a2f1a,#162a20);padding:24px 20px 20px;border-radius:22px 22px 0 0;position:relative;">
+        <div style="width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:99px;margin:0 auto 20px;"></div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="background:rgba(212,168,67,.15);border:2px solid var(--amber);border-radius:16px;padding:12px;font-size:28px;">🏕️</div>
+          <div>
+            <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:2px;">دوريتنا</div>
+            <div style="font-size:22px;font-weight:800;color:#fff;">الإصدار ${APP_VERSION}</div>
+            <div style="font-size:11px;color:var(--amber);">${APP_BUILD_DATE} · ما الجديد 🎉</div>
+          </div>
         </div>
       </div>
-      <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
-        ${WHATS_NEW.map(f=>`
-          <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:var(--bg-soft);border-radius:12px;border:1px solid var(--border);">
-            <span style="font-size:22px;flex-shrink:0;">${f.icon}</span>
+      <!-- الميزات -->
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px;">
+        ${WHATS_NEW.map((f,i)=>`
+          <div style="display:flex;gap:13px;align-items:flex-start;padding:12px 14px;background:var(--bg-soft);border-radius:14px;border:1px solid var(--border);animation:slide-in .3s ease ${i*0.08}s both;">
+            <div style="width:42px;height:42px;background:var(--bg-el);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">${f.icon}</div>
             <div>
-              <div style="font-size:13px;font-weight:700;margin-bottom:2px;">${f.title}</div>
-              <div style="font-size:11px;color:var(--muted);">${f.desc}</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:3px;">${f.title}</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.5;">${f.desc}</div>
             </div>
           </div>`).join('')}
       </div>
-      <button onclick="closeWhatsNew()" class="btn btn-primary btn-block" style="margin-top:18px;font-size:14px;padding:13px;">
-        رائع! فهمت ✓
-      </button>
-    </div>`;
+      <div style="padding:0 18px;">
+        <button onclick="closeWhatsNew()" class="btn btn-primary btn-block" style="font-size:14px;padding:13px;border-radius:14px;">
+          رائع، فهمت! ✓
+        </button>
+      </div>
+    </div>
+    <style>@keyframes slide-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}</style>`;
 
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)closeWhatsNew();});
