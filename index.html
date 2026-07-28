@@ -2110,9 +2110,7 @@ function render(){
   else if(tab==='budget')renderBudget();
   else if(tab==='settings')renderSettings();
   else if(tab==='quiz'){
-    const el=document.getElementById('content');
-    el.innerHTML='';
-    renderQuizSection('');
+    renderQuizSection();
   }
   else if(tab==='suggestions')renderSuggestions();
   else if(tab==='more')renderMore();
@@ -3346,21 +3344,23 @@ let _moreSubTab='memories';
 // ── برنامج المسابقة ──
 let _quizState={active:false,qIdx:0,questions:[],selected:null,revealed:false,timer:null,timeLeft:20};
 
-function renderQuizSection(headerHtml){
+function renderQuizSection(){
   const el=document.getElementById('content');
-  el.innerHTML=headerHtml;
+  el.innerHTML=`<div style="padding:20px;text-align:center;color:var(--muted);">⏳ جاري التحميل...</div>`;
 
-  // جلب البيانات
   Promise.all([
     fetch(SB_URL+'/rest/v1/quiz_questions?select=*&order=random()',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
     fetch(SB_URL+'/rest/v1/quiz_scores?select=*&order=total_points.desc',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
     fetch(SB_URL+'/rest/v1/quiz_answers?select=*&user_id=eq.'+(session?.user?.id||''),{headers:apiHeaders()}).then(r=>r.ok?r.json():[]),
   ]).then(([questions,scores,myAnswers])=>{
+    if(tab!=='quiz')return; // تجاهل إذا تغيّر التبويب أثناء التحميل
     D.quizQ=questions||[];
     D.quizScores=scores||[];
     D.quizAnswers=myAnswers||[];
-    buildQuizUI(el);
-  }).catch(()=>{ el.innerHTML+='<div class="empty">خطأ في التحميل</div>'; });
+    buildQuizUI(document.getElementById('content'));
+  }).catch(()=>{
+    if(tab==='quiz') document.getElementById('content').innerHTML='<div class="empty">خطأ في التحميل</div>';
+  });
 }
 
 function buildQuizUI(el){
@@ -3449,7 +3449,7 @@ function buildQuizUI(el){
     </div>
   </div>`:''}`;
 
-  el.innerHTML+=h;
+  el.innerHTML=h;
 }
 
 function renderQuizQuestion(){
