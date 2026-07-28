@@ -4152,7 +4152,7 @@ window.A={
     }catch(e){toast('خطأ: '+e.message,'error');}
     if(btn){btn.disabled=false;btn.textContent='📧 إرسال للجميع';}
   },
-    if(!myProfile?.is_super_admin){toast('السوبر أدمن فقط','error');return;}
+  async deleteUser(uid,name){
     if(uid===session?.user?.id){toast('لا يمكنك حذف نفسك','error');return;}
     if(!confirm(`حذف مستخدم "${name}"؟\nسيُزال من التطبيق ولا يمكن التراجع.`))return;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
