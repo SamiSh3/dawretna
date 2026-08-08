@@ -1748,8 +1748,49 @@ document.getElementById('saveEditBtn').onclick=async()=>{
   const uid=document.getElementById('editUserId').value;
   const name=document.getElementById('editName').value.trim();
   const phone=document.getElementById('editPhone').value.trim();
+  if(!name){toast('الاسم مطلوب','error');return;}
+
+  // الاسم القديم
+  const oldProfile=D.team.find(t=>D.quizScores.find(s=>s.user_id===uid)||true);
+  const oldName=(await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+uid+'&select=name',{headers:apiHeaders()}).then(r=>r.ok?r.json():[]))[0]?.name||'';
+
+  // تحديث الـ profile
   await sb.from('profiles').update({name,phone_wa:phone}).eq('id',uid);
-  closeModal('adminEditModal');await loadAll();toast('تم حفظ التعديلات ✅');
+
+  // إذا تغيّر الاسم — حدّث كل الجداول المرتبطة
+  if(oldName&&oldName!==name){
+    const H=apiHeaders();
+    const tables=[
+      {t:'slots',col:'host_name'},
+      {t:'rsvps',col:'member_name'},
+      {t:'budget_payments',col:'member_name'},
+      {t:'swap_requests',col:'requester_name'},
+      {t:'memories',col:'author_name'},
+      {t:'polls',col:'created_by'},
+      {t:'poll_votes',col:'member_name'},
+      {t:'quiz_scores',col:'member_name'},
+      {t:'quiz_answers',col:'member_name'},
+      {t:'suggestions',col:'author_name'},
+      {t:'trip_requirements',col:'assigned_to'},
+      {t:'trip_requirements',col:'created_by'},
+      {t:'annual_payments',col:'member_name'},
+    ];
+    await Promise.all(tables.map(({t,col})=>
+      fetch(SB_URL+'/rest/v1/'+t+'?'+col+'=eq.'+encodeURIComponent(oldName),{
+        method:'PATCH',headers:H,body:JSON.stringify({[col]:name})
+      })
+    ));
+    // تحديث D محلياً
+    D.team=D.team.map(m=>m.name===oldName?{...m,name}:m);
+    D.slots=D.slots.map(s=>s.host_name===oldName?{...s,host_name:name}:s);
+    D.rsvps=D.rsvps.map(r=>r.member_name===oldName?{...r,member_name:name}:r);
+    toast(`✅ تم تحديث الاسم من "${oldName}" إلى "${name}" في جميع الجداول`);
+  } else {
+    toast('✅ تم حفظ التعديلات');
+  }
+
+  closeModal('adminEditModal');
+  await loadAll();render();
   if(tab==='admin')renderAdmin();
 };
 document.getElementById('cancelEditBtn').onclick=()=>closeModal('adminEditModal');
