@@ -716,6 +716,8 @@ async function afterLogin(){
   checkAutoReminders().catch(()=>{});
   // إظهار ما الجديد للمستخدم
   setTimeout(showWhatsNew, 800);
+  // طلب تفعيل التنبيهات إذا لم يتم بعد
+  setTimeout(promptPushIfNeeded, 3000);
   // فحص تنبيهات جديدة كل 30 ثانية
   setInterval(pollNotifications,8000);
   // تحقق من انتهاء صلاحية طلبات التبديل كل دقيقة
@@ -2132,6 +2134,38 @@ function closeWhatsNew(){
 }
 window.closeWhatsNew=closeWhatsNew;
 window.showWhatsNew=showWhatsNew;
+// ── طلب تفعيل التنبيهات ──
+async function promptPushIfNeeded(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator))return;
+  if(Notification.permission==='denied')return;
+  if(localStorage.getItem('pushPromptDismissed'))return;
+  if(Notification.permission==='granted'){
+    const reg=await navigator.serviceWorker.ready.catch(()=>null);
+    const sub=await reg?.pushManager?.getSubscription();
+    if(sub)return;
+  }
+  if(document.getElementById('pushPromptBanner'))return;
+  const banner=document.createElement('div');
+  banner.id='pushPromptBanner';
+  banner.style.cssText='position:fixed;bottom:70px;left:12px;right:12px;background:var(--bg-card);border:1px solid var(--amber);border-radius:16px;padding:14px 16px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:slide-up .3s ease;';
+  banner.innerHTML=`
+    <style>@keyframes slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}</style>
+    <div style="display:flex;align-items:flex-start;gap:11px;">
+      <span style="font-size:26px;flex-shrink:0;">🔔</span>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:3px;">فعّل الإشعارات</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.5;">استلم تذكيرات الطلعات وطلبات التبديل حتى لو التطبيق مغلق</div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="window.A?.enablePush?.();document.getElementById('pushPromptBanner')?.remove();" class="btn btn-primary btn-sm" style="flex:1;">🔔 تفعيل</button>
+          <button onclick="document.getElementById('pushPromptBanner')?.remove();localStorage.setItem('pushPromptDismissed','1');" class="btn btn-ghost btn-sm">لاحقاً</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(banner);
+  setTimeout(()=>banner.remove(),15000);
+}
+window.promptPushIfNeeded=promptPushIfNeeded;
+
 async function refreshApp(){
   const btn=document.getElementById('refreshBtn');
   const bar=document.getElementById('ptrBar');
