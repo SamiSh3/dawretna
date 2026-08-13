@@ -2156,7 +2156,7 @@ async function promptPushIfNeeded(){
         <div style="font-size:13px;font-weight:700;margin-bottom:3px;">فعّل الإشعارات</div>
         <div style="font-size:11px;color:var(--muted);line-height:1.5;">استلم تذكيرات الطلعات وطلبات التبديل حتى لو التطبيق مغلق</div>
         <div style="display:flex;gap:8px;margin-top:10px;">
-          <button onclick="window.A?.enablePush?.();document.getElementById('pushPromptBanner')?.remove();" class="btn btn-primary btn-sm" style="flex:1;">🔔 تفعيل</button>
+          <button onclick="A.enableNotifs();document.getElementById('pushPromptBanner')?.remove();" class="btn btn-primary btn-sm" style="flex:1;">🔔 تفعيل</button>
           <button onclick="document.getElementById('pushPromptBanner')?.remove();localStorage.setItem('pushPromptDismissed','1');" class="btn btn-ghost btn-sm">لاحقاً</button>
         </div>
       </div>
@@ -3784,7 +3784,7 @@ function renderSettings(){
         <span style="font-size:13px;color:var(--sage);font-weight:700;">الإشعارات مفعّلة</span>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="A.testSound()">🔊 اختبار الصوت</button>
-      <button class="btn btn-primary btn-block" onclick="A.enablePush()" style="margin-top:8px;">🔔 تفعيل التنبيهات خارج التطبيق</button>`:
+      <button class="btn btn-primary btn-block" onclick="A.enableNotifs()" style="margin-top:8px;">🔔 تفعيل التنبيهات خارج التطبيق</button>`:
       `<button class="btn btn-primary btn-block" onclick="A.enableNotifs()">🔔 تفعيل الإشعارات والصوت</button>`
     }
   </div>`;
