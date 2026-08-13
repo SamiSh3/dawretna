@@ -4091,7 +4091,11 @@ window.A={
       });
       if(!r.ok) throw new Error('HTTP '+r.status);
 
-      new Notification('دوريتنا 🏕️',{body:'✅ الإشعارات تعمل خارج التطبيق!',icon:'/dawretna/icon.png'});
+      // إظهار إشعار تجريبي (iOS PWA يحتاج showNotification بدل new Notification)
+      try{
+        const reg2=await navigator.serviceWorker.ready;
+        await reg2.showNotification('دوريتنا 🏕️',{body:'✅ الإشعارات تعمل خارج التطبيق!',icon:'https://samish3.github.io/dawretna/icon.png'});
+      }catch(e){/* تجاهل خطأ الإشعار التجريبي */}
       playNotifSound();
       toast('✅ تم التفعيل — ستصلك حتى لو التطبيق مغلق');
     }catch(e){
