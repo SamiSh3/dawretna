@@ -4246,6 +4246,7 @@ window.A={
       if(btn){btn.disabled=false;btn.textContent='🔔 تنبيه من لم يحدد حضوره';}
     }catch(e){toast('خطأ: '+e.message,'error');if(btn){btn.disabled=false;btn.textContent='🔔 تنبيه من لم يحدد حضوره';}}
   },
+  async adminSetHost(slotId){
     if(!sel)return;
     const newHost=sel.value||null;
     const slot=D.slots.find(s=>s.id===slotId);
