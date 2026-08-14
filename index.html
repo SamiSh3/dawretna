@@ -2718,6 +2718,7 @@ async function openCalSlotModal(slot){
         </select>
         <button class="btn btn-ghost btn-sm" onclick="A.adminSetHost('${slot.id}')" style="flex-shrink:0;">💾 تغيير المضيف</button>
       </div>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="A.sendRsvpReminder('${slot.id}')" style="margin-top:6px;">🔔 تنبيه من لم يحدد حضوره</button>
       <button class="btn btn-danger btn-sm btn-block" onclick="A.adminDeleteSlot('${slot.id}','${toGregShort(slot.date)}')">🗑️ حذف الطلعة</button>
       `:''}
       ${isPast?`
@@ -4231,7 +4232,20 @@ window.A={
     if(r.ok){toast('🗑️ تم حذف '+name);renderAdmin();}
     else{const e=await r.text();toast('خطأ: '+e,'error');}
   },
-  async adminSetHost(slotId){
+  async sendRsvpReminder(){
+    const btn=event?.target;
+    if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
+    try{
+      const r=await fetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-rsvp-reminder',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')}
+      });
+      const d=await r.json();
+      if(d.error){toast('خطأ: '+d.error,'error');return;}
+      toast(`✅ Push: ${d.pushSent} · إيميل: ${d.emailSent} · من ${d.total} عضو لم يرد`);
+      if(btn){btn.disabled=false;btn.textContent='🔔 تنبيه من لم يحدد حضوره';}
+    }catch(e){toast('خطأ: '+e.message,'error');if(btn){btn.disabled=false;btn.textContent='🔔 تنبيه من لم يحدد حضوره';}}
+  },
     if(!sel)return;
     const newHost=sel.value||null;
     const slot=D.slots.find(s=>s.id===slotId);
