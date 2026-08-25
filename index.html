@@ -277,6 +277,14 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ptr-indicator{position:fixed;top:0;left:0;right:0;height:3px;background:var(--amber);transform:scaleX(0);transform-origin:right;transition:transform .3s;z-index:999;}
 .ptr-indicator.show{transform:scaleX(1);}
+/* ── stats ── */
+.stat-card{background:var(--bg-card);border:1px solid var(--bsoft);border-radius:var(--rlg);padding:16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.stat-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.stat-num{font-size:28px;font-weight:800;line-height:1;}
+.stat-lbl{font-size:12px;color:var(--muted);margin-top:3px;}
+.stat-bar{height:6px;background:var(--bg-el);border-radius:99px;overflow:hidden;margin-top:8px;}
+.stat-bar-fill{height:100%;border-radius:99px;transition:.5s;}
+
 /* ── cancelled slot ── */
 .cancelled-banner{background:rgba(212,90,90,.12);border:1px solid rgba(212,90,90,.4);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .cancelled-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;flex-shrink:0;}
@@ -499,6 +507,7 @@ details.dg[open] summary::before{transform:rotate(90deg);}
       </button>
       <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
+      <button class="nav-item" data-tab="stats"><span class="nav-icon">📊</span>إحصائيات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
     </div>
   </nav>
@@ -722,6 +731,8 @@ async function afterLogin(){
   setTimeout(showWhatsNew, 800);
   // طلب تفعيل التنبيهات إذا لم يتم بعد
   setTimeout(promptPushIfNeeded, 3000);
+  // تتبع مرات الدخول
+  try{const opens=JSON.parse(localStorage.getItem('dawretna_opens')||'[]');opens.push(new Date().toISOString());localStorage.setItem('dawretna_opens',JSON.stringify(opens.slice(-365)));}catch(e){}
   // فحص تنبيهات جديدة كل 30 ثانية
   setInterval(pollNotifications,8000);
   // تحقق من انتهاء صلاحية طلبات التبديل كل دقيقة
@@ -2236,6 +2247,7 @@ function render(){
   else if(tab==='settings')renderSettings();
   else if(tab==='suggestions'){setTab('more');_moreSubTab='suggestions';renderMore();return;}
   else if(tab==='quiz'){setTab('more');_moreSubTab='quiz';renderMore();return;}
+  else if(tab==='stats')renderStats();
   else if(tab==='more')renderMore();
   else if(tab==='admin')renderAdmin();
 }
@@ -3394,6 +3406,70 @@ async function updateQuizScore(correct,total,pts){
     await fetch(SB_URL+'/rest/v1/quiz_scores?on_conflict=user_id',{method:'POST',headers:H,body:JSON.stringify(payload)});
   }catch(e){}
 }
+function renderStats(){
+  const el=document.getElementById('content');
+  const year=new Date().getFullYear();
+  const mn=myName();
+
+  // حساب الإحصائيات
+  const yearSlots=D.slots.filter(s=>s.date?.startsWith(year));
+  const pastSlots=yearSlots.filter(s=>daysUntil(s.date)<0);
+  const totalPast=pastSlots.length||1;
+
+  const attended=D.rsvps.filter(r=>r.status==='yes'&&r.member_name===mn&&yearSlots.find(s=>s.id===r.slot_id&&daysUntil(s.date)<0)).length;
+  const declined=D.rsvps.filter(r=>r.status==='no'&&r.member_name===mn&&yearSlots.find(s=>s.id===r.slot_id)).length;
+  const hosted=yearSlots.filter(s=>s.host_name===mn&&daysUntil(s.date)<0).length;
+  const cancelled=D.slots.filter(s=>s.is_cancelled&&s.cancelled_by===mn&&s.date?.startsWith(year)).length;
+  const opens=JSON.parse(localStorage.getItem('dawretna_opens')||'[]').filter(d=>d.startsWith(year)).length;
+  const attRate=Math.round(attended/totalPast*100);
+
+  const stats=[
+    {icon:'✅',color:'#4a9a5a',bg:'rgba(74,154,90,.12)',num:attended,lbl:'مرات الحضور هذا العام',bar:attRate,barColor:'#4a9a5a'},
+    {icon:'🏠',color:'#d4a843',bg:'rgba(212,168,67,.12)',num:hosted,lbl:'مرات التضييف هذا العام',bar:Math.round(hosted/totalPast*100),barColor:'#d4a843'},
+    {icon:'🙅',color:'#d45a5a',bg:'rgba(212,90,90,.12)',num:declined,lbl:'مرات الاعتذار هذا العام',bar:Math.round(declined/(totalPast||1)*100),barColor:'#d45a5a'},
+    {icon:'❌',color:'#888',bg:'rgba(128,128,128,.12)',num:cancelled,lbl:'طلعات ألغيتها هذا العام',bar:0,barColor:'#888'},
+    {icon:'📱',color:'#5a8ad4',bg:'rgba(90,138,212,.12)',num:opens,lbl:'مرات فتح التطبيق هذا العام',bar:0,barColor:'#5a8ad4'},
+  ];
+
+  let h=`<div class="page-wrap">
+  <div class="page-hdr">
+    <div class="page-title">📊 إحصائياتك لعام ${year}</div>
+  </div>
+
+  <!-- بطاقة الملخص -->
+  <div class="card" style="text-align:center;padding:20px 16px;margin-bottom:16px;">
+    <div style="font-size:36px;margin-bottom:6px;">${mn?mn[0]:'?'}</div>
+    <div style="font-size:16px;font-weight:800;">${esc(mn||'')}</div>
+    <div style="font-size:12px;color:var(--muted);margin:6px 0 14px;">نسبة الحضور هذا العام</div>
+    <div style="position:relative;width:100px;height:100px;margin:0 auto;">
+      <svg viewBox="0 0 36 36" style="transform:rotate(-90deg);width:100px;height:100px;">
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--bg-el)" stroke-width="3"/>
+        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#4a9a5a" stroke-width="3"
+          stroke-dasharray="${attRate} ${100-attRate}" stroke-dashoffset="0" stroke-linecap="round"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="font-size:20px;font-weight:800;color:#4a9a5a;">${attRate}%</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px;">من ${pastSlots.length} طلعة مضت</div>
+  </div>
+
+  <!-- البطاقات -->
+  ${stats.map(s=>`
+  <div class="stat-card">
+    <div class="stat-icon" style="background:${s.bg};">${s.icon}</div>
+    <div style="flex:1;">
+      <div class="stat-num" style="color:${s.color};">${s.num}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+      ${s.bar>0?`<div class="stat-bar"><div class="stat-bar-fill" style="width:${s.bar}%;background:${s.barColor};"></div></div>`:''}
+    </div>
+  </div>`).join('')}
+
+  </div>`;
+
+  el.innerHTML=h;
+}
+
 function renderMore(){
   let h=moreTabsHtml();
 
@@ -4253,9 +4329,9 @@ window.A={
   async cancelSlot(id){
     const reason=prompt('سبب الإلغاء (اختياري):');
     if(reason===null)return;
-    await patchRow('slots',id,{is_cancelled:true,cancel_reason:reason||null});
+    await patchRow('slots',id,{is_cancelled:true,cancel_reason:reason||null,cancelled_by:myName()});
     const s=D.slots.find(x=>x.id===id);
-    if(s){s.is_cancelled=true;s.cancel_reason=reason||null;}
+    if(s){s.is_cancelled=true;s.cancel_reason=reason||null;s.cancelled_by=myName();}
     // تنبيه الأعضاء
     const s2=D.slots.find(x=>x.id===id);
     if(s2) await notifyAdmins('general',`❌ تم إلغاء طلعة ${toGregShort(s2.date)}`,reason||'');
