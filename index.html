@@ -4269,6 +4269,7 @@ window.A={
     render();closeModal('calSlotModal');
     toast('✅ تم استعادة الطلعة');
   },
+  async sendRsvpReminder(){
     const btn=event?.target;
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
     try{
