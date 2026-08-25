@@ -505,7 +505,6 @@ details.dg[open] summary::before{transform:rotate(90deg);}
           </svg>
         </span>التقويم
       </button>
-      <button class="nav-item" data-tab="budget"><span class="nav-icon">💰</span>الميزانية</button>
       <button class="nav-item" data-tab="settings"><span class="nav-icon">⚙️</span>الإعدادات</button>
       <button class="nav-item" data-tab="stats"><span class="nav-icon">📊</span>إحصائيات</button>
       <button class="nav-item" data-tab="more"><span class="nav-icon">⋯</span>المزيد</button>
@@ -2243,6 +2242,7 @@ function render(){
   else if(tab==='settings')renderSettings();
   else if(tab==='suggestions'){setTab('more');_moreSubTab='suggestions';renderMore();return;}
   else if(tab==='quiz'){setTab('more');_moreSubTab='quiz';renderMore();return;}
+  else if(tab==='budget'){setTab('more');_moreSubTab='budget';renderMore();return;}
   else if(tab==='stats')renderStats();
   else if(tab==='more')renderMore();
   else if(tab==='admin')renderAdmin();
@@ -3071,6 +3071,7 @@ function renderBudget(){
   const annualBudget=D.chalet.annual_budget||0;
   const budgetYear=D.chalet.budget_year||todayYear();
 
+  let h=moreTabsHtml();
   function rowHtml(m,hasPaid,share,slotId,yearKey){
     const sn=m.name.replace(/'/g,"&#39;");
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
@@ -3199,7 +3200,7 @@ function renderBudget(){
       </div>
     </div>`).join('')}`:''}
     `;
-    document.getElementById('content').innerHTML=h;return; // الوضع السنوي لا يحتاج قسم الطلعات
+  document.getElementById('content').innerHTML=h;return;
   } // نهاية if(budgetType==='annual')
 
   // ── تفاصيل الطلعات (per_slot فقط) ──
@@ -3321,7 +3322,7 @@ function moreTabsHtml(){
   const tabs=[
     {k:'memories',l:'📸 ذكريات'},{k:'special',l:'🔥 خاصة'},
     {k:'polls',l:'📊 استطلاع'},{k:'suggestions',l:'💡 مقترحات'},
-    {k:'quiz',l:'🧠 مسابقة'}
+    {k:'quiz',l:'🧠 مسابقة'},{k:'budget',l:'💰 الميزانية'}
   ];
   return `<div style="position:relative;margin-bottom:14px;">
     <div id="moreTabs" style="display:flex;gap:5px;overflow-x:auto;padding:4px;background:var(--bg-el);border-radius:999px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;">
@@ -3566,6 +3567,7 @@ function renderMore(){
   }
   if(_moreSubTab==='suggestions'){renderSuggestions();return;}
   if(_moreSubTab==='quiz'){renderQuizSection();return;}
+  if(_moreSubTab==='budget'){renderBudget();return;}
   document.getElementById('content').innerHTML=h;
 }
 let _moreSubTab='memories';
