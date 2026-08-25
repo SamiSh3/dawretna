@@ -3415,7 +3415,7 @@ function renderStats(){
   const attended=D.rsvps.filter(r=>r.status==='yes'&&r.member_name===mn&&yearSlots.find(s=>s.id===r.slot_id&&daysUntil(s.date)<0)).length;
   const declined=D.rsvps.filter(r=>r.status==='no'&&r.member_name===mn&&yearSlots.find(s=>s.id===r.slot_id)).length;
   const hosted=yearSlots.filter(s=>s.host_name===mn&&daysUntil(s.date)<0).length;
-  const cancelled=D.slots.filter(s=>s.is_cancelled&&s.cancelled_by===mn&&s.date?.startsWith(year)).length;
+  const cancelled=D.slots.filter(s=>s.is_cancelled&&s.date?.startsWith(year)).length;
   const opens=JSON.parse(localStorage.getItem('dawretna_opens')||'[]').filter(d=>d.startsWith(year)).length;
   const attRate=Math.round(attended/totalPast*100);
 
@@ -3423,7 +3423,7 @@ function renderStats(){
     {icon:'✅',color:'#4a9a5a',bg:'rgba(74,154,90,.12)',num:attended,lbl:'مرات الحضور هذا العام',bar:attRate,barColor:'#4a9a5a'},
     {icon:'🏠',color:'#d4a843',bg:'rgba(212,168,67,.12)',num:hosted,lbl:'مرات التضييف هذا العام',bar:Math.round(hosted/totalPast*100),barColor:'#d4a843'},
     {icon:'🙅',color:'#d45a5a',bg:'rgba(212,90,90,.12)',num:declined,lbl:'مرات الاعتذار هذا العام',bar:Math.round(declined/(totalPast||1)*100),barColor:'#d45a5a'},
-    {icon:'❌',color:'#888',bg:'rgba(128,128,128,.12)',num:cancelled,lbl:'طلعات ألغيتها هذا العام',bar:0,barColor:'#888'},
+    {icon:'❌',color:'#888',bg:'rgba(128,128,128,.12)',num:cancelled,lbl:'طلعات مُلغية هذا العام',bar:0,barColor:'#888'},
     {icon:'📱',color:'#5a8ad4',bg:'rgba(90,138,212,.12)',num:opens,lbl:'مرات فتح التطبيق هذا العام',bar:0,barColor:'#5a8ad4'},
   ];
 
