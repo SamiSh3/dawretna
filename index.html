@@ -2088,7 +2088,7 @@ document.getElementById('notifBtn').onclick=openNotifPopup;
 function setTab(t){tab=t;sessionStorage.setItem('lastTab',t);render();}
 
 // ── ما الجديد ──
-const APP_VERSION='3.0';
+const APP_VERSION='3.1';
 const APP_BUILD_DATE='أغسطس 2026';
 const WHATS_NEW=[
   {icon:'🔔',title:'إشعارات خارج التطبيق',desc:'استلم تنبيهات الطلعات والتبديل حتى لو التطبيق مغلق — فعّلها من الإعدادات'},
@@ -2096,6 +2096,7 @@ const WHATS_NEW=[
   {icon:'💡',title:'المقترحات',desc:'شارك أفكارك واقتراحاتك لتحسين الطلعات'},
   {icon:'📋',title:'متطلبات الطلعة',desc:'قائمة كل ما تحتاجه الطلعة — شاي، قهوة، بخور... وسجّل اسمك لتجيب أي بند'},
   {icon:'📧',title:'إيميل التحديثات',desc:'يصلك إيميل من دوريتنا عند أي تحديث جديد في التطبيق'},
+  {icon:'📊',title:'الإحصائيات الشخصية',desc:'تبويب جديد يعرض نسبة حضورك ومرات التضييف والاعتذار وعدد مرات دخولك للتطبيق'},
 ];
 
 function showWhatsNew(){
