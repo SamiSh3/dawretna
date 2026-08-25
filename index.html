@@ -277,6 +277,10 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ptr-indicator{position:fixed;top:0;left:0;right:0;height:3px;background:var(--amber);transform:scaleX(0);transform-origin:right;transition:transform .3s;z-index:999;}
 .ptr-indicator.show{transform:scaleX(1);}
+/* ── cancelled slot ── */
+.cancelled-banner{background:rgba(212,90,90,.12);border:1px solid rgba(212,90,90,.4);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.cancelled-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;flex-shrink:0;}
+.slot-cancelled{opacity:.5;pointer-events:none;filter:grayscale(.8);}
 /* ── quiz ── */
 .quiz-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;transition:all .2s;font-size:14px;}
 .quiz-opt:hover{border-color:var(--amber);background:var(--bg-soft);}
@@ -2555,17 +2559,20 @@ function renderCalendar(){
 
       let cls='day-cell';
       if(slot){
-        if(isPast) cls+=' past-event';
-        else if(slot.host_name) cls+=' has-event';   // محجوزة → برتقالي
-        else cls+=' booked-event';                   // متاحة → أخضر
+        if(slot.is_cancelled) cls+=' past-event'; // ملغية → رمادية
+        else if(isPast) cls+=' past-event';
+        else if(slot.host_name) cls+=' has-event';
+        else cls+=' booked-event';
       } else if(isTod) cls+=' today';
 
       const hijDay=slot?getEventHijriDay(slot):getHijriDay(iso);
       const onclick=slot?`onclick="A.calClick('${iso}')"` :'';
       const tipTitle=slot
-        ? (slot.host_name
-            ? `${esc(toGreg(slot.date))} · ${esc(slot.host_name)} 🏕️`
-            : `${esc(toGreg(slot.date))} · متاح للحجز`)
+        ? (slot.is_cancelled
+            ? `${esc(toGreg(slot.date))} · ❌ ملغية`
+            : slot.host_name
+              ? `${esc(toGreg(slot.date))} · ${esc(slot.host_name)} 🏕️`
+              : `${esc(toGreg(slot.date))} · متاح للحجز`)
         : '';
 
       h+=`<div class="${cls}" ${onclick} title="${tipTitle}">
@@ -2593,6 +2600,7 @@ async function openCalSlotModal(slot){
   const freshSlot=D.slots.find(s=>s.id===slot.id)||slot;
   slot=freshSlot;
   const du=daysUntil(slot.date),isPast=du<0;
+  const isCancelled=slot.is_cancelled===true;
   const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
   let yes=0,no=0;
   const chips=D.team.map(t=>{
@@ -2603,14 +2611,20 @@ async function openCalSlotModal(slot){
   }).join('');
   const myRv=sRsvp.find(r=>r.member_name===myName());
   const inSw=myName()&&slot.host_name===myName()?D.swaps.find(s=>s.to_slot_id===slot.id):null;
-  // outSw = طلب أرسلته أنا يستهدف هذه الطلعة (to) أو من طلعتي (from)
   const outSw=myName()?(
     D.swaps.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected')||
     D._recentSwaps?.find(s=>s.to_slot_id===slot.id&&s.requester_name===myName()&&s.status!=='rejected')
   ):null;
 
   let h=`
-    ${isPast?`<div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--rsm);padding:7px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+    ${isCancelled?`<div class="cancelled-banner">
+      <span style="font-size:22px;">❌</span>
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--danger);">هذه الطلعة ملغية</div>
+        ${slot.cancel_reason?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">السبب: ${esc(slot.cancel_reason)}</div>`:''}
+      </div>
+    </div>`:''}
+    ${isPast&&!isCancelled?`<div style="background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--rsm);padding:7px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
       <span style="font-size:16px;">🗄️</span>
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--muted);">طلعة مؤرشفة</div>
@@ -2649,7 +2663,7 @@ async function openCalSlotModal(slot){
     ${(()=>{
       const nextSlot=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
       const isNextSlot=nextSlot&&nextSlot.id===slot.id;
-      if(!isPast&&slot.host_name&&isNextSlot){
+      if(!isPast&&slot.host_name&&isNextSlot&&!isCancelled){
         return slot.host_name===myName()?
           `<div class="note" style="color:var(--sage);text-align:center;margin-bottom:10px;border-color:var(--sage);">🏠 أنت المضيف — حضورك مؤكد</div>`:
           `<div style="display:flex;gap:8px;margin-bottom:12px;">
@@ -2719,7 +2733,11 @@ async function openCalSlotModal(slot){
         <button class="btn btn-ghost btn-sm" onclick="A.adminSetHost('${slot.id}')" style="flex-shrink:0;">💾 تغيير المضيف</button>
       </div>
       <button class="btn btn-ghost btn-sm btn-block" onclick="A.sendRsvpReminder('${slot.id}')" style="margin-top:6px;">🔔 تنبيه من لم يحدد حضوره</button>
-      <button class="btn btn-danger btn-sm btn-block" onclick="A.adminDeleteSlot('${slot.id}','${toGregShort(slot.date)}')">🗑️ حذف الطلعة</button>
+      ${!isCancelled?
+        `<button class="btn btn-danger btn-sm btn-block" onclick="A.cancelSlot('${slot.id}')" style="margin-top:6px;">❌ إلغاء الطلعة</button>`:
+        `<button class="btn btn-sage btn-sm btn-block" onclick="A.uncancelSlot('${slot.id}')" style="margin-top:6px;">↩️ استعادة الطلعة</button>`
+      }
+      <button class="btn btn-danger btn-sm btn-block" onclick="A.adminDeleteSlot('${slot.id}','${toGregShort(slot.date)}')" style="margin-top:6px;">🗑️ حذف الطلعة</button>
       `:''}
       ${isPast?`
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">👥 تخصيص الحضور والاعتذار</div>
@@ -4232,7 +4250,25 @@ window.A={
     if(r.ok){toast('🗑️ تم حذف '+name);renderAdmin();}
     else{const e=await r.text();toast('خطأ: '+e,'error');}
   },
-  async sendRsvpReminder(){
+  async cancelSlot(id){
+    const reason=prompt('سبب الإلغاء (اختياري):');
+    if(reason===null)return;
+    await patchRow('slots',id,{is_cancelled:true,cancel_reason:reason||null});
+    const s=D.slots.find(x=>x.id===id);
+    if(s){s.is_cancelled=true;s.cancel_reason=reason||null;}
+    // تنبيه الأعضاء
+    const s2=D.slots.find(x=>x.id===id);
+    if(s2) await notifyAdmins('general',`❌ تم إلغاء طلعة ${toGregShort(s2.date)}`,reason||'');
+    render();closeModal('calSlotModal');
+    toast('❌ تم إلغاء الطلعة');
+  },
+  async uncancelSlot(id){
+    await patchRow('slots',id,{is_cancelled:false,cancel_reason:null});
+    const s=D.slots.find(x=>x.id===id);
+    if(s){s.is_cancelled=false;s.cancel_reason=null;}
+    render();closeModal('calSlotModal');
+    toast('✅ تم استعادة الطلعة');
+  },
     const btn=event?.target;
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
     try{
