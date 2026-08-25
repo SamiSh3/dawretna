@@ -3071,7 +3071,6 @@ function renderBudget(){
   const annualBudget=D.chalet.annual_budget||0;
   const budgetYear=D.chalet.budget_year||todayYear();
 
-  let h=moreTabsHtml();
   function rowHtml(m,hasPaid,share,slotId,yearKey){
     const sn=m.name.replace(/'/g,"&#39;");
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
@@ -3089,7 +3088,7 @@ function renderBudget(){
       </div>${btn}</div>`;
   }
 
-  let h='';
+  let h=moreTabsHtml();
 
   // ── إعدادات للمشرف ──
   if(myProfile?.is_admin){
