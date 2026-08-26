@@ -286,6 +286,8 @@ details.dg[open] summary::before{transform:rotate(90deg);}
 .stat-bar-fill{height:100%;border-radius:99px;transition:.5s;}
 
 /* ── cancelled slot ── */
+.day-cell.cancelled-event{background:rgba(212,90,90,.1);border:1px dashed rgba(212,90,90,.5);}
+.day-cell.cancelled-event .day-greg{color:var(--danger);text-decoration:line-through;opacity:.7;}
 .cancelled-banner{background:rgba(212,90,90,.12);border:1px solid rgba(212,90,90,.4);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .cancelled-badge{background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;flex-shrink:0;}
 .slot-cancelled{opacity:.5;pointer-events:none;filter:grayscale(.8);}
@@ -1496,7 +1498,7 @@ async function markRead(id){
 // تنبيهات تلقائية عند فتح التطبيق
 async function checkAutoReminders(){
   if(!session)return;
-  const upcoming=D.slots.filter(s=>s.host_name&&daysUntil(s.date)>=0&&daysUntil(s.date)<=7);
+  const upcoming=D.slots.filter(s=>s.host_name&&daysUntil(s.date)>=0&&daysUntil(s.date)<=7&&!s.is_cancelled);
   for(const slot of upcoming){
     const du=daysUntil(slot.date);
     const d=toGregShort(slot.date);
@@ -1971,7 +1973,7 @@ function openSwapModal(toSlotId){
 
   const mine=D.slots.filter(s=>
     s.host_name===myName()&&
-    daysUntil(s.date)>=0&&
+    daysUntil(s.date)>=0&&!s.is_cancelled&&
     !D.swaps.find(sw=>sw.from_slot_id===s.id)
   );
 
@@ -2265,7 +2267,7 @@ function renderHome(){
       </div>`;
     return;
   }
-  const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const next=D.slots.filter(s=>daysUntil(s.date)>=0&&!s.is_cancelled).sort((a,b)=>a.date.localeCompare(b.date))[0];
   let h='';
 
   if(next){
@@ -2314,7 +2316,7 @@ function renderHome(){
     }
     // خيار التبديل - يظهر لمن ليس المضيف ولديه طلعة أخرى وبلا cooldown وبلا طلب معلق
     if(next.host_name&&next.host_name!==myName()&&!inSw&&!outSw&&!onCooldown&&!hasActivePendingSwap()){
-      const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0);
+      const mySlots=D.slots.filter(s=>s.host_name===myName()&&daysUntil(s.date)>=0&&!s.is_cancelled);
       if(mySlots.length){
         h+=`<div style="margin-top:8px;padding:10px;background:var(--bg-soft);border-radius:var(--rsm);border:1px solid var(--border);">
           <div style="font-size:12px;color:var(--amber);font-weight:700;margin-bottom:6px;">🔁 طلب تبديل مع ${esc(next.host_name)}</div>
@@ -2385,7 +2387,7 @@ function renderHome(){
   }
 
   // قائمة كل الطلعات القادمة مع RSVP
-  const allSlots=D.slots.filter(s=>daysUntil(s.date)>=0&&s.id!==next?.id).sort((a,b)=>a.date.localeCompare(b.date));
+  const allSlots=D.slots.filter(s=>daysUntil(s.date)>=0&&!s.is_cancelled&&s.id!==next?.id).sort((a,b)=>a.date.localeCompare(b.date));
   if(allSlots.length){
     h+=`<div class="h2" style="font-size:15px;margin-bottom:10px;">📅 مواعيد قادمة أخرى</div>`;
     allSlots.forEach(s=>{
@@ -2533,6 +2535,7 @@ function renderCalendar(){
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--ember);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>محجوزة</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>متاحة</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--sage-s);border:1px solid var(--sage);border-radius:3px;vertical-align:middle;margin-left:4px;opacity:.6;"></span>منتهية</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:rgba(212,90,90,.15);border:1px dashed rgba(212,90,90,.6);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>ملغية</span>
     <span><span style="display:inline-block;width:10px;height:10px;background:var(--amber-s);border:1px solid var(--amber);border-radius:3px;vertical-align:middle;margin-left:4px;"></span>اليوم</span>
   </div>
   <div class="months-grid">`;
@@ -2567,7 +2570,7 @@ function renderCalendar(){
 
       let cls='day-cell';
       if(slot){
-        if(slot.is_cancelled) cls+=' past-event'; // ملغية → رمادية
+        if(slot.is_cancelled) cls+=' cancelled-event';
         else if(isPast) cls+=' past-event';
         else if(slot.host_name) cls+=' has-event';
         else cls+=' booked-event';
@@ -2669,7 +2672,7 @@ async function openCalSlotModal(slot){
 
     <!-- RSVP - للطلعة القادمة فقط -->
     ${(()=>{
-      const nextSlot=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      const nextSlot=D.slots.filter(s=>daysUntil(s.date)>=0&&!s.is_cancelled).sort((a,b)=>a.date.localeCompare(b.date))[0];
       const isNextSlot=nextSlot&&nextSlot.id===slot.id;
       if(!isPast&&slot.host_name&&isNextSlot&&!isCancelled){
         return slot.host_name===myName()?
@@ -4619,7 +4622,7 @@ window.A={
     await loadAll();renderBudget();toast('تم حفظ الميزانية 💰');
   },
   sendEmailReminder(){
-    const next=D.slots.filter(s=>daysUntil(s.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    const next=D.slots.filter(s=>daysUntil(s.date)>=0&&!s.is_cancelled).sort((a,b)=>a.date.localeCompare(b.date))[0];
     if(!next){toast('ما فيه موعد قادم','error');return;}
     const emails=D.members?.filter(m=>m.email)?.map(m=>m.email).join(',');
     const subj=`تذكير: طلعة ${D.chalet.name} — ${toGregShort(next.date)}`;
