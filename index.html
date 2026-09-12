@@ -1776,15 +1776,14 @@ document.getElementById('saveEditBtn').onclick=async()=>{
 
   // إذا تغيّر الاسم
   if(oldName&&oldName!==name){
-    // استدعاء RPC مباشرة عبر REST
-    const H={...apiHeaders(),'Content-Type':'application/json'};
+    const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json'};
     const r=await fetch(SB_URL+'/rest/v1/rpc/sync_member_name',{
       method:'POST',headers:H,
       body:JSON.stringify({old_name:oldName,new_name:name})
     });
     if(!r.ok){
       const e=await r.text();
-      toast('خطأ في التحديث: '+e.slice(0,60),'error');
+      toast('خطأ في التحديث: '+e.slice(0,80),'error');
     } else {
       toast(`✅ "${oldName}" ← "${name}" تم التحديث في جميع البيانات`);
     }
