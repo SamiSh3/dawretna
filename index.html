@@ -1632,18 +1632,11 @@ async function resolveSwap(swapId,accept){
   const fs=D.slots.find(s=>s.id===sw.from_slot_id);
   const ts=D.slots.find(s=>s.id===sw.to_slot_id);
   if(!fs||!ts||ts.host_name!==myName()){toast('الطلب غير متاح لك','error');return;}
-  if(sw.status!=='pending'||!sw.created_at||Date.now()-new Date(sw.created_at).getTime()>=24*60*60*1000){toast('الطلب لم يعد متاحاً','error');return;}
-  const fromHost=fs.host_name,toHost=ts.host_name;
   _swapResolving.add(swapId);
   try{
-    // Transitional path; replace with resolve_swap_atomic after the migration is deployed.
-    // Checked writes prevent false success; a server transaction is still needed for atomicity.
-    if(accept){
-      if(fromHost!==sw.requester_name||fs.is_cancelled||ts.is_cancelled||daysUntil(fs.date)<0||daysUntil(ts.date)<0)throw new Error('تغيّر الحجز أو انتهى الموعد');
-      await patchRow('slots',fs.id,{host_name:toHost});
-      await patchRow('slots',ts.id,{host_name:fromHost});
-    }
-    await patchRow('swap_requests',swapId,{status:accept?'accepted':'rejected'});
+    // Both slots and the request change in one database transaction.
+    const result=await checkedQuery(sb.rpc('resolve_swap_atomic',{p_swap_id:String(swapId),p_accept:accept}));
+    if(!result.data?.ok)throw new Error('تعذر تأكيد نتيجة التبديل');
     D.swaps=D.swaps.filter(s=>s.id!==swapId);
     await loadAll();render();
     if(accept){
@@ -1654,10 +1647,8 @@ async function resolveSwap(swapId,accept){
       await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌',`رفض ${myName()} طلب التبديل`,ts.id);
       toast('❌ تم الرفض');
     }
-  }catch(e){
-    await loadAll().catch(()=>{});render();
-    toast('تعذر تنفيذ الطلب؛ تحقق من المواعيد: '+e.message,'error');
-  }finally{_swapResolving.delete(swapId);}
+  }catch(e){toast('تعذر تنفيذ الطلب: '+e.message,'error');}
+  finally{_swapResolving.delete(swapId);}
 }
 async function adjustHijri(id,delta){
   const s=D.slots.find(x=>x.id===id);if(!s)return;
@@ -4682,3 +4673,4 @@ setTimeout(function(){
 </script>
 </body>
 </html>
+
