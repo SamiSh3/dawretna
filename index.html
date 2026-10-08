@@ -677,7 +677,11 @@ async function initAuth(){
   const hasOAuth=window.location.hash?.includes('access_token');
 
   sb.auth.onAuthStateChange(async(ev,s)=>{
-    if(ev==='SIGNED_OUT') return;
+    if(ev==='SIGNED_OUT'){
+      session=null; _loggedIn=false; myProfile=null; _dataLoaded=false;
+      D.notifications=[]; showLogin(); return;
+    }
+    if(s) session=s; // Refresh the token used by REST calls too.
     if(s&&!_loggedIn){
       if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
       session=s; _loggedIn=true;
@@ -726,7 +730,12 @@ async function afterLogin(){
     loadAll().catch(()=>{})
   ]);
   _dataLoaded=true;
-  render(); // يظهر البيانات الحقيقية
+  render();
+  const slotMatch=window.location.hash.match(/^#slot=(.+)$/);
+  if(slotMatch){
+    const linked=D.slots.find(s=>String(s.id)===decodeURIComponent(slotMatch[1]));
+    if(linked)await openCalSlotModal(linked);
+  } // يظهر البيانات الحقيقية
   checkAutoReminders().catch(()=>{});
   // إظهار ما الجديد للمستخدم
   setTimeout(showWhatsNew, 800);
@@ -845,14 +854,14 @@ async function loadProfile(){
   const ctrl=new AbortController();
   setTimeout(()=>ctrl.abort(),5000);
   try{
-    const r=await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+session.user.id+'&select=*&limit=1',{headers:H,signal:ctrl.signal});
+    const r=await checkedFetch(SB_URL+'/rest/v1/profiles?id=eq.'+session.user.id+'&select=*&limit=1',{headers:H,signal:ctrl.signal});
     const rows=r.ok?await r.json():[];
     if(rows[0]){
       myProfile=rows[0];
     } else {
       // Profile غير موجود — أنشئه (UPSERT يتجنب التعارض مع الـ trigger)
       const name=session.user.user_metadata?.full_name||session.user.user_metadata?.name||session.user.email?.split('@')[0]||'مستخدم';
-      await fetch(SB_URL+'/rest/v1/profiles',{
+      await checkedFetch(SB_URL+'/rest/v1/profiles',{
         method:'POST',headers:{...H,'Prefer':'resolution=merge-duplicates,return=minimal'},
         body:JSON.stringify({id:session.user.id,name,email:session.user.email,avatar_url:session.user.user_metadata?.avatar_url||null})
       });
@@ -898,7 +907,7 @@ async function loadAll(){
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),ms);
     try{
-      const r=await fetch(url,{...opts,headers:H,signal:ctrl.signal});
+      const r=await checkedFetch(url,{...opts,headers:H,signal:ctrl.signal});
       clearTimeout(tid);
       return r.ok?await r.json():null;
     }catch(e){clearTimeout(tid);return null;}
@@ -913,7 +922,7 @@ async function loadAll(){
     D.slots=d.slots||[]; D.rsvps=d.rsvps||[]; D.swaps=d.swaps||[];
     // D.team من profiles (في الخلفية مع try-catch)
     try{
-      const _pR=await fetch(SB_URL+'/rest/v1/profiles?select=name&order=name',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)}});
+      const _pR=await checkedFetch(SB_URL+'/rest/v1/profiles?select=name&order=name',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY)}});
       const _profiles=_pR.ok?await _pR.json():[];
       if(_profiles.length) D.team=_profiles.filter(p=>p.name).map(p=>({name:p.name}));
     }catch(e){}
@@ -949,7 +958,7 @@ async function loadAll(){
     try{
       const _H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
       const since=new Date(Date.now()-7*60*60*1000).toISOString();
-      const _r=await fetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at,status&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:_H});
+      const _r=await checkedFetch(SB_URL+'/rest/v1/swap_requests?select=id,from_slot_id,to_slot_id,requester_name,created_at,status&requester_name=eq.'+encodeURIComponent(myName())+'&created_at=gte.'+since,{headers:_H});
       D._recentSwaps=_r.ok?await _r.json():[];
     }catch(e){D._recentSwaps=[];}
   }
@@ -1150,7 +1159,7 @@ async function _unlockAudio(){
     const src=_audioCtx.createBufferSource();
     src.buffer=buf;src.connect(_audioCtx.destination);src.start();
     // تحميل ملف الصوت
-    const res=await fetch(_NOTIF_WAV);
+    const res=await checkedFetch(_NOTIF_WAV);
     const arr=await res.arrayBuffer();
     _audioBuffer=await _audioCtx.decodeAudioData(arr);
   }catch(e){_audioUnlocked=false;}
@@ -1186,7 +1195,7 @@ async function pollNotifications(){
   if(!session)return;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
   try{
-    const r=await fetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=20',{headers:H});
+    const r=await checkedFetch(SB_URL+'/rest/v1/notifications?select=*&user_id=eq.'+session.user.id+'&order=created_at.desc&limit=20',{headers:H});
     if(!r.ok)return;
     const fresh=await r.json();
     // إيجاد التنبيهات الجديدة (غير موجودة في D.notifications)
@@ -1283,6 +1292,8 @@ function startRealtimeNotifs(){
 }
 
 /* ════════════════ UTILS ════════════════ */
+function jsArg(value){return esc(JSON.stringify(String(value??'')).replace(/'/g,'\\u0027'));}
+function localISO(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function esc(s){return(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 // ── توقيت الرياض ──
 const TZ = 'Asia/Riyadh';
@@ -1344,7 +1355,7 @@ window.sendHomeSwap=async function(toSlotId){
   if(hasPendingSwap()){toast('لديك طلب تبديل معلق — انتظر الرد عليه أولاً','error');return;}
   if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
   try{
-    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+    const r=await checkedFetch(SB_URL+'/rest/v1/swap_requests',{
       method:'POST',
       headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
@@ -1432,12 +1443,12 @@ async function notify(name,type,title,body,slotId){
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
   try{
     // ابحث عن الـ user_id بالاسم
-    const r=await fetch(SB_URL+'/rest/v1/profiles?name=eq.'+encodeURIComponent(name)+'&select=id&limit=1',{headers:H});
+    const r=await checkedFetch(SB_URL+'/rest/v1/profiles?name=eq.'+encodeURIComponent(name)+'&select=id&limit=1',{headers:H});
     const profiles=r.ok?await r.json():[];
     if(!profiles[0])return;
     const userId=profiles[0].id;
     // أرسل التنبيه في DB
-    await fetch(SB_URL+'/rest/v1/notifications',{
+    await checkedFetch(SB_URL+'/rest/v1/notifications',{
       method:'POST',
       headers:{...H,'Prefer':'return=minimal'},
       body:JSON.stringify({user_id:userId,type,title,body,related_slot_id:slotId||null})
@@ -1463,7 +1474,7 @@ async function notifyAdmins(type,title,body){
   if(!session)return;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
   try{
-    const r=await fetch(SB_URL+'/rest/v1/profiles?is_admin=eq.true&select=name',{headers:H});
+    const r=await checkedFetch(SB_URL+'/rest/v1/profiles?is_admin=eq.true&select=name',{headers:H});
     const admins=r.ok?await r.json():[];
     for(const a of admins){
       await notify(a.name,type,title,body,null);
@@ -1473,7 +1484,7 @@ async function notifyAdmins(type,title,body){
 async function markAllRead(){
   if(!session)return;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-  await fetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id+'&read=eq.false',{
+  await checkedFetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id+'&read=eq.false',{
     method:'PATCH',headers:H,body:JSON.stringify({read:true})
   });
   D.notifications.forEach(n=>n.read=true);
@@ -1504,39 +1515,55 @@ async function checkAutoReminders(){
     const d=toGregShort(slot.date);
     const isMe=slot.host_name===myName();
     if(du<=7&&du>3&&isMe){
-      await sb.from('notifications').upsert({user_id:session.user.id,type:'week_reminder',title:'طلعتك بعد أسبوع 🏕️',body:`${d} — حضّر للشاليه!`,related_slot_id:slot.id,reminder_key:`week_${slot.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true});
+      await checkedQuery(sb.from('notifications').upsert({user_id:session.user.id,type:'week_reminder',title:'طلعتك بعد أسبوع 🏕️',body:`${d} — حضّر للشاليه!`,related_slot_id:slot.id,reminder_key:`week_${slot.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true}));
     }
     if(du<=3&&du>0){
       if(isMe){
-        await sb.from('notifications').upsert({user_id:session.user.id,type:'three_day_reminder',title:`طلعتك بعد ${du} أيام ⏰`,body:`${d} — تأكد من التجهيزات`,related_slot_id:slot.id,reminder_key:`three_${slot.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true});
+        await checkedQuery(sb.from('notifications').upsert({user_id:session.user.id,type:'three_day_reminder',title:`طلعتك بعد ${du} أيام ⏰`,body:`${d} — تأكد من التجهيزات`,related_slot_id:slot.id,reminder_key:`three_${slot.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true}));
       } else {
-        await sb.from('notifications').upsert({user_id:session.user.id,type:'three_day_reminder',title:`طلعة قريبة! بعد ${du} أيام ⏰`,body:`${d} — المضيف: ${esc(slot.host_name)}`,related_slot_id:slot.id,reminder_key:`three_${slot.id}_${session.user.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true});
+        await checkedQuery(sb.from('notifications').upsert({user_id:session.user.id,type:'three_day_reminder',title:`طلعة قريبة! بعد ${du} أيام ⏰`,body:`${d} — المضيف: ${esc(slot.host_name)}`,related_slot_id:slot.id,reminder_key:`three_${slot.id}_${session.user.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true}));
       }
     }
     if(du===0){
-      await sb.from('notifications').upsert({user_id:session.user.id,type:'day_reminder',title:'اليوم الطلعة! 🔥',body:`${D.chalet.name} — ${isMe?'طلعتك اليوم':'المضيف: '+esc(slot.host_name)}`,related_slot_id:slot.id,reminder_key:`day_${slot.id}_${session.user.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true});
+      await checkedQuery(sb.from('notifications').upsert({user_id:session.user.id,type:'day_reminder',title:'اليوم الطلعة! 🔥',body:`${D.chalet.name} — ${isMe?'طلعتك اليوم':'المضيف: '+esc(slot.host_name)}`,related_slot_id:slot.id,reminder_key:`day_${slot.id}_${session.user.id}`},{onConflict:'user_id,reminder_key',ignoreDuplicates:true}));
     }
   }
 }
 
 /* ════════════════ ACTIONS ════════════════ */
+async function checkedFetch(url,opts={}){
+  const r=await window.fetch(url,opts);
+  if(opts.method&&opts.method!=='GET'&&!r.ok){
+    throw new Error('تعذر حفظ العملية ('+r.status+')');
+  }
+  return r;
+}
+async function checkedQuery(query){
+  const result=await query;
+  if(result.error)throw new Error(result.error.message);
+  return result;
+}
+window.addEventListener('unhandledrejection',e=>{
+  toast(e.reason?.message||'تعذر إكمال العملية','error');
+});
 function apiHeaders(){
   return {'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'};
 }
 async function patchRow(table,id,data){
-  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),body:JSON.stringify(data)});
+  await checkedFetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),body:JSON.stringify(data)});
 }
 async function postRow(table,data,prefer='return=minimal'){
-  await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{...apiHeaders(),'Prefer':prefer},body:JSON.stringify(data)});
+  await checkedFetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{...apiHeaders(),'Prefer':prefer},body:JSON.stringify(data)});
 }
 async function deleteRow(table,id){
-  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+  await checkedFetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
 }
 
 async function bookSlot(id,btn){
   const mn=myName();
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
+  if(slot.host_name||slot.is_cancelled||daysUntil(slot.date)<0){toast('الموعد غير متاح للحجز','error');return;}
   // فحص تعدد الحجز في السنة الهجرية نفسها
   const allowMulti=D.settings?.allow_multi_booking==='true';
   if(!allowMulti){
@@ -1553,9 +1580,10 @@ async function bookSlot(id,btn){
     }
   }
   await withLoading(btn,async()=>{
-    slot.host_name=mn;
-    render();
-    await patchRow('slots',id,{host_name:mn});
+    const r=await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+encodeURIComponent(id)+'&host_name=is.null&is_cancelled=not.is.true',{method:'PATCH',headers:{...apiHeaders(),'Prefer':'return=representation'},body:JSON.stringify({host_name:mn})});
+    const rows=await r.json();
+    if(!rows.length)throw new Error('الموعد حُجز أو لم تعد لديك صلاحية الحجز');
+    slot.host_name=mn; render();
   });
   await notifyAll('slot_booked',`${esc(mn)} حجز طلعة 🏕️`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
@@ -1569,96 +1597,58 @@ async function cancelBookSlot(id,btn){
   if(!confirm(`إلغاء حجز طلعة ${toGregShort(slot.date)}؟`))return;
   const oldHost=slot.host_name;
   await withLoading(btn,async()=>{
-    slot.host_name=null;
-    render();
-    openCalSlotModal(slot);
-    await patchRow('slots',id,{host_name:null});
+    const r=await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+encodeURIComponent(id)+'&host_name=eq.'+encodeURIComponent(oldHost),{method:'PATCH',headers:{...apiHeaders(),'Prefer':'return=representation'},body:JSON.stringify({host_name:null})});
+    if(!(await r.json()).length)throw new Error('تغيّر الحجز؛ حدّث الصفحة وحاول مجدداً');
+    slot.host_name=null; render();
   });
   await notifyAll('general',`${esc(oldHost||myName())} ألغى حجز طلعة 📅`,toGregShort(slot.date),id);
   loadAll().catch(()=>{});
   toast('تم إلغاء الحجز');
 }
+const _rsvpSaving=new Set();
 async function setRsvp(slotId,status){
-  const mn=myName();
-  // تحديث فوري محلي (لا انتظار)
-  const existing=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
-  if(existing){
-    existing.status=status;
-  } else {
-    D.rsvps.push({slot_id:slotId,member_name:mn,status});
-  }
-  render();
-  toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
-
-  // حفظ في DB
-  const H=apiHeaders();
+  const mn=myName(),slot=D.slots.find(s=>s.id===slotId);
+  if(!session||!slot||slot.host_name===mn||slot.is_cancelled||daysUntil(slot.date)<0)return;
+  if(_rsvpSaving.has(slotId))return;
+  _rsvpSaving.add(slotId);
   try{
-    let r;
-    if(existing?.id){
-      // تحديث بـ id الصف (أدق وأضمن)
-      r=await fetch(SB_URL+'/rest/v1/rsvps?id=eq.'+existing.id,{
-        method:'PATCH',headers:H,body:JSON.stringify({status})
-      });
-    } else {
-      // إنشاء سجل جديد
-      r=await fetch(SB_URL+'/rest/v1/rsvps',{
-        method:'POST',headers:{...H,'Prefer':'return=representation'},
-        body:JSON.stringify({slot_id:slotId,member_name:mn,status})
-      });
-      if(r.ok){const[row]=await r.json();if(row?.id&&existing)existing.id=row.id;else if(row?.id)D.rsvps[D.rsvps.length-1].id=row.id;}
-    }
-    if(!r.ok){
-      const e=await r.text();
-      console.error('rsvp DB error:',e);
-      // التراجع عن الـ optimistic update
-      if(existing) existing.status=status==='yes'?'no':'yes';
-      else D.rsvps=D.rsvps.filter(r=>!(r.slot_id===slotId&&r.member_name===mn));
-      render();
-      toast('خطأ في الحفظ','error');
-      return;
-    }
-    const slot=D.slots.find(s=>s.id===slotId);
-    if(slot?.host_name&&slot.host_name!==mn){
-      await notify(slot.host_name,'rsvp',
-        `${esc(mn)} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,
-        toGregShort(slot.date),slotId);
-    }
-  }catch(e){console.error('rsvp error:',e);}
+    const r=await checkedFetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{
+      method:'POST',headers:{...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=representation'},
+      body:JSON.stringify({slot_id:slotId,member_name:mn,status})
+    });
+    const rows=await r.json();
+    if(!rows.length)throw new Error('تعذر تأكيد حفظ الحضور');
+    D.rsvps=D.rsvps.filter(x=>!(x.slot_id===slotId&&x.member_name===mn));
+    D.rsvps.push(rows[0]); render();
+    toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
+    if(slot.host_name)await notify(slot.host_name,'rsvp',`${mn} ${status==='yes'?'سيحضر ✅':'اعتذر 🙅'}`,toGregShort(slot.date),slotId);
+  }catch(e){toast(e.message||'خطأ في الحفظ','error');}
+  finally{_rsvpSaving.delete(slotId);}
 }
+const _swapResolving=new Set();
 async function resolveSwap(swapId,accept){
+  if(_swapResolving.has(swapId))return;
   const sw=D.swaps.find(s=>s.id===swapId);if(!sw)return;
-  if(accept){
-    const fs=D.slots.find(s=>s.id===sw.from_slot_id);
-    const ts=D.slots.find(s=>s.id===sw.to_slot_id);
-    if(!fs||!ts){toast('خطأ: لم يتم العثور على الطلعات','error');return;}
-    // احفظ القيم الأصلية قبل أي تعديل
-    const fsOrigHost=fs.host_name;
-    const tsOrigHost=ts.host_name;
-    // تبديل فوري محلي
-    fs.host_name=tsOrigHost||null;
-    ts.host_name=fsOrigHost||null;
+  const fs=D.slots.find(s=>s.id===sw.from_slot_id);
+  const ts=D.slots.find(s=>s.id===sw.to_slot_id);
+  if(!fs||!ts||ts.host_name!==myName()){toast('الطلب غير متاح لك','error');return;}
+  _swapResolving.add(swapId);
+  try{
+    // Both slots and the request change in one database transaction.
+    const result=await checkedQuery(sb.rpc('resolve_swap_atomic',{p_swap_id:String(swapId),p_accept:accept}));
+    if(!result.data?.ok)throw new Error('تعذر تأكيد نتيجة التبديل');
     D.swaps=D.swaps.filter(s=>s.id!==swapId);
-    render();
-    // حفظ في DB باستخدام القيم الأصلية
-    await patchRow('slots',fs.id,{host_name:tsOrigHost||null});
-    await patchRow('slots',ts.id,{host_name:fsOrigHost||null});
-    await patchRow('swap_requests',swapId,{status:'accepted'});
-    // تنبيه للمرسل (يوديه لطلعته الجديدة = ts)
-    await notify(fsOrigHost||'','swap_accepted','طلب التبديل قُبل ✅',
-      `صار لك يوم ${toGregShort(ts.date)} بدل ${toGregShort(fs.date)}`,ts.id);
-    // تنبيه للمستقبِل (يوديه لطلعته الجديدة = fs)
-    await notify(tsOrigHost||'','swap_accepted','تم تبديل المواعيد ✅',
-      `صار لك يوم ${toGregShort(fs.date)} بدل ${toGregShort(ts.date)}`,fs.id);
-    toast('✅ تم التبديل بنجاح');
-  } else {
-    D.swaps=D.swaps.filter(s=>s.id!==swapId);
-    render();
-    await patchRow('swap_requests',swapId,{status:'rejected'});
-    await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌',
-      `رفض ${esc(myName())} طلب التبديل — يمكنك المحاولة لاحقاً`,sw.to_slot_id);
-    toast('❌ تم الرفض');
-  }
-  loadAll().catch(()=>{});
+    await loadAll();render();
+    if(accept){
+      await notify(sw.requester_name,'swap_accepted','طلب التبديل قُبل ✅',`صار لك يوم ${toGregShort(ts.date)} بدل ${toGregShort(fs.date)}`,ts.id);
+      await notify(myName(),'swap_accepted','تم تبديل المواعيد ✅',`صار لك يوم ${toGregShort(fs.date)} بدل ${toGregShort(ts.date)}`,fs.id);
+      toast('✅ تم التبديل بنجاح');
+    }else{
+      await notify(sw.requester_name,'swap_rejected','طلب التبديل رُفض ❌',`رفض ${myName()} طلب التبديل`,ts.id);
+      toast('❌ تم الرفض');
+    }
+  }catch(e){toast('تعذر تنفيذ الطلب: '+e.message,'error');}
+  finally{_swapResolving.delete(swapId);}
 }
 async function adjustHijri(id,delta){
   const s=D.slots.find(x=>x.id===id);if(!s)return;
@@ -1681,14 +1671,14 @@ function remText(type,slot){
   }
 }
 async function logRem(slotId,type){
-  await sb.from('reminders').upsert({slot_id:slotId,type,sent_by:myName()},{onConflict:'slot_id,type'});
+  await checkedQuery(sb.from('reminders').upsert({slot_id:slotId,type,sent_by:myName()},{onConflict:'slot_id,type'}));
   await loadAll();render();
 }
 async function sendCustom(slotId){
   const ta=document.getElementById('cm_'+slotId);if(!ta)return;
   const txt=ta.value.trim();if(!txt){toast('اكتب رسالة أول','error');return;}
   window.open(waLink(txt),'_blank');
-  await sb.from('reminders').insert({slot_id:slotId,type:'custom',sent_by:myName(),message:txt});
+  await checkedQuery(sb.from('reminders').insert({slot_id:slotId,type:'custom',sent_by:myName(),message:txt}));
   ta.value='';
 }
 
@@ -1697,7 +1687,7 @@ document.getElementById('saveBudgetBtn').onclick=async()=>{
   const id=document.getElementById('budgetSlotId').value;
   const amount=parseFloat(document.getElementById('budgetAmount').value)||null;
   const notes=document.getElementById('budgetNotes').value.trim();
-  await sb.from('slots').update({budget:amount,budget_notes:notes}).eq('id',id);
+  await checkedQuery(sb.from('slots').update({budget:amount,budget_notes:notes}).eq('id',id));
   const slot=D.slots.find(s=>s.id===id);
   const perPerson=D.team.length&&amount?Math.round(amount/D.team.length):0;
   await notifyAll('general',`تم تحديد ميزانية طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amount||0).toLocaleString('ar')} ﷼${perPerson?' ('+perPerson.toLocaleString('ar')+' ﷼ للفرد)':''}`);
@@ -1715,15 +1705,15 @@ function openBudgetModal(slotId){
 
 // specials
 async function createSpecial(title,date,location){
-  const{error}=await sb.from('special_trips').insert({title,date,location:location||null,creator_name:myName()}).select().single();
+  const{error}=await checkedQuery(sb.from('special_trips').insert({title,date,location:location||null,creator_name:myName()}).select().single());
   if(error){toast('المشرفون فقط يمكنهم إنشاء طلعات خاصة','error');return;}
   await notifyAll('new_special',`طلعة خاصة جديدة 🔥 ${esc(title)}`,`${toGregShort(date)}${location?' — '+location:''}`,null);
   await loadAll();render();toast('تم الإنشاء 🎉');
 }
 async function toggleJoin(id){
   const j=D.parts.find(p=>p.trip_id===id&&p.member_name===myName());
-  if(j)await sb.from('special_trip_participants').delete().eq('trip_id',id).eq('member_name',myName());
-  else await sb.from('special_trip_participants').insert({trip_id:id,member_name:myName()});
+  if(j)await checkedQuery(sb.from('special_trip_participants').delete().eq('trip_id',id).eq('member_name',myName()));
+  else await checkedQuery(sb.from('special_trip_participants').insert({trip_id:id,member_name:myName()}));
   await loadAll();render();
 }
 
@@ -1734,7 +1724,7 @@ async function vote(pollId,optIdx){
   if(ex) ex.option_idx=optIdx;
   else D.votes.push({poll_id:pollId,member_name:myName(),option_idx:optIdx});
   render();
-  await sb.from('poll_votes').upsert({poll_id:pollId,member_name:myName(),option_idx:optIdx},{onConflict:'poll_id,member_name'});
+  await checkedQuery(sb.from('poll_votes').upsert({poll_id:pollId,member_name:myName(),option_idx:optIdx},{onConflict:'poll_id,member_name'}));
   loadAll().catch(()=>{});
   toast('تم التصويت ✅');
 }
@@ -1742,22 +1732,22 @@ async function unvote(pollId){
   // إلغاء التصويت
   D.votes=D.votes.filter(v=>!(v.poll_id===pollId&&v.member_name===myName()));
   render();
-  await sb.from('poll_votes').delete().eq('poll_id',pollId).eq('member_name',myName());
+  await checkedQuery(sb.from('poll_votes').delete().eq('poll_id',pollId).eq('member_name',myName()));
   loadAll().catch(()=>{});
   toast('تم إلغاء التصويت');
 }
-async function closePoll(id){await sb.from('polls').update({closed:true}).eq('id',id);await loadAll();render();}
-async function deletePoll(id){await sb.from('polls').delete().eq('id',id);await loadAll();render();}
+async function closePoll(id){await checkedQuery(sb.from('polls').update({closed:true}).eq('id',id));await loadAll();render();}
+async function deletePoll(id){await checkedQuery(sb.from('polls').delete().eq('id',id));await loadAll();render();}
 async function createPoll(q,opts){
   if(!q||opts.length<2){toast('سؤال وخيارين على الأقل','error');return;}
-  await sb.from('polls').insert({question:q,options:JSON.stringify(opts),created_by:myName()});
+  await checkedQuery(sb.from('polls').insert({question:q,options:JSON.stringify(opts),created_by:myName()}));
   await loadAll();render();toast('تم إنشاء الاستطلاع 📊');
 }
 
 // memories
 async function addMemory(cap,img,date){
   if(!cap){toast('اكتب وصف','error');return;}
-  await sb.from('memories').insert({caption:cap,image_url:img||null,date,author_name:myName()});
+  await checkedQuery(sb.from('memories').insert({caption:cap,image_url:img||null,date,author_name:myName()}));
   await notifyAll('new_memory',`${esc(myName())} أضاف ذكرى 📸`,`${toGregShort(date)} — ${cap.slice(0,40)}`,null);
   await loadAll();render();toast('تمت الإضافة 📸');
 }
@@ -1771,13 +1761,13 @@ document.getElementById('saveEditBtn').onclick=async()=>{
   if(!name){toast('الاسم مطلوب','error');return;}
 
   // تحديث الـ profile
-  const{error}=await sb.from('profiles').update({name,phone_wa:phone}).eq('id',uid);
+  const{error}=await checkedQuery(sb.from('profiles').update({name,phone_wa:phone}).eq('id',uid));
   if(error){toast('خطأ: '+error.message,'error');return;}
 
   // إذا تغيّر الاسم
   if(oldName&&oldName!==name){
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json'};
-    const r=await fetch(SB_URL+'/rest/v1/rpc/sync_member_name',{
+    const r=await checkedFetch(SB_URL+'/rest/v1/rpc/sync_member_name',{
       method:'POST',headers:H,
       body:JSON.stringify({old_name:oldName,new_name:name})
     });
@@ -1798,37 +1788,37 @@ document.getElementById('saveEditBtn').onclick=async()=>{
 document.getElementById('cancelEditBtn').onclick=()=>closeModal('adminEditModal');
 
 async function toggleAdmin(uid,cur){
-  await sb.from('profiles').update({is_admin:!cur}).eq('id',uid);
+  await checkedQuery(sb.from('profiles').update({is_admin:!cur}).eq('id',uid));
   await loadAll();toast(!cur?'تم التعيين كمشرف 👑':'تم إلغاء الصلاحية');
   renderAdmin();
 }
 
 // settings
 async function saveChalet(name,address,mapUrl,lat,lng){
-  if(D.chalet.id)await sb.from('chalet').update({name,address,map_url:mapUrl,lat:lat||null,lng:lng||null}).eq('id',D.chalet.id);
-  else await sb.from('chalet').insert({name,address,map_url:mapUrl,lat:lat||null,lng:lng||null});
+  if(D.chalet.id)await checkedQuery(sb.from('chalet').update({name,address,map_url:mapUrl,lat:lat||null,lng:lng||null}).eq('id',D.chalet.id));
+  else await checkedQuery(sb.from('chalet').insert({name,address,map_url:mapUrl,lat:lat||null,lng:lng||null}));
   await loadAll();render();toast('تم الحفظ ✅');
 }
 async function addSlot(date){
   if(!date){toast('اختر تاريخ','error');return;}
   if(D.slots.find(s=>s.date===date)){toast('التاريخ موجود','error');return;}
-  await sb.from('slots').insert({date,hijri_offset:0});await loadAll();render();toast('تمت الإضافة');
+  await checkedQuery(sb.from('slots').insert({date,hijri_offset:0}));await loadAll();render();toast('تمت الإضافة');
 }
 async function removeSlot(id){
   const slot=D.slots.find(s=>s.id===id);
   if(!slot)return;
   if(!confirm(`هل تريد حذف طلعة ${toGregShort(slot.date)}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
-  await sb.from('slots').delete().eq('id',id);
+  await checkedQuery(sb.from('slots').delete().eq('id',id));
   await loadAll();render();toast('تم حذف الطلعة');
 }
 async function addMember(name){
   if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم إضافة أعضاء','error');return;}
   if(!name)return;
-  await sb.from('team_members').upsert({name},{onConflict:'name'});await loadAll();render();
+  await checkedQuery(sb.from('team_members').upsert({name},{onConflict:'name'}));await loadAll();render();
 }
 async function removeMember(name){
   if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم حذف أعضاء','error');return;}
-  await sb.from('team_members').delete().eq('name',name);await loadAll();render();
+  await checkedQuery(sb.from('team_members').delete().eq('name',name));await loadAll();render();
 }
 
 // إيجاد أقرب أول ثلاثاء في شهر هجري قادم
@@ -1838,11 +1828,11 @@ function nextFirstTuesday(){
   for(let i=0;i<90;i++){
     if(cur.getDay()===2){// ثلاثاء
       const dayN=hijriDayNum(cur);
-      if(dayN>=1&&dayN<=7) return cur.toISOString().slice(0,10);
+      if(dayN>=1&&dayN<=7) return localISO(cur);
     }
     cur.setDate(cur.getDate()+1);
   }
-  return today.toISOString().slice(0,10);
+  return localISO(today);
 }
 
 function updateNewSlotHijri(){
@@ -1854,7 +1844,7 @@ function updateNewSlotHijri(){
 
 function openNewSlot(){
   if(!myProfile?.is_admin){toast('المشرفون فقط يمكنهم إضافة طلعات','error');return;}
-  const today=new Date().toISOString().slice(0,10);
+  const today=todayISO();
   const suggested=nextFirstTuesday();
   const inp=document.getElementById('newSlotDate');
   if(inp){inp.value=suggested;inp.min=today;} // منع التواريخ السابقة
@@ -1887,12 +1877,12 @@ document.getElementById('newSlotDate').addEventListener('change', updateNewSlotH
 document.getElementById('adjMinus').onclick=()=>{
   const inp=document.getElementById('newSlotDate');if(!inp.value)return;
   const d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()-1);
-  inp.value=d.toISOString().slice(0,10);updateNewSlotHijri();
+  inp.value=localISO(d);updateNewSlotHijri();
 };
 document.getElementById('adjPlus').onclick=()=>{
   const inp=document.getElementById('newSlotDate');if(!inp.value)return;
   const d=new Date(inp.value+'T00:00:00');d.setDate(d.getDate()+1);
-  inp.value=d.toISOString().slice(0,10);updateNewSlotHijri();
+  inp.value=localISO(d);updateNewSlotHijri();
 };
 document.getElementById('newSlotCancelBtn').onclick=()=>closeModal('newSlotModal');
 document.getElementById('newSlotConfirmBtn').onclick=async()=>{
@@ -1906,7 +1896,7 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const locId=document.getElementById('locSel')?.value||null;
   const loc=locId?D.locations.find(l=>l.id===locId):null;
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
-  await fetch(SB_URL+'/rest/v1/slots',{method:'POST',headers:{...H,'Prefer':'return=minimal'},
+  await checkedFetch(SB_URL+'/rest/v1/slots',{method:'POST',headers:{...H,'Prefer':'return=minimal'},
     body:JSON.stringify({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null,
       location_name:loc?.name||null,location_address:loc?.address||null,
       location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null})});
@@ -1929,7 +1919,7 @@ document.getElementById('swapConfirmBtn').onclick=async()=>{
       requester_name:myName(),
       status:'pending'
     });
-    const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+    const r=await checkedFetch(SB_URL+'/rest/v1/swap_requests',{
       method:'POST',
       headers:{
         'apikey':SB_KEY,
@@ -1959,6 +1949,7 @@ document.getElementById('swapConfirmBtn').onclick=async()=>{
         toSlot.id);
     }
     loadAll().catch(()=>{});
+    btn.disabled=false;btn.textContent='📤 إرسال الطلب';
   }catch(e){
     alert('خطأ غير متوقع: '+e.message);
     btn.disabled=false;btn.textContent='📤 إرسال الطلب';
@@ -2001,7 +1992,7 @@ document.getElementById('profileBtn').onclick=()=>{
   const d=document.getElementById('profileDetail');
   const av=p.avatar_url
     ?`<img src="${esc(p.avatar_url)}" style="width:100%;height:100%;object-fit:cover;">`
-    :`<span>${(p.name||'?')[0].toUpperCase()}</span>`;
+    :`<span>${esc((p.name||'?')[0].toUpperCase())}</span>`;
   d.innerHTML=`<div style="display:flex;align-items:center;gap:12px;">
     <div style="width:52px;height:52px;border-radius:50%;overflow:hidden;background:var(--amber-s);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--amber);">${av}</div>
     <div>
@@ -2014,7 +2005,7 @@ document.getElementById('profileBtn').onclick=()=>{
 };
 document.getElementById('saveProfileBtn').onclick=async()=>{
   const ph=document.getElementById('waPhone').value.trim();
-  await sb.from('profiles').update({phone_wa:ph}).eq('id',session.user.id);
+  await checkedQuery(sb.from('profiles').update({phone_wa:ph}).eq('id',session.user.id));
   myProfile.phone_wa=ph;closeModal('profileModal');toast('تم الحفظ ✅');
 };
 function openNotifPopup(){
@@ -2613,7 +2604,8 @@ async function openCalSlotModal(slot){
   const isCancelled=slot.is_cancelled===true;
   const sRsvp=D.rsvps.filter(r=>r.slot_id===slot.id);
   let yes=0,no=0;
-  const chips=D.team.map(t=>{
+  const attendees=D.team.filter(t=>t.name!==slot.host_name);
+  const chips=attendees.map(t=>{
     const rv=sRsvp.find(r=>r.member_name===t.name);
     if(rv?.status==='yes')yes++;else if(rv?.status==='no')no++;
     const cls=rv?.status==='yes'?'yes':(rv?.status==='no'?'no':'');
@@ -2667,7 +2659,7 @@ async function openCalSlotModal(slot){
 
     <!-- الحضور -->
     ${chips?`<div class="attendees" style="margin-bottom:6px;">${chips}</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${D.team.length-yes-no}</div>`:''}
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">سيحضر ${yes} · اعتذر ${no} · بالانتظار ${attendees.length-yes-no}</div>`:''}
 
     <!-- RSVP - للطلعة القادمة فقط -->
     ${(()=>{
@@ -2752,13 +2744,13 @@ async function openCalSlotModal(slot){
       ${isPast?`
       <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">👥 تخصيص الحضور والاعتذار</div>
       <div style="display:flex;flex-direction:column;gap:5px;">
-        ${D.team.map(member=>{
+        ${attendees.map(member=>{
           const rv=D.rsvps.find(r=>r.slot_id===slot.id&&r.member_name===member.name);
           return `<div style="display:flex;align-items:center;gap:6px;">
             <span style="flex:1;font-size:12px;">${esc(member.name)}</span>
-            <button class="btn btn-xs ${rv?.status==='yes'?'btn-sage':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','yes')">✅ حضر</button>
-            <button class="btn btn-xs ${rv?.status==='no'?'btn-danger':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','no')">🙅 اعتذر</button>
-            <button class="btn btn-xs ${!rv?'btn-ghost':''}" onclick="A.adminSetRsvp('${slot.id}','${esc(member.name)}','clear')" style="${!rv?'opacity:.4':''}" title="مسح">✕</button>
+            <button class="btn btn-xs ${rv?.status==='yes'?'btn-sage':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}',${jsArg(member.name)},'yes')">✅ حضر</button>
+            <button class="btn btn-xs ${rv?.status==='no'?'btn-danger':'btn-ghost'}" onclick="A.adminSetRsvp('${slot.id}',${jsArg(member.name)},'no')">🙅 اعتذر</button>
+            <button class="btn btn-xs ${!rv?'btn-ghost':''}" onclick="A.adminSetRsvp('${slot.id}',${jsArg(member.name)},'clear')" style="${!rv?'opacity:.4':''}" title="مسح">✕</button>
           </div>`;
         }).join('')}
       </div>
@@ -2875,7 +2867,7 @@ async function openCalSlotModal(slot){
       if(hasActivePendingSwap()){toast('⚠️ لديك طلب تبديل معلق — انتظر حتى يتم الرد عليه','error');return;}
       this.disabled=true;this.textContent='يتم الإرسال...';
       try{
-        const r=await fetch(SB_URL+'/rest/v1/swap_requests',{
+        const r=await checkedFetch(SB_URL+'/rest/v1/swap_requests',{
           method:'POST',
           headers:{'apikey':SB_KEY,'Authorization':'Bearer '+(session?.access_token||SB_KEY),'Content-Type':'application/json','Prefer':'return=minimal'},
           body:JSON.stringify({from_slot_id:fromId,to_slot_id:toSlotId,requester_name:myName(),status:'pending'})
@@ -3042,7 +3034,7 @@ async function togglePayment(slotId,memberName){
   try{
     // upsert مع تحديد الـ constraint بشكل صريح
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    const r=await fetch(SB_URL+'/rest/v1/budget_payments?on_conflict=slot_id,member_name',{
+    const r=await checkedFetch(SB_URL+'/rest/v1/budget_payments?on_conflict=slot_id,member_name',{
       method:'POST',headers:H,
       body:JSON.stringify({slot_id:slotId,member_name:memberName,paid:newPaid,amount:share,updated_by:myName()})
     });
@@ -3063,7 +3055,11 @@ async function togglePayment(slotId,memberName){
         await notifyAdmins('general',`${esc(memberName)} دفع حصته 💰`,
           `طلعة ${toGregShort(slot.date)}${share?' — '+share.toLocaleString('ar')+' ريال':''}`);
     }
-  }catch(e){toast('خطأ: '+e.message,'error');}
+  }catch(e){
+    if(existing)existing.paid=!newPaid;
+    else D.payments=D.payments.filter(p=>!(p.slot_id===slotId&&p.member_name===memberName));
+    renderBudget();toast('خطأ: '+e.message,'error');
+  }
   loadAll().catch(()=>{});
 }
 
@@ -3074,16 +3070,16 @@ function renderBudget(){
   const budgetYear=D.chalet.budget_year||todayYear();
 
   function rowHtml(m,hasPaid,share,slotId,yearKey){
-    const sn=m.name.replace(/'/g,"&#39;");
+    const sn=jsArg(m.name);
     const me=m.name===myName()?' <span class="badge-you">أنت</span>':'';
     const amt=Number(share).toLocaleString('ar')+' ﷼';
     let btn='';
     if(myProfile?.is_admin){
-      if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}','${sn}')">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
-      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay('${sn}',${yearKey},${hasPaid})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      if(slotId) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.togglePay('${slotId}',${sn})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
+      else if(yearKey) btn=`<button class="btn ${hasPaid?'btn-ghost':'btn-sage'} btn-xs" onclick="A.toggleAnnualPay(${sn},${yearKey},${hasPaid})">${hasPaid?'إلغاء':'✓ دفع'}</button>`;
     }
     return `<div class="member-payment-row">
-      <div class="payment-av">${m.name[0]}</div>
+      <div class="payment-av">${esc(m.name[0])}</div>
       <div class="payment-info">
         <div class="payment-name">${esc(m.name)}${me}</div>
         <div class="payment-amount" style="color:${hasPaid?'var(--sage)':'var(--muted)'};">${hasPaid?'✅ ':'⏳ '}${amt}</div>
@@ -3401,7 +3397,7 @@ async function updateQuizScore(correct,total,pts){
       total_answered:(ex?.total_answered||0)+total,
       updated_at:new Date().toISOString()
     };
-    await fetch(SB_URL+'/rest/v1/quiz_scores?on_conflict=user_id',{method:'POST',headers:H,body:JSON.stringify(payload)});
+    await checkedFetch(SB_URL+'/rest/v1/quiz_scores?on_conflict=user_id',{method:'POST',headers:H,body:JSON.stringify(payload)});
   }catch(e){}
 }
 function renderStats(){
@@ -3672,7 +3668,7 @@ function buildQuizUI(el){
           <div style="font-size:12px;font-weight:700;">${esc(q.question)}</div>
           <div style="font-size:10px;color:var(--muted);margin-top:3px;">
             أ: ${esc(q.option_a)} · ب: ${esc(q.option_b)} · ج: ${esc(q.option_c)} · د: ${esc(q.option_d)}
-            <span style="color:var(--sage);font-weight:700;"> ✓ ${q.correct_answer==='a'?q.option_a:q.correct_answer==='b'?q.option_b:q.correct_answer==='c'?q.option_c:q.option_d}</span>
+            <span style="color:var(--sage);font-weight:700;"> ✓ ${esc(q.correct_answer==='a'?q.option_a:q.correct_answer==='b'?q.option_b:q.correct_answer==='c'?q.option_c:q.option_d)}</span>
             <span class="cat-badge" style="margin-right:4px;">${esc(q.category||'عام')}</span>
           </div>
         </div>
@@ -3977,7 +3973,7 @@ async function renderAdmin(){
   (profiles||[]).forEach(p=>{
     const isMe=p.id===session?.user?.id;
     const isSuperAdmin=myProfile?.is_super_admin;
-    const av=p.avatar_url?`<img src="${esc(p.avatar_url)}">`:`<span>${(p.name||'?')[0]}</span>`;
+    const av=p.avatar_url?`<img src="${esc(p.avatar_url)}">`:`<span>${esc((p.name||'?')[0])}</span>`;
     h+=`<div class="user-row">
       <div class="user-av">${av}</div>
       <div class="user-info">
@@ -3988,9 +3984,9 @@ async function renderAdmin(){
         <div class="user-email">${esc(p.email||'')}${p.phone_wa?' · 📱'+esc(p.phone_wa):''}</div>
       </div>
       <div style="display:flex;gap:4px;">
-        ${isSuperAdmin?`<button class="btn btn-blue btn-xs" onclick="A.openEditUser('${p.id}','${esc(p.name||'')}','${esc(p.phone_wa||'')}','${esc(p.email||'')}')">✏️</button>`:''}
+        ${isSuperAdmin?`<button class="btn btn-blue btn-xs" onclick="A.openEditUser('${p.id}',${jsArg(p.name||'')},${jsArg(p.phone_wa||'')},${jsArg(p.email||'')})">✏️</button>`:''}
         ${isSuperAdmin&&!isMe?`<button class="btn ${p.is_admin?'btn-ember':'btn-ghost'} btn-xs" onclick="A.toggleAdmin('${p.id}',${p.is_admin})">${p.is_admin?'إلغاء مشرف':'مشرف'}</button>`:''}
-        ${isSuperAdmin&&!isMe&&!p.is_super_admin?`<button class="btn btn-danger btn-xs" onclick="A.deleteUser('${p.id}','${esc(p.name||'')}')">🗑️</button>`:''}
+        ${isSuperAdmin&&!isMe&&!p.is_super_admin?`<button class="btn btn-danger btn-xs" onclick="A.deleteUser('${p.id}',${jsArg(p.name||'')})">🗑️</button>`:''}
       </div>
     </div>`;
   });
@@ -4039,7 +4035,7 @@ window.A={
   async clearAllNotifs(){
     if(!confirm('حذف كل التنبيهات؟'))return;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
-    await fetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id,{method:'DELETE',headers:H});
+    await checkedFetch(SB_URL+'/rest/v1/notifications?user_id=eq.'+session.user.id,{method:'DELETE',headers:H});
     D.notifications=[];updateNotifBadge();renderNotifications();toast('تم حذف كل التنبيهات');
   },
   calPrev(){calYear--;selectedDate=null;renderCalendar();},
@@ -4066,28 +4062,10 @@ window.A={
       toast('خطأ: '+e.message,'error');
     }
   },
-  rsvpCal(slotId,status){
-    const mn=myName();
-    if(!mn)return;
-    const ex=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===mn);
-    if(ex) ex.status=status;
-    else D.rsvps.push({slot_id:slotId,member_name:mn,status});
-    render();
-    const s=D.slots.find(x=>x.id===slotId);
-    if(s) openCalSlotModal(s);
-    toast(status==='yes'?'✅ سأحضر':'🙅 اعتذر');
-    // حفظ في DB
-    const H=apiHeaders();
-    if(ex){
-      fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(mn),{
-        method:'PATCH',headers:H,body:JSON.stringify({status})
-      }).catch(()=>{});
-    } else {
-      fetch(SB_URL+'/rest/v1/rsvps',{
-        method:'POST',headers:{...H,'Prefer':'return=minimal'},
-        body:JSON.stringify({slot_id:slotId,member_name:mn,status})
-      }).catch(()=>{});
-    }
+  async rsvpCal(slotId,status){
+    await setRsvp(slotId,status);
+    const slot=D.slots.find(s=>s.id===slotId);
+    if(slot)await openCalSlotModal(slot);
   },
   async bookCal(id){
     await bookSlot(id);
@@ -4099,7 +4077,7 @@ window.A={
   resolveSwap:(id,a)=>resolveSwap(id,a),
   async cancelSwap(swapId){
     if(!confirm('إلغاء طلب التبديل؟'))return;
-    await sb.from('swap_requests').delete().eq('id',swapId);
+    await checkedQuery(sb.from('swap_requests').delete().eq('id',swapId));
     await loadAll();render();toast('تم إلغاء طلب التبديل');
   },
   setTripsTab(t){_tripsSubTab=t;renderTrips();},
@@ -4115,7 +4093,7 @@ window.A={
   },
   createPoll(){const q=document.getElementById('pollQ')?.value.trim();const opts=[...document.querySelectorAll('.pi')].map(i=>i.value.trim()).filter(Boolean);createPoll(q,opts);},
   addMem(){addMemory(document.getElementById('memC')?.value.trim(),document.getElementById('memI')?.value.trim(),document.getElementById('memD')?.value);},
-  delMem:async(id)=>{await sb.from('memories').delete().eq('id',id);await loadAll();render();},
+  delMem:async(id)=>{await checkedQuery(sb.from('memories').delete().eq('id',id));await loadAll();render();},
   async installPWA(){
     if(_deferredInstall){
       _deferredInstall.prompt();
@@ -4180,7 +4158,7 @@ window.A={
       });
 
       const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-      const r=await fetch(SB_URL+'/rest/v1/push_subscriptions?on_conflict=user_id',{method:'POST',headers:H,
+      const r=await checkedFetch(SB_URL+'/rest/v1/push_subscriptions?on_conflict=user_id',{method:'POST',headers:H,
         body:JSON.stringify({user_id:session.user.id,subscription:JSON.stringify(sub)})
       });
       if(!r.ok) throw new Error('HTTP '+r.status);
@@ -4206,7 +4184,7 @@ window.A={
     D.settings.allow_multi_booking=val?'true':'false'; // تحديث فوري
     renderSettings(); // حدّث الزر فوراً
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
-    await fetch(SB_URL+'/rest/v1/app_settings',{method:'POST',headers:H,
+    await checkedFetch(SB_URL+'/rest/v1/app_settings',{method:'POST',headers:H,
       body:JSON.stringify({key:'allow_multi_booking',value:val?'true':'false'})});
     toast(val?'✅ مُفعَّل: يمكن حجز أكثر من طلعة في السنة':'⭕ مُعطَّل: حجز واحد فقط في السنة');
   },
@@ -4224,7 +4202,7 @@ window.A={
   removeMember,toggleAdmin,openEditUser,
   async toggleReg(current){
     const newVal=current?'false':'true';
-    await sb.from('app_settings').upsert({key:'registrations_enabled',value:newVal,updated_by:myName()},{onConflict:'key'});
+    await checkedQuery(sb.from('app_settings').upsert({key:'registrations_enabled',value:newVal,updated_by:myName()},{onConflict:'key'}));
     await loadAll();renderAdmin();
     toast(newVal==='false'?'🔒 التسجيل مغلق':'✅ التسجيل مفعّل');
   },
@@ -4234,7 +4212,7 @@ window.A={
     const locId=sel.value;
     const loc=locId?D.locations.find(l=>l.id===locId):null;
     const H={...apiHeaders(),'Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
+    await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
       location_name:loc?.name||null,location_address:loc?.address||null,
       location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
     })});
@@ -4245,7 +4223,7 @@ window.A={
     const locAddr=document.getElementById('slotLocAddr_'+slotId)?.value.trim()||null;
     const locMap=document.getElementById('slotLocMap_'+slotId)?.value.trim()||null;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
+    await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,
       body:JSON.stringify({location_name:locName,location_address:locAddr,location_map_url:locMap})});
     await loadAll();closeModal('calSlotModal');render();toast('تم حفظ الموقع ✅');
   },
@@ -4269,7 +4247,7 @@ window.A={
     if(!inp)return;
     const title=inp.value.trim()||null;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json','Prefer':'return=minimal'};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
+    await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({title})});
     await loadAll();
     closeModal('calSlotModal');
     render();
@@ -4279,10 +4257,10 @@ window.A={
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     if(status==='clear'){
       // حذف الـ RSVP
-      await fetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{method:'DELETE',headers:H});
+      await checkedFetch(SB_URL+'/rest/v1/rsvps?slot_id=eq.'+slotId+'&member_name=eq.'+encodeURIComponent(memberName),{method:'DELETE',headers:H});
       D.rsvps=D.rsvps.filter(r=>!(r.slot_id===slotId&&r.member_name===memberName));
     } else {
-      await fetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,
+      await checkedFetch(SB_URL+'/rest/v1/rsvps?on_conflict=slot_id,member_name',{method:'POST',headers:H,
         body:JSON.stringify({slot_id:slotId,member_name:memberName,status})});
       const ex=D.rsvps.find(r=>r.slot_id===slotId&&r.member_name===memberName);
       if(ex) ex.status=status;
@@ -4300,7 +4278,7 @@ window.A={
     const btn=document.querySelector('[onclick="A.sendUpdateEmail()"]');
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
     try{
-      const r=await fetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-update-email',{
+      const r=await checkedFetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-update-email',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},
         body:JSON.stringify({subject,features:selected})
@@ -4321,7 +4299,7 @@ window.A={
     if(uid===session?.user?.id){toast('لا يمكنك حذف نفسك','error');return;}
     if(!confirm(`حذف مستخدم "${name}"؟\nسيُزال من التطبيق ولا يمكن التراجع.`))return;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
-    const r=await fetch(SB_URL+'/rest/v1/profiles?id=eq.'+uid,{method:'DELETE',headers:H});
+    const r=await checkedFetch(SB_URL+'/rest/v1/profiles?id=eq.'+uid,{method:'DELETE',headers:H});
     if(r.ok){toast('🗑️ تم حذف '+name);renderAdmin();}
     else{const e=await r.text();toast('خطأ: '+e,'error');}
   },
@@ -4348,7 +4326,7 @@ window.A={
     const btn=event?.target;
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري الإرسال...';}
     try{
-      const r=await fetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-rsvp-reminder',{
+      const r=await checkedFetch('https://ncljmdpwdeznyytbnrgz.supabase.co/functions/v1/send-rsvp-reminder',{
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')}
       });
@@ -4372,7 +4350,7 @@ window.A={
   async adminDeleteSlot(slotId,dateStr){
     if(!confirm(`حذف طلعة ${dateStr}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
     const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token};
-    await fetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'DELETE',headers:H});
+    await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'DELETE',headers:H});
     D.slots=D.slots.filter(s=>s.id!==slotId);
     closeModal('calSlotModal');
     render();
@@ -4383,7 +4361,7 @@ window.A={
     const name=inp?.value.trim();
     if(!name){toast('أدخل اسم المتطلب','error');return;}
     const H={...apiHeaders(),'Prefer':'return=representation'};
-    const r=await fetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
+    const r=await checkedFetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
       body:JSON.stringify({slot_id:slotId,name,created_by:myName()})});
     if(r.ok){const[row]=await r.json();D.requirements.push(row);if(inp)inp.value='';
       const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);}
@@ -4391,7 +4369,7 @@ window.A={
   },
   async addReqPreset(slotId,name){
     const H={...apiHeaders(),'Prefer':'return=representation'};
-    const r=await fetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
+    const r=await checkedFetch(SB_URL+'/rest/v1/trip_requirements',{method:'POST',headers:H,
       body:JSON.stringify({slot_id:slotId,name,created_by:myName()})});
     if(r.ok){const[row]=await r.json();D.requirements.push(row);
       const s=D.slots.find(x=>x.id===slotId);if(s)openCalSlotModal(s);}
@@ -4399,18 +4377,18 @@ window.A={
   async toggleReq(id,isDone){
     const req=D.requirements.find(r=>r.id===id);
     if(!req)return;
-    req.is_ready=!isDone;
-    if(!req.assigned_to&&!isDone) req.assigned_to=myName();
-    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
-      body:JSON.stringify({is_ready:!isDone,assigned_to:req.assigned_to})});
+    const assignee=req.assigned_to||(!isDone?myName():null);
+    await checkedFetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
+      body:JSON.stringify({is_ready:!isDone,assigned_to:assignee})});
+    req.is_ready=!isDone;req.assigned_to=assignee;
     const s=D.slots.find(x=>x.id===req.slot_id);if(s)openCalSlotModal(s);
     toast(!isDone?'✅ تم التجهيز':'↩️ تم الإلغاء');
   },
   async claimReq(id){
     const req=D.requirements.find(r=>r.id===id);if(!req)return;
-    req.assigned_to=myName();
-    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
+    await checkedFetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'PATCH',headers:apiHeaders(),
       body:JSON.stringify({assigned_to:myName()})});
+    req.assigned_to=myName();
     const s=D.slots.find(x=>x.id===req.slot_id);if(s)openCalSlotModal(s);
     toast('👤 سجّلت نفسك لتجهيز هذا البند');
   },
@@ -4418,8 +4396,8 @@ window.A={
     const req=D.requirements.find(r=>r.id===id);
     if(!req)return;
     const slotId=req.slot_id;
+    await checkedFetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
     D.requirements=D.requirements.filter(r=>r.id!==id);
-    await fetch(SB_URL+'/rest/v1/trip_requirements?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
     const sl=D.slots.find(x=>x.id===slotId);
     if(sl) openCalSlotModal(sl);
   },
@@ -4455,7 +4433,7 @@ window.A={
       btn.style.display='block';btn.onclick=()=>A.nextQuizQ();
     }
     try{
-      await fetch(SB_URL+'/rest/v1/quiz_answers',{method:'POST',
+      await checkedFetch(SB_URL+'/rest/v1/quiz_answers',{method:'POST',
         headers:{...apiHeaders(),'Prefer':'return=minimal'},
         body:JSON.stringify({question_id:q.id,user_id:session?.user?.id,member_name:myName(),answer:sel||'',is_correct:isCorrect,points:isCorrect?10:0})});
       D.quizAnswers.push({question_id:q.id,is_correct:isCorrect});
@@ -4476,22 +4454,23 @@ window.A={
     const cat=document.getElementById('qCat')?.value.trim()||'عام';
     if(!q||!a||!b||!c||!d){toast('أكمل جميع الحقول','error');return;}
     const H={...apiHeaders(),'Prefer':'return=representation'};
-    const r=await fetch(SB_URL+'/rest/v1/quiz_questions',{method:'POST',headers:H,
+    const r=await checkedFetch(SB_URL+'/rest/v1/quiz_questions',{method:'POST',headers:H,
       body:JSON.stringify({question:q,option_a:a,option_b:b,option_c:c,option_d:d,correct_answer:ans,category:cat,created_by:myName()})});
     if(r.ok){const[row]=await r.json();D.quizQ.unshift(row);A.setMoreTab('quiz');toast('✅ تمت الإضافة');}
     else toast('خطأ','error');
   },
   async delQuestion(id){
     if(!confirm('حذف هذا السؤال؟'))return;
-    await fetch(SB_URL+'/rest/v1/quiz_questions?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+    await checkedFetch(SB_URL+'/rest/v1/quiz_questions?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
     D.quizQ=D.quizQ.filter(q=>q.id!==id);A.setMoreTab('quiz');toast('🗑️ تم الحذف');
   },
   async addSuggestion(){
+    const title=document.getElementById('sugTitle')?.value.trim();
     const body=document.getElementById('sugBody')?.value.trim();
     const category=document.getElementById('sugCat')?.value||'general';
     if(!title){toast('أدخل العنوان','error');return;}
     const H={...apiHeaders(),'Prefer':'return=representation'};
-    const r=await fetch(SB_URL+'/rest/v1/suggestions',{method:'POST',headers:H,
+    const r=await checkedFetch(SB_URL+'/rest/v1/suggestions',{method:'POST',headers:H,
       body:JSON.stringify({title,body:body||null,category,author_name:myName()})});
     if(r.ok){
       const [row]=await r.json();
@@ -4503,7 +4482,7 @@ window.A={
   async delSuggestion(id){
     if(!confirm('حذف هذا الاقتراح؟'))return;
     const H=apiHeaders();
-    await fetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'DELETE',headers:H});
+    await checkedFetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'DELETE',headers:H});
     D.suggestions=D.suggestions.filter(s=>s.id!==id);
     renderSuggestions();toast('🗑️ تم الحذف');
   },
@@ -4512,7 +4491,7 @@ window.A={
     const newTitle=prompt('العنوان:',s.title);if(!newTitle?.trim())return;
     const newBody=prompt('التفاصيل:',s.body||'');
     const H=apiHeaders();
-    await fetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'PATCH',headers:H,
+    await checkedFetch(SB_URL+'/rest/v1/suggestions?id=eq.'+id,{method:'PATCH',headers:H,
       body:JSON.stringify({title:newTitle.trim(),body:newBody||null})});
     s.title=newTitle.trim();s.body=newBody||null;
     renderSuggestions();toast('✅ تم التعديل');
@@ -4524,15 +4503,14 @@ window.A={
     if(existing) existing.paid=newPaid;
     else D.annualPayments.push({member_name:name,year,paid:newPaid});
     renderBudget();
-    toast(newPaid?'✅ تم تسجيل الاشتراك':'↩️ تم إلغاء الاشتراك');
     try{
       const H={...apiHeaders(),'Prefer':'return=minimal'};
       if(existing){
-        await fetch(SB_URL+'/rest/v1/annual_payments?year=eq.'+year+'&member_name=eq.'+encodeURIComponent(name),{
+        await checkedFetch(SB_URL+'/rest/v1/annual_payments?year=eq.'+year+'&member_name=eq.'+encodeURIComponent(name),{
           method:'PATCH',headers:H,body:JSON.stringify({paid:newPaid,updated_by:myName()})
         });
       } else {
-        await fetch(SB_URL+'/rest/v1/annual_payments',{
+        await checkedFetch(SB_URL+'/rest/v1/annual_payments',{
           method:'POST',headers:H,body:JSON.stringify({year,member_name:name,paid:newPaid,updated_by:myName()})
         });
       }
@@ -4542,15 +4520,20 @@ window.A={
         else
           await notifyAdmins('general',`${esc(name)} دفع اشتراكه السنوي 💰`,`سنة ${year}`);
       }
-    }catch(e){console.error('toggleAnnualPay:',e);}
+      toast(newPaid?'✅ تم تسجيل الاشتراك':'↩️ تم إلغاء الاشتراك');
+    }catch(e){
+      if(existing)existing.paid=currentPaid;
+      else D.annualPayments=D.annualPayments.filter(p=>!(p.member_name===name&&p.year===year));
+      renderBudget();toast(e.message,'error');
+    }
     loadAll().catch(()=>{});
   },
   async setBudgetType(type){
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     if(D.chalet.id){
-      await fetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({budget_type:type})});
+      await checkedFetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({budget_type:type})});
     } else {
-      await fetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',budget_type:type})});
+      await checkedFetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',budget_type:type})});
     }
     D.chalet.budget_type=type;
     renderBudget();
@@ -4562,9 +4545,9 @@ window.A={
     if(!amt){toast('أدخل المبلغ','error');return;}
     const H={...apiHeaders(),'Prefer':'resolution=merge-duplicates,return=minimal'};
     if(D.chalet.id){
-      await fetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({annual_budget:amt,budget_year:year})});
+      await checkedFetch(SB_URL+'/rest/v1/chalet?id=eq.'+D.chalet.id,{method:'PATCH',headers:H,body:JSON.stringify({annual_budget:amt,budget_year:year})});
     } else {
-      await fetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',annual_budget:amt,budget_year:year})});
+      await checkedFetch(SB_URL+'/rest/v1/chalet',{method:'POST',headers:H,body:JSON.stringify({name:'دوريتنا',annual_budget:amt,budget_year:year})});
     }
     D.chalet.annual_budget=amt; D.chalet.budget_year=year;
     const perPerson=D.team.length?Math.round(amt/D.team.length):0;
@@ -4575,8 +4558,8 @@ window.A={
   async saveChaletName(){
     const name=document.getElementById('sN')?.value.trim();
     if(!name)return;
-    if(D.chalet.id) await sb.from('chalet').update({name}).eq('id',D.chalet.id);
-    else await sb.from('chalet').insert({name});
+    if(D.chalet.id) await checkedQuery(sb.from('chalet').update({name}).eq('id',D.chalet.id));
+    else await checkedQuery(sb.from('chalet').insert({name}));
     await loadAll();render();toast('تم حفظ الاسم ✅');
   },
   fillLocFromSel(locId){
@@ -4599,12 +4582,12 @@ window.A={
   async deleteLoc(id){
     if(!myProfile?.is_admin)return;
     if(!confirm('حذف هذا الموقع؟'))return;
-    await fetch(SB_URL+'/rest/v1/locations?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
+    await checkedFetch(SB_URL+'/rest/v1/locations?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
     await loadAll();renderSettings();toast('تم الحذف');
   },
   async setDefaultLoc(id){
     if(!myProfile?.is_admin)return;
-    await fetch(SB_URL+'/rest/v1/locations',{method:'PATCH',headers:apiHeaders(),body:JSON.stringify({is_default:false})});
+    await checkedFetch(SB_URL+'/rest/v1/locations',{method:'PATCH',headers:apiHeaders(),body:JSON.stringify({is_default:false})});
     await patchRow('locations',id,{is_default:true});
     await loadAll();renderSettings();toast('تم تعيين الموقع الافتراضي ⭐');
   },
@@ -4614,7 +4597,7 @@ window.A={
     const notes=document.getElementById('inlineBudgetNotes')?.value.trim();
     if(!slotId){toast('اختر طلعة','error');return;}
     if(!amount){toast('أدخل المبلغ','error');return;}
-    await sb.from('slots').update({budget:amount,budget_notes:notes||null}).eq('id',slotId);
+    await checkedQuery(sb.from('slots').update({budget:amount,budget_notes:notes||null}).eq('id',slotId));
     const slot=D.slots.find(s=>s.id===slotId);
     const perPerson=D.team.length?Math.round(amount/D.team.length):0;
     await notifyAll('general',`تم تحديد ميزانية طلعة 💰`,`${slot?toGregShort(slot.date):''} — ${Number(amount).toLocaleString('ar')} ﷼ (${perPerson.toLocaleString('ar')} ﷼ للفرد)`);
@@ -4690,3 +4673,4 @@ setTimeout(function(){
 </script>
 </body>
 </html>
+
