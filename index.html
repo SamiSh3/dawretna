@@ -685,7 +685,15 @@ async function initAuth(){
     if(s&&!_loggedIn){
       if(_loginTimer){clearTimeout(_loginTimer);_loginTimer=null;}
       session=s; _loggedIn=true;
-      await afterLogin();
+      // Supabase auth callbacks must not await additional Supabase client calls.
+      // Defer app initialization until the auth callback has returned.
+      setTimeout(()=>afterLogin().catch(e=>{
+        console.error('Login initialization failed',e);
+        _dataLoaded=true;
+        showApp();
+        try{render();}catch(err){console.error(err);}
+        toast('تم تسجيل الدخول لكن تعذر تحميل بعض البيانات. حاول تحديث الصفحة.','error');
+      }),0);
     }
   });
 
