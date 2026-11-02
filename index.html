@@ -4603,12 +4603,40 @@ window.A={
     if(!name){toast('أدخل اسم الموقع','error');return;}
     const editId=document.getElementById('locEditId')?.value;
     const payload={name,address:addr||null,map_url:mapUrl||null,lat,lng};
+    let syncedSlots=0;
     if(editId){
+      // slots store a snapshot of the location rather than a location_id.
+      // Capture affected slots before editing the location so existing trips stay in sync.
+      const previous=D.locations.find(l=>String(l.id)===String(editId));
+      if(!previous){toast('الموقع غير موجود، حدّث الصفحة وحاول مجدداً','error');return;}
+      const same=(a,b)=>String(a??'')===String(b??'');
+      const affected=D.slots.filter(slot=>
+        same(slot.location_name,previous.name) &&
+        same(slot.location_address,previous.address) &&
+        same(slot.location_map_url,previous.map_url) &&
+        same(slot.location_lat,previous.lat) &&
+        same(slot.location_lng,previous.lng)
+      ).map(slot=>slot.id);
       await checkedQuery(sb.from('locations').update(payload).eq('id',editId).select('id').single());
+      if(affected.length){
+        const slotLocation={
+          location_name:payload.name,location_address:payload.address,
+          location_map_url:payload.map_url,location_lat:payload.lat,location_lng:payload.lng
+        };
+        try{
+          const updated=await checkedQuery(sb.from('slots').update(slotLocation).in('id',affected).select('id'));
+          syncedSlots=updated?.length??0;
+          if(syncedSlots!==affected.length)throw new Error('لم يتم تحديث جميع الطلعات المرتبطة');
+        }catch(e){
+          await loadAll();renderSettings();
+          toast('تم تعديل الموقع، لكن تعذّر تحديث الطلعات: '+e.message,'error');
+          return;
+        }
+      }
     }else{
       await postRow('locations',{...payload,is_default:!D.locations.length});
     }
-    await loadAll();renderSettings();toast(editId?'✅ تم تعديل موقع الاجتماع':'تم إضافة الموقع ✅');
+    await loadAll();renderSettings();toast(editId?'✅ تم تعديل الموقع وتحديث '+syncedSlots+' طلعة مرتبطة':'تم إضافة الموقع ✅');
   },
   async deleteLoc(id){
     if(!myProfile?.is_admin)return;
