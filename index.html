@@ -3889,11 +3889,13 @@ function renderSettings(){
       </div>
       <div style="display:flex;gap:4px;">
         ${!l.is_default?`<button class="btn btn-ghost btn-xs" onclick="A.setDefaultLoc('${l.id}')">★</button>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="A.editLoc('${l.id}')">✏️ تعديل</button>
         <button class="btn btn-danger btn-xs" onclick="A.deleteLoc('${l.id}')">حذف</button>
       </div>
     </div>`).join('')}
     <hr class="sep">
-    <div class="h2" style="font-size:14px;margin-bottom:8px;">➕ إضافة موقع</div>
+    <div class="h2" id="locFormTitle" style="font-size:14px;margin-bottom:8px;">➕ إضافة موقع</div>
+    <input type="hidden" id="locEditId" value="">
     <div class="field"><label>الاسم</label><input type="text" id="locName" placeholder="مثال: شاليه النخيل"></div>
     <div class="field"><label>العنوان</label><input type="text" id="locAddr" placeholder="الرياض - حي النرجس"></div>
     <div class="field"><label>رابط خرائط</label><input type="url" id="locMap" placeholder="https://maps.app.goo.gl/..."></div>
@@ -3901,7 +3903,8 @@ function renderSettings(){
       <div class="field"><label>Lat</label><input type="number" id="locLat" step="any" placeholder="24.71"></div>
       <div class="field"><label>Lng</label><input type="number" id="locLng" step="any" placeholder="46.67"></div>
     </div>
-    <button class="btn btn-primary btn-block" onclick="A.addLocation()">إضافة موقع</button></div>
+    <button class="btn btn-primary btn-block" id="locSaveBtn" onclick="A.addLocation()">إضافة موقع</button>
+    <button class="btn btn-ghost btn-block hidden" id="locCancelBtn" onclick="A.cancelEditLoc()">إلغاء التعديل</button></div>
 `;
     h+=`<div class="card"><div class="h2">🗓️ إضافة طلعة</div>
     <button class="btn btn-primary btn-block" onclick="A.openNewSlot()">➕ إنشاء طلعة جديدة</button></div>
@@ -4567,6 +4570,29 @@ window.A={
     if(!loc)return;
     document.getElementById('locNameInp').value=loc.name||'';
           },
+  editLoc(id){
+    if(!myProfile?.is_admin)return;
+    const loc=D.locations.find(l=>String(l.id)===String(id));
+    if(!loc)return;
+    document.getElementById('locEditId').value=loc.id;
+    document.getElementById('locName').value=loc.name||'';
+    document.getElementById('locAddr').value=loc.address||'';
+    document.getElementById('locMap').value=loc.map_url||'';
+    document.getElementById('locLat').value=loc.lat??'';
+    document.getElementById('locLng').value=loc.lng??'';
+    document.getElementById('locFormTitle').textContent='✏️ تعديل موقع الاجتماع';
+    document.getElementById('locSaveBtn').textContent='💾 حفظ التعديلات';
+    document.getElementById('locCancelBtn').classList.remove('hidden');
+    document.getElementById('locName').focus();
+  },
+  cancelEditLoc(){
+    for(const id of ['locEditId','locName','locAddr','locMap','locLat','locLng']){
+      const el=document.getElementById(id);if(el)el.value='';
+    }
+    document.getElementById('locFormTitle').textContent='➕ إضافة موقع';
+    document.getElementById('locSaveBtn').textContent='إضافة موقع';
+    document.getElementById('locCancelBtn').classList.add('hidden');
+  },
   async addLocation(){
     if(!myProfile?.is_admin){toast('مشرفون فقط','error');return;}
     const name=document.getElementById('locName')?.value.trim();
@@ -4575,9 +4601,14 @@ window.A={
     const lat=parseFloat(document.getElementById('locLat')?.value)||null;
     const lng=parseFloat(document.getElementById('locLng')?.value)||null;
     if(!name){toast('أدخل اسم الموقع','error');return;}
-    const isFirst=!D.locations.length;
-    await postRow('locations',{name,address:addr||null,map_url:mapUrl||null,lat,lng,is_default:false});
-    await loadAll();renderSettings();toast('تم إضافة الموقع ✅');
+    const editId=document.getElementById('locEditId')?.value;
+    const payload={name,address:addr||null,map_url:mapUrl||null,lat,lng};
+    if(editId){
+      await checkedQuery(sb.from('locations').update(payload).eq('id',editId).select('id').single());
+    }else{
+      await postRow('locations',{...payload,is_default:!D.locations.length});
+    }
+    await loadAll();renderSettings();toast(editId?'✅ تم تعديل موقع الاجتماع':'تم إضافة الموقع ✅');
   },
   async deleteLoc(id){
     if(!myProfile?.is_admin)return;
