@@ -931,6 +931,12 @@ async function loadAll(){
     D.payments=d.payments||[]; D.annualPayments=d.annualPay||[];
     D.settings={}; (d.settings||[]).forEach(s=>D.settings[s.key]=s.value);
     D.locations=d.locations||[];
+    // Location details are resolved by stable location_id; snapshots are legacy fallback.
+    D.slots=D.slots.map(slot=>{
+      const location=slot.location_id?D.locations.find(l=>l.id===slot.location_id):null;
+      return location?{...slot,location_name:location.name,location_address:location.address,
+        location_map_url:location.map_url,location_lat:location.lat,location_lng:location.lng}:slot;
+    });
   }
 
   // باقي البيانات بالتوازي مع timeout
@@ -1898,6 +1904,7 @@ document.getElementById('newSlotConfirmBtn').onclick=async()=>{
   const H={'apikey':SB_KEY,'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'};
   await checkedFetch(SB_URL+'/rest/v1/slots',{method:'POST',headers:{...H,'Prefer':'return=minimal'},
     body:JSON.stringify({date,title,hijri_offset:0,budget:budget||null,budget_notes:notes||null,
+      location_id:loc?.id||null,
       location_name:loc?.name||null,location_address:loc?.address||null,
       location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null})});
   await notifyAll('slot_booked','طلعة جديدة أُضيفت 📅',`${title?title+' — ':''}${toGreg(date)}`,null);
@@ -2826,7 +2833,7 @@ async function openCalSlotModal(slot){
     ${myProfile?.is_admin&&!isPast?`
     <select id="slotLocSel_${slot.id}" style="width:100%;padding:8px;background:var(--bg-el);border:1px solid var(--border);color:var(--text);border-radius:var(--rsm);font-size:12px;margin-bottom:6px;">
       <option value="">— بدون موقع محدد —</option>
-      ${D.locations.map(l=>`<option value="${l.id}" ${slot.location_name===l.name?'selected':''}>
+      ${D.locations.map(l=>`<option value="${l.id}" ${slot.location_id===l.id?'selected':''}>
         ${esc(l.name)}${l.address?' — '+esc(l.address):''}${l.is_default?' ⭐':''}
       </option>`).join('')}
     </select>
@@ -4216,6 +4223,7 @@ window.A={
     const loc=locId?D.locations.find(l=>l.id===locId):null;
     const H={...apiHeaders(),'Prefer':'return=minimal'};
     await checkedFetch(SB_URL+'/rest/v1/slots?id=eq.'+slotId,{method:'PATCH',headers:H,body:JSON.stringify({
+      location_id:loc?.id||null,
       location_name:loc?.name||null,location_address:loc?.address||null,
       location_map_url:loc?.map_url||null,location_lat:loc?.lat||null,location_lng:loc?.lng||null
     })});
