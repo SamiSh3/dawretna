@@ -4624,7 +4624,9 @@ window.A={
     }else{
       await postRow('locations',{...payload,is_default:!D.locations.length});
     }
-    await loadAll();renderSettings();toast(editId?'✅ تم تعديل الموقع، وستظهر البيانات الجديدة في الطلعات المرتبطة':'تم إضافة الموقع ✅');ync deleteLoc(id){
+    await loadAll();renderSettings();toast(editId?'✅ تم تعديل الموقع، وستظهر البيانات الجديدة في الطلعات المرتبطة':'تم إضافة الموقع ✅');
+  },
+  async deleteLoc(id){
     if(!myProfile?.is_admin)return;
     if(!confirm('حذف هذا الموقع؟'))return;
     await checkedFetch(SB_URL+'/rest/v1/locations?id=eq.'+id,{method:'DELETE',headers:apiHeaders()});
